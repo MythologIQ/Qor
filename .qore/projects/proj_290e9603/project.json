@@ -1,0 +1,17 @@
+{
+  "projectId": "proj_290e9603",
+  "name": "Security Test Project",
+  "description": "Testing security",
+  "createdAt": "2026-02-24T11:39:28.065Z",
+  "updatedAt": "2026-02-24T11:39:28.065Z",
+  "createdBy": "test-actor",
+  "pipelineState": {
+    "void": "empty",
+    "reveal": "empty",
+    "constellation": "empty",
+    "path": "empty",
+    "risk": "empty",
+    "autonomy": "empty"
+  },
+  "checksum": ""
+}

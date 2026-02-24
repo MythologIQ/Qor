@@ -1,0 +1,17 @@
+{
+  "projectId": "proj_b6959104",
+  "name": "Integrity Test",
+  "description": "",
+  "createdAt": "2026-02-24T11:28:01.138Z",
+  "updatedAt": "2026-02-24T11:28:01.138Z",
+  "createdBy": "actor",
+  "pipelineState": {
+    "void": "empty",
+    "reveal": "empty",
+    "constellation": "empty",
+    "path": "empty",
+    "risk": "empty",
+    "autonomy": "empty"
+  },
+  "checksum": ""
+}

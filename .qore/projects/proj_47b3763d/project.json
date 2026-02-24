@@ -1,0 +1,17 @@
+{
+  "projectId": "proj_47b3763d",
+  "name": "Test Project",
+  "description": "",
+  "createdAt": "2026-02-24T11:14:33.658Z",
+  "updatedAt": "2026-02-24T11:14:33.658Z",
+  "createdBy": "actor-1",
+  "pipelineState": {
+    "void": "empty",
+    "reveal": "empty",
+    "constellation": "empty",
+    "path": "empty",
+    "risk": "empty",
+    "autonomy": "empty"
+  },
+  "checksum": ""
+}
