@@ -36,6 +36,7 @@ import {
 } from "../planning/PlanningLedger.js";
 import type { ApiErrorCode, ApiErrorResponse } from "@mythologiq/qore-contracts/schemas/ApiTypes";
 import type { PlanningAction as ContractPlanningAction, FullProjectState } from "@mythologiq/qore-contracts";
+import { OptimizedResponder, createOptimizedResponder } from "./response-utils.js";
 
 export interface PlanningRoutesConfig {
   projectsDir?: string;
@@ -53,13 +54,16 @@ function toContractAction(_action: PlanningAction): ContractPlanningAction {
 
 export class PlanningRoutes {
   private readonly logger = createLogger("planning-routes");
+  private readonly responder: OptimizedResponder;
 
   constructor(
     private readonly runtime: {
       evaluate(request: unknown): Promise<unknown>;
     },
     private readonly config: PlanningRoutesConfig = {},
-  ) {}
+  ) {
+    this.responder = createOptimizedResponder();
+  }
 
   /**
    * Handle planning routes
@@ -201,21 +205,15 @@ export class PlanningRoutes {
           filter: Object.keys(filter).length > 0 ? filter : undefined,
         });
         
-        // Return in standard envelope format
-        return this.sendJson(res, 200, {
-          data: result.thoughts,
-          meta: {
-            pagination: {
-              page,
-              limit,
-              total: result.total,
-              hasMore: result.hasMore,
-            },
-          },
-        });
+        // Use optimized responder with ETag and compression
+        return this.responder.sendPaginated(req, res, {
+          page,
+          limit,
+          total: result.total,
+        }, result.thoughts);
       }
 
-      // POST /api/projects/:projectId/void/thoughts - Add thought
+      // POST /api/projects/:projectId/void/thoughts - Add single thought
       if (method === "POST" && url === `/api/projects/${projectId}/void/thoughts`) {
         const body = await this.readJsonBody(req);
         const { content, source, capturedBy, tags } = body as {
@@ -240,7 +238,50 @@ export class PlanningRoutes {
         };
 
         await voidStore.addThought(thought, capturedBy);
-        return this.sendJson(res, 201, thought);
+        return this.responder.sendJson(req, res, 201, thought);
+      }
+
+      // POST /api/projects/:projectId/void/thoughts/batch - Batch import thoughts
+      if (method === "POST" && url === `/api/projects/${projectId}/void/thoughts/batch`) {
+        const body = await this.readJsonBody(req);
+        const { thoughts, skipDuplicates, continueOnError, actorId } = body as {
+          thoughts: Array<{
+            content: string;
+            source: "text" | "voice";
+            capturedBy: string;
+            tags?: string[];
+            status?: "raw" | "claimed";
+          }>;
+          skipDuplicates?: boolean;
+          continueOnError?: boolean;
+          actorId?: string;
+        };
+
+        if (!thoughts || !Array.isArray(thoughts) || thoughts.length === 0) {
+          return this.sendError(res, 400, "BAD_REQUEST" as ApiErrorCode, "thoughts array required with at least one thought", traceId);
+        }
+
+        // Limit batch size to prevent abuse
+        const MAX_BATCH_SIZE = 100;
+        if (thoughts.length > MAX_BATCH_SIZE) {
+          return this.sendError(res, 400, "BAD_REQUEST" as ApiErrorCode, `Batch size exceeds limit of ${MAX_BATCH_SIZE} thoughts`, traceId);
+        }
+
+        const result = await voidStore.addThoughtsBatch(thoughts, {
+          skipDuplicates: skipDuplicates ?? true,
+          continueOnError: continueOnError ?? true,
+          actorId: actorId ?? "batch-import",
+        });
+
+        // Return 201 if all succeeded, 207 (Multi-Status) if partial success
+        const statusCode = result.totalFailed === 0 ? 201 : 207;
+        
+        return this.responder.sendJson(req, res, statusCode, {
+          data: result,
+          meta: {
+            timestamp: new Date().toISOString(),
+          },
+        });
       }
 
       // GET /api/projects/:projectId/reveal/clusters - List clusters
