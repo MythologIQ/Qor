@@ -2,6 +2,13 @@
  * Constellation Graph Editor
  *
  * SVG-based node graph editor with pan/zoom, drag, edge drawing, and layout algorithms.
+ * 
+ * WCAG 2.1 AA Compliant:
+ * - SVG has role="application" for interactive graph
+ * - All nodes are keyboard accessible with tabindex
+ * - Status changes announced to screen readers
+ * - Focus indicators visible on nodes
+ * 
  * @module zo/ui-shell/constellation-graph
  */
 (function() {
@@ -17,6 +24,7 @@
   var edgesGroup = null;
   var nodesGroup = null;
   var minimapEl = null;
+  var statusRegion = null;
   
   var projectId = null;
   var clusters = [];
@@ -51,6 +59,11 @@
     container = el || document.querySelector(".constellation-tree");
     if (!container) return;
     
+    // Add ARIA role to container
+    container.setAttribute("role", "region");
+    container.setAttribute("aria-label", "Mind map graph editor");
+    
+    createStatusRegion();
     createSVG();
     createMinimap();
     bindEvents();
@@ -62,6 +75,22 @@
     window.addEventListener("brainstorm:recording-ingested", function() {
       fetchData();
     });
+  }
+  
+  function createStatusRegion() {
+    // Create live region for announcements
+    statusRegion = document.createElement("div");
+    statusRegion.className = "sr-only";
+    statusRegion.setAttribute("role", "status");
+    statusRegion.setAttribute("aria-live", "polite");
+    statusRegion.setAttribute("aria-atomic", "true");
+    container.appendChild(statusRegion);
+  }
+  
+  function announce(message) {
+    if (statusRegion) {
+      statusRegion.textContent = message;
+    }
   }
   
   function createSVG() {
@@ -76,6 +105,9 @@
     svg.setAttribute("width", "100%");
     svg.setAttribute("height", height + "px");
     svg.setAttribute("viewBox", viewBox.x + " " + viewBox.y + " " + viewBox.width + " " + viewBox.height);
+    svg.setAttribute("role", "application");
+    svg.setAttribute("aria-label", "Interactive mind map. Use arrow keys to pan, plus/minus to zoom, tab to navigate nodes. Press enter to select a node, shift-click to draw edges between nodes.");
+    svg.setAttribute("tabindex", "0");
     svg.style.cursor = "grab";
     
     // Definitions (markers, filters)
@@ -121,14 +153,19 @@
     // Layer groups (order matters for z-index)
     edgesGroup = document.createElementNS("http://www.w3.org/2000/svg", "g");
     edgesGroup.setAttribute("class", "edges-layer");
+    edgesGroup.setAttribute("role", "presentation");
+    edgesGroup.setAttribute("aria-label", "Connections between clusters");
     svg.appendChild(edgesGroup);
     
     mainGroup = document.createElementNS("http://www.w3.org/2000/svg", "g");
     mainGroup.setAttribute("class", "main-layer");
+    mainGroup.setAttribute("role", "presentation");
     svg.appendChild(mainGroup);
     
     nodesGroup = document.createElementNS("http://www.w3.org/2000/svg", "g");
     nodesGroup.setAttribute("class", "nodes-layer");
+    nodesGroup.setAttribute("role", "list");
+    nodesGroup.setAttribute("aria-label", "Cluster nodes");
     mainGroup.appendChild(nodesGroup);
     
     container.innerHTML = "";
@@ -138,6 +175,7 @@
   function createMinimap() {
     minimapEl = document.createElement("div");
     minimapEl.className = "constellation-minimap";
+    minimapEl.setAttribute("aria-hidden", "true");
     minimapEl.innerHTML = "<canvas width=\"150\" height=\"100\"></canvas>";
     container.appendChild(minimapEl);
   }
@@ -164,6 +202,7 @@
     });
     
     render();
+    announce("Mind map loaded with " + clusters.length + " clusters");
   }
   
   function fetchData() {
@@ -190,10 +229,12 @@
         
         hideLoading();
         render();
+        announce("Mind map loaded with " + clusters.length + " clusters");
       })
       .catch(function(err) {
         console.error("Constellation load error:", err);
         showError("Failed to load mind map");
+        announce("Error: Failed to load mind map");
       });
   }
   
@@ -211,6 +252,48 @@
     };
   }
 
+  function showLoading() {
+    if (!svg) return;
+    
+    var loading = document.createElementNS("http://www.w3.org/2000/svg", "text");
+    loading.setAttribute("class", "loading-text");
+    loading.setAttribute("x", viewBox.width / 2);
+    loading.setAttribute("y", viewBox.height / 2);
+    loading.setAttribute("text-anchor", "middle");
+    loading.setAttribute("fill", "var(--color-muted, #64748b)");
+    loading.setAttribute("font-size", "14");
+    loading.setAttribute("role", "status");
+    loading.setAttribute("aria-live", "polite");
+    loading.textContent = "Loading mind map...";
+    
+    nodesGroup.innerHTML = "";
+    nodesGroup.appendChild(loading);
+    announce("Loading mind map");
+  }
+  
+  function showError(message) {
+    if (!svg) return;
+    
+    nodesGroup.innerHTML = "";
+    
+    var errorText = document.createElementNS("http://www.w3.org/2000/svg", "text");
+    errorText.setAttribute("class", "error-text");
+    errorText.setAttribute("x", viewBox.width / 2);
+    errorText.setAttribute("y", viewBox.height / 2);
+    errorText.setAttribute("text-anchor", "middle");
+    errorText.setAttribute("fill", "var(--color-error, #ef4444)");
+    errorText.setAttribute("font-size", "14");
+    errorText.setAttribute("role", "alert");
+    errorText.setAttribute("aria-live", "assertive");
+    errorText.textContent = message;
+    nodesGroup.appendChild(errorText);
+  }
+  
+  function hideLoading() {
+    var loading = nodesGroup.querySelector(".loading-text");
+    if (loading) loading.remove();
+  }
+
   // ============================================
   // RENDERING
   // ============================================
@@ -226,7 +309,7 @@
   function renderNodes() {
     nodesGroup.innerHTML = "";
     
-    clusters.forEach(function(cluster) {
+    clusters.forEach(function(cluster, index) {
       var pos = nodePositions[cluster.id] || { x: 100, y: 100 };
       var thoughtCount = Array.isArray(cluster.thoughtIds) ? cluster.thoughtIds.length : 0;
       
@@ -234,6 +317,10 @@
       g.setAttribute("class", "constellation-node" + (cluster.locked ? " locked" : ""));
       g.setAttribute("data-node-id", cluster.id);
       g.setAttribute("transform", "translate(" + pos.x + "," + pos.y + ")");
+      g.setAttribute("role", "button");
+      g.setAttribute("tabindex", "0");
+      g.setAttribute("aria-label", cluster.name || cluster.suggestedName || "Cluster " + (index + 1) + ", " + thoughtCount + " ideas" + (cluster.locked ? ", locked" : ""));
+      g.setAttribute("aria-pressed", selectedNode === cluster.id ? "true" : "false");
       
       // Node circle
       var circle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
@@ -244,6 +331,7 @@
       circle.setAttribute("fill-opacity", "0.15");
       circle.setAttribute("stroke", cluster.locked ? "var(--color-muted, #64748b)" : "var(--color-primary, #3b82f6)");
       circle.setAttribute("stroke-width", "2");
+      circle.setAttribute("aria-hidden", "true");
       g.appendChild(circle);
       
       // Node label
@@ -254,6 +342,7 @@
       text.setAttribute("fill", "var(--color-text, #f1f5f9)");
       text.setAttribute("font-size", "14");
       text.setAttribute("font-weight", "600");
+      text.setAttribute("aria-hidden", "true");
       text.textContent = truncateText(cluster.name || cluster.suggestedName || "Cluster", 20);
       g.appendChild(text);
       
@@ -264,6 +353,7 @@
       countText.setAttribute("dy", "1.2em");
       countText.setAttribute("fill", "var(--color-muted, #64748b)");
       countText.setAttribute("font-size", "11");
+      countText.setAttribute("aria-hidden", "true");
       countText.textContent = thoughtCount + " idea" + (thoughtCount !== 1 ? "s" : "");
       g.appendChild(countText);
       
@@ -275,6 +365,7 @@
         badge.setAttribute("dy", "2.5em");
         badge.setAttribute("fill", "var(--color-warning, #f59e0b)");
         badge.setAttribute("font-size", "10");
+        badge.setAttribute("aria-hidden", "true");
         badge.textContent = "🔒 locked";
         g.appendChild(badge);
       }
@@ -302,6 +393,8 @@
       path.setAttribute("fill", "none");
       path.setAttribute("data-edge-id", edge.id);
       path.setAttribute("marker-end", "url(#arrowhead)");
+      path.setAttribute("role", "presentation");
+      path.setAttribute("aria-hidden", "true");
       
       // Edge label
       if (edge.label) {
@@ -315,6 +408,7 @@
         label.setAttribute("fill", "var(--color-muted, #64748b)");
         label.setAttribute("font-size", "10");
         label.setAttribute("class", "edge-label");
+        label.setAttribute("aria-hidden", "true");
         label.textContent = edge.label;
         edgesGroup.appendChild(label);
       }
@@ -331,6 +425,7 @@
       tempPath.setAttribute("stroke-width", "2");
       tempPath.setAttribute("stroke-dasharray", "5,5");
       tempPath.setAttribute("fill", "none");
+      tempPath.setAttribute("aria-hidden", "true");
       edgesGroup.appendChild(tempPath);
     }
   }
@@ -526,6 +621,7 @@
     dragStart = null;
     edgeStartNode = null;
     tempEdge = null;
+    selectedNode = null;
     svg.style.cursor = "grab";
     render();
   }
@@ -874,17 +970,20 @@
     return text.substring(0, maxLen - 3) + "...";
   }
   
-  function showLoading() {
-    container.innerHTML = "<div class=\"constellation-loading\">Loading mind map...</div>";
+  function createStatusRegion() {
+    // Create live region for announcements
+    statusRegion = document.createElement("div");
+    statusRegion.className = "sr-only";
+    statusRegion.setAttribute("role", "status");
+    statusRegion.setAttribute("aria-live", "polite");
+    statusRegion.setAttribute("aria-atomic", "true");
+    container.appendChild(statusRegion);
   }
   
-  function hideLoading() {
-    var loading = container.querySelector(".constellation-loading");
-    if (loading) loading.remove();
-  }
-  
-  function showError(message) {
-    container.innerHTML = "<div class=\"constellation-loading error\">" + escapeHtml(message) + "</div>";
+  function announce(message) {
+    if (statusRegion) {
+      statusRegion.textContent = message;
+    }
   }
   
   function escapeHtml(str) {

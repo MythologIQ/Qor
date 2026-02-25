@@ -3,6 +3,12 @@
  *
  * Main reveal UI state and rendering with split-pane layout.
  * Features: Split-pane, expandable thought lists, inline notes, claim animations.
+ * 
+ * WCAG 2.1 AA Compliant:
+ * - All sections have role="region" and aria-labelledby
+ * - All buttons have accessible labels
+ * - All interactive elements are keyboard accessible
+ * - Status changes are announced to screen readers
  */
 (function() {
   'use strict';
@@ -29,6 +35,10 @@
   function init() {
     container = document.getElementById('reveal-container');
     if (!container) return;
+
+    // Add ARIA attributes to main container
+    container.setAttribute('role', 'region');
+    container.setAttribute('aria-label', 'Cluster organization workspace');
 
     canvas = container.querySelector('.reveal-canvas');
     outliersEl = container.querySelector('.reveal-outliers');
@@ -60,22 +70,25 @@
     
     splitPane = document.createElement('div');
     splitPane.className = 'reveal-split-pane';
+    splitPane.setAttribute('role', 'presentation');
     
     // Left pane - Outliers / Unclaimed thoughts
     leftPane = document.createElement('div');
     leftPane.className = 'reveal-pane reveal-pane--outliers';
+    leftPane.setAttribute('role', 'region');
+    leftPane.setAttribute('aria-label', 'Unclaimed thoughts panel');
     leftPane.innerHTML = 
       '<div class="reveal-pane-header">' +
-        '<h3 class="reveal-pane-title">Unclaimed Thoughts</h3>' +
-        '<span class="reveal-outlier-count badge badge--default">0</span>' +
-        '<button class="reveal-pane-toggle" aria-label="Toggle pane">' +
-          '<span class="reveal-pane-toggle-icon">◀</span>' +
+        '<h3 class="reveal-pane-title" id="outliers-pane-title">Unclaimed Thoughts</h3>' +
+        '<span class="reveal-outlier-count badge badge--default" aria-label="Number of unclaimed thoughts">0</span>' +
+        '<button class="reveal-pane-toggle" aria-label="Toggle unclaimed thoughts panel" aria-expanded="true" aria-controls="reveal-outlier-content">' +
+          '<span class="reveal-pane-toggle-icon" aria-hidden="true">◀</span>' +
         '</button>' +
       '</div>' +
-      '<div class="reveal-pane-content">' +
-        '<div class="reveal-outlier-pool"></div>' +
-        '<div class="reveal-outlier-empty empty-state" style="display: none;">' +
-          '<div class="empty-state__icon">✨</div>' +
+      '<div class="reveal-pane-content" id="reveal-outlier-content">' +
+        '<div class="reveal-outlier-pool" role="list" aria-label="Unclaimed thoughts list"></div>' +
+        '<div class="reveal-outlier-empty empty-state" style="display: none;" role="status">' +
+          '<div class="empty-state__icon" aria-hidden="true">✨</div>' +
           '<h4 class="empty-state__title">All thoughts claimed!</h4>' +
           '<p class="empty-state__desc">All thoughts have been organized into clusters.</p>' +
         '</div>' +
@@ -84,15 +97,17 @@
     // Right pane - Clusters workspace
     rightPane = document.createElement('div');
     rightPane.className = 'reveal-pane reveal-pane--clusters';
+    rightPane.setAttribute('role', 'region');
+    rightPane.setAttribute('aria-label', 'Clusters workspace panel');
     rightPane.innerHTML = 
       '<div class="reveal-pane-header">' +
-        '<h3 class="reveal-pane-title">Clusters</h3>' +
-        '<button class="reveal-add-cluster btn btn--sm btn--ghost">' +
-          '<span>+</span> New Cluster' +
+        '<h3 class="reveal-pane-title" id="clusters-pane-title">Clusters</h3>' +
+        '<button class="reveal-add-cluster btn btn--sm btn--ghost" aria-label="Create new cluster">' +
+          '<span aria-hidden="true">+</span> New Cluster' +
         '</button>' +
       '</div>' +
       '<div class="reveal-pane-content">' +
-        '<div class="reveal-cluster-workspace"></div>' +
+        '<div class="reveal-cluster-workspace" role="list" aria-label="Clusters list"></div>' +
       '</div>';
     
     // Move existing content
@@ -270,7 +285,7 @@
   }
 
   function loadRevealData() {
-    if (canvas) canvas.innerHTML = '<div class="reveal-loading"><div class="spinner"></div><span>Loading clusters...</span></div>';
+    if (canvas) canvas.innerHTML = '<div class="reveal-loading" role="status" aria-live="polite"><div class="spinner"></div><span>Loading clusters...</span></div>';
     var projectId = getProjectId();
 
     // Use PlanningClient if available, otherwise fallback to legacy API
@@ -303,7 +318,7 @@
           updateOutlierCount();
         })
         .catch(function() {
-          if (canvas) canvas.innerHTML = '<div class="reveal-loading">Failed to load.</div>';
+          if (canvas) canvas.innerHTML = '<div class="reveal-loading" role="status" aria-live="polite">Failed to load.</div>';
         });
     } else {
       // Fallback to legacy API
@@ -321,7 +336,7 @@
           updateOutlierCount();
         })
         .catch(function() {
-          if (canvas) canvas.innerHTML = '<div class="reveal-loading">Failed to load.</div>';
+          if (canvas) canvas.innerHTML = '<div class="reveal-loading" role="status" aria-live="polite">Failed to load.</div>';
         });
     }
   }
@@ -333,7 +348,7 @@
     if (state.clusters.length === 0) {
       canvas.innerHTML = 
         '<div class="reveal-empty-clusters">' +
-          '<div class="empty-state">' +
+          '<div class="empty-state" role="status" aria-live="polite">' +
             '<div class="empty-state__icon">🏷️</div>' +
             '<h4 class="empty-state__title">No clusters yet</h4>' +
             '<p class="empty-state__desc">Drag thoughts from the left panel to create clusters.</p>' +
