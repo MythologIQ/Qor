@@ -45,6 +45,7 @@
     "ui:mfa:secret": "node scripts/generate-mfa-secret.mjs",
     "keys:rotate": "node scripts/rotate-actor-keys.mjs",
     "assumptions:check": "node scripts/check-zo-assumptions.mjs",
+    "hooks:install": "node scripts/install-hooks.mjs",
     "release:gate": "node scripts/release-gate.mjs",
     "verify:all": "npm run typecheck && npm run lint && npm test && npm run build && npm run assumptions:check",
     "zo:bundle": "npm run ui:sync && powershell -ExecutionPolicy Bypass -File scripts/create-zo-upload.ps1",
