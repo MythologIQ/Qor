@@ -236,8 +236,9 @@ describe("Planning API Security Audit", () => {
         headers: { "x-qore-api-key": apiKey },
       });
       expect(res.status).toBe(200);
-      const json = await res.json() as { thoughts: Array<{ content: string }> };
-      expect(json.thoughts.length).toBeGreaterThan(0);
+      const json = await res.json() as { data: Array<{ content: string }>; meta: { pagination: { total: number } } };
+      expect(json.data.length).toBeGreaterThan(0);
+      expect(json.meta.pagination.total).toBeGreaterThan(0);
     });
   });
 
