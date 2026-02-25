@@ -1,5 +1,6 @@
 import { readFile, writeFile, mkdir, access, stat } from "fs/promises";
 import { join } from "path";
+import { randomUUID } from "crypto";
 import { createLogger } from "./Logger";
 import { PlanningStoreError } from "./StoreErrors";
 import { StoreIntegrity } from "./StoreIntegrity";
@@ -45,6 +46,38 @@ export interface PaginatedThoughts {
   limit: number;
   hasMore: boolean;
 }
+
+/**
+ * Result of batch thought import
+ */
+export interface BatchImportResult {
+  succeeded: Array<{ thoughtId: string; index: number }>;
+  failed: Array<{ index: number; error: string }>;
+  totalAttempted: number;
+  totalSucceeded: number;
+  totalFailed: number;
+}
+
+/**
+ * Options for batch thought import
+ */
+export interface BatchImportOptions {
+  skipDuplicates?: boolean;
+  continueOnError?: boolean;
+  actorId?: string;
+}
+
+/**
+ * Input type for batch thought import
+ * All fields are optional except those needed for validation
+ */
+export type BatchThoughtInput = {
+  content: string;
+  source: "text" | "voice";
+  capturedBy: string;
+  tags?: string[];
+  status?: "raw" | "claimed";
+};
 
 export class VoidStore {
   private ledger?: PlanningLedger;
@@ -486,6 +519,177 @@ export class VoidStore {
   async getThoughtsByTags(tags: string[]): Promise<VoidThought[]> {
     const thoughts = await this.getAllThoughts();
     return thoughts.filter((t) => t.tags?.some((tag) => tags.includes(tag)));
+  }
+
+  /**
+   * Import multiple thoughts in a single batch operation
+   * Optimized for bulk imports from brainstorming sessions
+   */
+  async addThoughtsBatch(
+    thoughts: BatchThoughtInput[],
+    options: BatchImportOptions = {},
+  ): Promise<BatchImportResult> {
+    const { skipDuplicates = true, continueOnError = true, actorId = "system" } = options;
+    
+    logger.info("Starting batch thought import", { 
+      projectId: this.projectId, 
+      count: thoughts.length,
+      skipDuplicates,
+    });
+
+    await this.ensureDirectory();
+
+    const result: BatchImportResult = {
+      succeeded: [],
+      failed: [],
+      totalAttempted: thoughts.length,
+      totalSucceeded: 0,
+      totalFailed: 0,
+    };
+
+    // Check for existing thoughts if skipDuplicates is true
+    let existingIds = new Set<string>();
+    if (skipDuplicates) {
+      const existing = await this.getAllThoughts();
+      // Create a hash of content+source to detect duplicates
+      existingIds = new Set(
+        existing.map((t) => `${t.content}:${t.source}`)
+      );
+    }
+
+    const checksumBefore = await this.integrity?.getChecksum("void", "thoughts.jsonl") ?? null;
+
+    // Get current file size for index offset
+    let byteOffset = 0;
+    try {
+      const stats = await stat(this.thoughtsFile);
+      byteOffset = stats.size;
+    } catch {
+      // File doesn't exist yet, offset is 0
+    }
+
+    // Process thoughts in batch
+    const lines: string[] = [];
+    const indexEntries: ThoughtIndexEntry[] = [];
+    const timestamp = new Date().toISOString();
+
+    for (let i = 0; i < thoughts.length; i++) {
+      const input = thoughts[i];
+      
+      try {
+        // Validate required fields
+        if (!input.content || !input.source || !input.capturedBy) {
+          result.failed.push({ 
+            index: i, 
+            error: "Missing required fields: content, source, capturedBy" 
+          });
+          result.totalFailed++;
+          if (!continueOnError) break;
+          continue;
+        }
+
+        // Check for duplicates
+        const contentKey = `${input.content}:${input.source}`;
+        if (skipDuplicates && existingIds.has(contentKey)) {
+          result.failed.push({ 
+            index: i, 
+            error: "Duplicate thought (same content and source)" 
+          });
+          result.totalFailed++;
+          continue;
+        }
+
+        // Create full thought object
+        const thoughtId = `thought_${randomUUID?.()?.slice(0, 8) ?? Date.now().toString(36)}_${i}`;
+        const thought: VoidThought = {
+          thoughtId,
+          projectId: this.projectId,
+          content: input.content,
+          source: input.source,
+          capturedAt: timestamp,
+          capturedBy: input.capturedBy,
+          tags: input.tags ?? [],
+          status: input.status ?? "raw",
+        };
+
+        const line = JSON.stringify(thought) + "\n";
+        const byteLength = Buffer.byteLength(line, "utf-8");
+        
+        lines.push(line);
+        indexEntries.push({
+          thoughtId,
+          byteOffset,
+          byteLength,
+        });
+
+        byteOffset += byteLength;
+        result.succeeded.push({ thoughtId, index: i });
+        result.totalSucceeded++;
+
+      } catch (err) {
+        result.failed.push({ 
+          index: i, 
+          error: err instanceof Error ? err.message : "Unknown error" 
+        });
+        result.totalFailed++;
+        if (!continueOnError) break;
+      }
+    }
+
+    // Write all thoughts in a single operation
+    if (lines.length > 0) {
+      try {
+        await writeFile(this.thoughtsFile, lines.join(""), { flag: "a" });
+        
+        // Append index entries
+        const indexContent = indexEntries
+          .map((e) => JSON.stringify(e))
+          .join("\n") + "\n";
+        await writeFile(this.indexFile, indexContent, { flag: "a" });
+        
+        // Invalidate cache
+        this.indexCache = null;
+      } catch (e) {
+        // On write failure, mark all as failed
+        for (const success of result.succeeded) {
+          result.failed.push({ 
+            index: success.index, 
+            error: "Write failed after validation" 
+          });
+        }
+        result.succeeded = [];
+        result.totalFailed = result.totalAttempted;
+        result.totalSucceeded = 0;
+      }
+    }
+
+    const checksumAfter = await this.integrity?.getChecksum("void", "thoughts.jsonl") ?? null;
+
+    // Log single ledger entry for batch operation
+    if (this.ledger && result.totalSucceeded > 0) {
+      await this.ledger.appendEntry({
+        projectId: this.projectId,
+        view: "void",
+        action: "create",
+        artifactId: `batch_${result.totalSucceeded}_thoughts`,
+        actorId,
+        checksumBefore,
+        checksumAfter,
+        payload: { 
+          batchImport: true, 
+          count: result.totalSucceeded,
+          failed: result.totalFailed,
+        },
+      });
+    }
+
+    logger.info("Batch thought import complete", { 
+      projectId: this.projectId, 
+      succeeded: result.totalSucceeded,
+      failed: result.totalFailed,
+    });
+
+    return result;
   }
 }
 
