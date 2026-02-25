@@ -174,10 +174,45 @@ export class PlanningRoutes {
         return this.sendJson(res, 200, result);
       }
 
-      // GET /api/projects/:projectId/void/thoughts - List thoughts
+      // GET /api/projects/:projectId/void/thoughts - List thoughts (with pagination)
       if (method === "GET" && url === `/api/projects/${projectId}/void/thoughts`) {
-        const thoughts = await voidStore.getAllThoughts();
-        return this.sendJson(res, 200, { thoughts });
+        // Parse query parameters for pagination
+        const urlObj = new URL(req.url ?? "", "http://localhost");
+        const page = parseInt(urlObj.searchParams.get("page") ?? "1", 10);
+        const limit = parseInt(urlObj.searchParams.get("limit") ?? "50", 10);
+        const offset = (page - 1) * limit;
+        
+        // Parse filter parameters
+        const status = urlObj.searchParams.get("status") as "raw" | "claimed" | null;
+        const tagsParam = urlObj.searchParams.get("tags");
+        const tags = tagsParam ? tagsParam.split(",").map(t => t.trim()) : undefined;
+        const source = urlObj.searchParams.get("source");
+        
+        // Build filter object
+        const filter: { status?: "raw" | "claimed"; tags?: string[]; source?: string } = {};
+        if (status) filter.status = status;
+        if (tags && tags.length > 0) filter.tags = tags;
+        if (source) filter.source = source;
+        
+        // Get paginated thoughts
+        const result = await voidStore.getThoughts({
+          offset,
+          limit,
+          filter: Object.keys(filter).length > 0 ? filter : undefined,
+        });
+        
+        // Return in standard envelope format
+        return this.sendJson(res, 200, {
+          data: result.thoughts,
+          meta: {
+            pagination: {
+              page,
+              limit,
+              total: result.total,
+              hasMore: result.hasMore,
+            },
+          },
+        });
       }
 
       // POST /api/projects/:projectId/void/thoughts - Add thought
