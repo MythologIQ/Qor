@@ -1,6 +1,7 @@
 /**
  * Zo Navigation Sidebar Component
  * Provides persistent navigation to all project views.
+ * Supports mobile hamburger menu with slide-out sidebar.
  * @module zo/ui-shell/shared/zo-nav
  */
 (function() {
@@ -28,11 +29,14 @@
     recommendedNext: null,
     collapsed: false,
     integrityStatus: "healthy",
-    victorStance: "support"
+    victorStance: "support",
+    mobileMenuOpen: false
   };
 
   function ZoNav() {
     this.container = null;
+    this.mobileHeaderContainer = null;
+    this.backdropContainer = null;
     this.onNavigate = null;
     this.breadcrumbContainer = null;
     this.progressContainer = null;
@@ -40,9 +44,14 @@
     this.headerContainer = null;
   }
 
-  ZoNav.prototype.mount = function(container) {
+  ZoNav.prototype.mount = function(container, options) {
+    options = options || {};
     this.container = container;
+    this.mobileHeaderContainer = options.mobileHeaderContainer || null;
+    this.backdropContainer = options.backdropContainer || null;
     this.render();
+    this.renderMobileHeader();
+    this.renderBackdrop();
     this.attachHandlers();
     this.checkResponsive();
     this.showSubpanel(state.currentRoute);
@@ -73,18 +82,27 @@
         self.navigateToCluster(clusterId);
       }
     });
+
+    // Close mobile menu on escape key
+    document.addEventListener("keydown", function(e) {
+      if (e.key === "Escape" && state.mobileMenuOpen) {
+        self.closeMobileMenu();
+      }
+    });
   };
 
   ZoNav.prototype.setRoute = function(route) {
     state.currentRoute = route;
     this.render();
     this.showSubpanel(route);
+    this.updateMobileHeaderTitle();
   };
 
   ZoNav.prototype.setProjectId = function(projectId, projectName) {
     state.projectId = projectId;
     state.projectName = projectName || "Project";
     this.render();
+    this.updateMobileHeaderTitle();
     this.fetchNavState();
   };
 
@@ -142,6 +160,11 @@
       }
       // Default is fade (handled by .active animation)
     }
+    
+    // Close mobile menu after navigation
+    if (state.mobileMenuOpen) {
+      this.closeMobileMenu();
+    }
   };
 
   ZoNav.prototype.navigateToCluster = function(clusterId) {
@@ -152,9 +175,156 @@
     }));
   };
 
+  // ==========================================
+  // MOBILE HEADER RENDERING
+  // ==========================================
+
+  ZoNav.prototype.renderMobileHeader = function() {
+    if (!this.mobileHeaderContainer) return;
+    
+    var currentItem = NAV_ITEMS.find(function(item) {
+      return item.route === state.currentRoute;
+    });
+    var currentLabel = currentItem ? currentItem.label : "Unknown";
+    
+    var html = '<div class="mobile-header">';
+    html += '<button class="mobile-header__menu-btn" type="button" aria-label="Open navigation menu" aria-expanded="' + state.mobileMenuOpen + '">';
+    html += '<span class="hamburger' + (state.mobileMenuOpen ? ' hamburger--active' : '') + '">';
+    html += '<span class="hamburger__line"></span>';
+    html += '<span class="hamburger__line"></span>';
+    html += '<span class="hamburger__line"></span>';
+    html += '</span>';
+    html += '</button>';
+    html += '<h1 class="mobile-header__title">' + this.escapeHtml(currentLabel) + '</h1>';
+    html += '<div class="mobile-header__actions">';
+    html += '<div class="mobile-header__status">';
+    // Integrity status dot
+    var statusClass = "zo-nav__status-dot--" + state.integrityStatus;
+    html += '<span class="zo-nav__status-dot ' + statusClass + '"></span>';
+    // Victor stance badge
+    var stanceLabels = { support: "S", challenge: "C", mixed: "M", "red-flag": "R" };
+    var stanceColors = { 
+      support: "zo-nav__stance--support", 
+      challenge: "zo-nav__stance--challenge", 
+      mixed: "zo-nav__stance--mixed", 
+      "red-flag": "zo-nav__stance--red-flag" 
+    };
+    html += '<span class="zo-nav__stance ' + (stanceColors[state.victorStance] || "") + '" title="Victor: ' + state.victorStance + '">';
+    html += stanceLabels[state.victorStance] || "S";
+    html += '</span>';
+    html += '</div>';
+    html += '</div>';
+    html += '</div>';
+    
+    this.mobileHeaderContainer.innerHTML = html;
+    this.attachMobileHeaderHandlers();
+  };
+
+  ZoNav.prototype.renderBackdrop = function() {
+    if (!this.backdropContainer) return;
+    
+    var html = '<div class="sidebar-backdrop' + (state.mobileMenuOpen ? ' sidebar-backdrop--visible' : '') + '"></div>';
+    this.backdropContainer.innerHTML = html;
+    
+    // Attach backdrop click handler
+    var backdrop = this.backdropContainer.querySelector(".sidebar-backdrop");
+    if (backdrop) {
+      var self = this;
+      backdrop.addEventListener("click", function() {
+        self.closeMobileMenu();
+      });
+    }
+  };
+
+  ZoNav.prototype.updateMobileHeaderTitle = function() {
+    if (!this.mobileHeaderContainer) return;
+    
+    var titleEl = this.mobileHeaderContainer.querySelector(".mobile-header__title");
+    if (titleEl) {
+      var currentItem = NAV_ITEMS.find(function(item) {
+        return item.route === state.currentRoute;
+      });
+      titleEl.textContent = currentItem ? currentItem.label : "Unknown";
+    }
+  };
+
+  ZoNav.prototype.attachMobileHeaderHandlers = function() {
+    var self = this;
+    var menuBtn = this.mobileHeaderContainer.querySelector(".mobile-header__menu-btn");
+    if (menuBtn) {
+      menuBtn.addEventListener("click", function() {
+        self.toggleMobileMenu();
+      });
+    }
+  };
+
+  ZoNav.prototype.toggleMobileMenu = function() {
+    if (state.mobileMenuOpen) {
+      this.closeMobileMenu();
+    } else {
+      this.openMobileMenu();
+    }
+  };
+
+  ZoNav.prototype.openMobileMenu = function() {
+    state.mobileMenuOpen = true;
+    this.applyMobileMenuState();
+    document.body.style.overflow = "hidden"; // Prevent scroll
+  };
+
+  ZoNav.prototype.closeMobileMenu = function() {
+    state.mobileMenuOpen = false;
+    this.applyMobileMenuState();
+    document.body.style.overflow = ""; // Restore scroll
+  };
+
+  ZoNav.prototype.applyMobileMenuState = function() {
+    // Update sidebar
+    var sidebar = this.container.querySelector(".zo-nav");
+    if (sidebar) {
+      if (state.mobileMenuOpen) {
+        sidebar.classList.add("zo-nav--open");
+      } else {
+        sidebar.classList.remove("zo-nav--open");
+      }
+    }
+    
+    // Update backdrop
+    if (this.backdropContainer) {
+      var backdrop = this.backdropContainer.querySelector(".sidebar-backdrop");
+      if (backdrop) {
+        if (state.mobileMenuOpen) {
+          backdrop.classList.add("sidebar-backdrop--visible");
+        } else {
+          backdrop.classList.remove("sidebar-backdrop--visible");
+        }
+      }
+    }
+    
+    // Update hamburger button
+    if (this.mobileHeaderContainer) {
+      var menuBtn = this.mobileHeaderContainer.querySelector(".mobile-header__menu-btn");
+      if (menuBtn) {
+        menuBtn.setAttribute("aria-expanded", state.mobileMenuOpen);
+        var hamburger = menuBtn.querySelector(".hamburger");
+        if (hamburger) {
+          if (state.mobileMenuOpen) {
+            hamburger.classList.add("hamburger--active");
+          } else {
+            hamburger.classList.remove("hamburger--active");
+          }
+        }
+      }
+    }
+  };
+
   ZoNav.prototype.render = function() {
     if (!this.container) return;
-    var html = '<nav class="zo-nav' + (state.collapsed ? ' zo-nav--collapsed' : '') + '">';
+    var navClass = "zo-nav";
+    if (state.collapsed) navClass += " zo-nav--collapsed";
+    if (state.mobileMenuOpen) navClass += " zo-nav--open";
+    
+    var html = '<nav class="' + navClass + '" role="navigation" aria-label="Main navigation">';
 
     // Project header with integrity and Victor stance
     html += this.renderProjectHeader();
@@ -174,6 +344,9 @@
     html += '</nav>';
     this.container.innerHTML = html;
     this.attachHandlers();
+    
+    // Re-render mobile header
+    this.renderMobileHeader();
   };
 
   ZoNav.prototype.renderProjectHeader = function() {
@@ -409,9 +582,16 @@
 
   ZoNav.prototype.checkResponsive = function() {
     var wasCollapsed = state.collapsed;
-    state.collapsed = window.innerWidth < 768;
+    var isMobile = window.innerWidth < 768;
+    state.collapsed = isMobile;
+    
     if (wasCollapsed !== state.collapsed) {
       this.render();
+    }
+    
+    // Close mobile menu on resize to desktop
+    if (!isMobile && state.mobileMenuOpen) {
+      this.closeMobileMenu();
     }
   };
 

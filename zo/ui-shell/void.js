@@ -269,11 +269,16 @@
     if (!tagChips) return;
     
     tagChips.innerHTML = currentTags.map(function(tag, index) {
-      return '<span class="tag-chip" data-index="' + index + '">' +
-        escapeHtml(tag) +
-        '<button class="tag-chip-remove" aria-label="Remove tag">×</button>' +
+      return '<span class="tag-chip" data-index="' + index + '" role="listitem">' +
+        '<span class="sr-only">Tag: </span>' + escapeHtml(tag) +
+        '<button class="tag-chip-remove" aria-label="Remove tag: ' + escapeHtml(tag) + '">×</button>' +
         '</span>';
     }).join('');
+    
+    if (currentTags.length > 0) {
+      tagChips.setAttribute('role', 'list');
+      tagChips.setAttribute('aria-label', 'Selected tags');
+    }
     
     // Add remove handlers
     var removeBtns = tagChips.querySelectorAll('.tag-chip-remove');
@@ -288,25 +293,30 @@
   function showTagSuggestions(suggestions) {
     if (!tagSuggestions) return;
     
-    var html = suggestions.map(function(tag) {
-      return '<button class="tag-suggestion" data-tag="' + escapeHtml(tag) + '">' +
+    var html = '<div role="listbox" aria-label="Tag suggestions">';
+    html += suggestions.map(function(tag) {
+      return '<button class="tag-suggestion" data-tag="' + escapeHtml(tag) + '" role="option">' +
         escapeHtml(tag) + '</button>';
     }).join('');
     
     // Also show "Create new" option
     var value = tagInput.value.trim();
     if (value && suggestions.indexOf(value) === -1) {
-      html = '<button class="tag-suggestion tag-suggestion-new" data-tag="' + escapeHtml(value) + '">' +
+      html = '<button class="tag-suggestion tag-suggestion-new" data-tag="' + escapeHtml(value) + '" role="option">' +
         'Create "' + escapeHtml(value) + '"</button>' + html;
     }
     
-    if (!html) {
+    html += '</div>';
+    
+    if (suggestions.length === 0 && !value) {
       hideTagSuggestions();
       return;
     }
     
     tagSuggestions.innerHTML = html;
     tagSuggestions.style.display = 'block';
+    tagSuggestions.setAttribute('role', 'listbox');
+    tagSuggestions.setAttribute('aria-label', 'Tag suggestions');
     
     // Add click handlers
     var btns = tagSuggestions.querySelectorAll('.tag-suggestion');
@@ -366,36 +376,46 @@
     if (!thoughtList) return;
     
     if (thoughts.length === 0) {
-      thoughtList.innerHTML = '<div class="void-thought-empty">' +
-        '<span class="void-thought-empty-icon">💡</span>' +
+      thoughtList.innerHTML = '<div class="void-thought-empty" role="status">' +
+        '<span class="void-thought-empty-icon" aria-hidden="true">💡</span>' +
         '<span class="void-thought-empty-text">No thoughts captured yet</span>' +
         '</div>';
       return;
     }
     
+    thoughtList.setAttribute('role', 'list');
+    thoughtList.setAttribute('aria-label', 'Captured thoughts');
+    
     thoughtList.innerHTML = thoughts.map(function(thought, index) {
       var sourceIcon = thought.source === 'voice' ? '🎤' : '⌨️';
+      var sourceLabel = thought.source === 'voice' ? 'Voice capture' : 'Text capture';
       var isEditingThis = isEditing === thought.thoughtId;
       
-      return '<div class="void-thought-item' + (isEditingThis ? ' void-thought-item--editing' : '') + '" data-thought-id="' + thought.thoughtId + '">' +
+      return '<div class="void-thought-item' + (isEditingThis ? ' void-thought-item--editing' : '') + '" ' +
+        'data-thought-id="' + thought.thoughtId + '" ' +
+        'role="listitem" ' +
+        'aria-label="Thought captured ' + formatTimeAgo(thought.capturedAt) + '">' +
         '<div class="void-thought-header">' +
-          '<span class="void-thought-source" title="' + (thought.source === 'voice' ? 'Voice capture' : 'Text capture') + '">' + sourceIcon + '</span>' +
+          '<span class="void-thought-source" title="' + sourceLabel + '" aria-label="' + sourceLabel + '">' +
+            '<span aria-hidden="true">' + sourceIcon + '</span>' +
+            '<span class="sr-only">' + sourceLabel + '</span>' +
+          '</span>' +
           '<span class="void-thought-time">' + formatTimeAgo(thought.capturedAt) + '</span>' +
           '<div class="void-thought-actions">' +
-            '<button class="void-thought-edit" title="Edit">✏️</button>' +
-            '<button class="void-thought-delete" title="Delete">🗑️</button>' +
+            '<button class="void-thought-edit" title="Edit" aria-label="Edit thought">✏️</button>' +
+            '<button class="void-thought-delete" title="Delete" aria-label="Delete thought">🗑️</button>' +
           '</div>' +
         '</div>' +
         (isEditingThis
-          ? '<textarea class="void-thought-edit-input">' + escapeHtml(thought.content) + '</textarea>' +
+          ? '<textarea class="void-thought-edit-input" aria-label="Edit thought content">' + escapeHtml(thought.content) + '</textarea>' +
             '<div class="void-thought-edit-actions">' +
-              '<button class="btn btn--sm btn--secondary void-thought-cancel">Cancel</button>' +
-              '<button class="btn btn--sm btn--primary void-thought-save">Save</button>' +
+              '<button class="btn btn--sm btn--secondary void-thought-cancel" aria-label="Cancel edit">Cancel</button>' +
+              '<button class="btn btn--sm btn--primary void-thought-save" aria-label="Save changes">Save</button>' +
             '</div>'
           : '<div class="void-thought-content">' + escapeHtml(thought.content) + '</div>') +
         (thought.tags && thought.tags.length > 0
-          ? '<div class="void-thought-tags">' +
-              thought.tags.map(function(tag) { return '<span class="void-thought-tag">' + escapeHtml(tag) + '</span>'; }).join('') +
+          ? '<div class="void-thought-tags" role="list" aria-label="Tags">' +
+              thought.tags.map(function(tag) { return '<span class="void-thought-tag" role="listitem">' + escapeHtml(tag) + '</span>'; }).join('') +
             '</div>'
           : '') +
       '</div>';

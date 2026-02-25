@@ -1,6 +1,7 @@
 /**
  * Zo Navigation Sidebar Styles
  * Uses theme variables from legacy-roadmap.css
+ * Integrates with responsive.css for mobile/tablet/desktop layouts
  */
 .zo-nav {
   width: 220px;
@@ -8,10 +9,40 @@
   border-right: 1px solid var(--line);
   display: flex;
   flex-direction: column;
-  transition: width 0.2s ease;
+  transition: width 0.2s ease, transform 0.25s ease-out;
   flex-shrink: 0;
   height: 100%;
   overflow-x: hidden;
+}
+
+/* Mobile: Full height overlay */
+@media (max-width: 767px) {
+  .zo-nav {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 280px;
+    height: 100vh;
+    z-index: var(--z-fixed, 300);
+    transform: translateX(-100%);
+    box-shadow: none;
+  }
+  
+  .zo-nav--open {
+    transform: translateX(0);
+    box-shadow: 4px 0 24px rgba(0, 0, 0, 0.4);
+  }
+}
+
+/* Tablet: Collapsed sidebar */
+@media (min-width: 768px) and (max-width: 1023px) {
+  .zo-nav {
+    width: 72px;
+  }
+  
+  .zo-nav--expanded {
+    width: 220px;
+  }
 }
 
 /* In-panel positioning (inside Projects tab) */
@@ -417,7 +448,130 @@
   opacity: 1;
 }
 
-@media (max-width: 768px) {
+/* ============================================
+   MOBILE HEADER (Hamburger Menu)
+   ============================================ */
+
+.mobile-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-3) var(--space-4);
+  background: var(--bg);
+  border-bottom: 1px solid var(--line);
+  position: sticky;
+  top: 0;
+  z-index: var(--z-sticky, 200);
+}
+
+@media (min-width: 768px) {
+  .mobile-header {
+    display: none;
+  }
+}
+
+.mobile-header__menu-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  background: transparent;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg, 8px);
+  color: var(--text);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.mobile-header__menu-btn:hover {
+  background: var(--surface-2);
+  border-color: var(--primary);
+}
+
+.mobile-header__menu-btn:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+/* Hamburger icon */
+.hamburger {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  width: 20px;
+  height: 14px;
+}
+
+.hamburger__line {
+  display: block;
+  height: 2px;
+  width: 100%;
+  background: currentColor;
+  border-radius: 1px;
+  transition: transform 0.2s ease, opacity 0.2s ease;
+  transform-origin: center;
+}
+
+/* Hamburger animation when active */
+.hamburger--active .hamburger__line:nth-child(1) {
+  transform: translateY(6px) rotate(45deg);
+}
+
+.hamburger--active .hamburger__line:nth-child(2) {
+  opacity: 0;
+}
+
+.hamburger--active .hamburger__line:nth-child(3) {
+  transform: translateY(-6px) rotate(-45deg);
+}
+
+.mobile-header__title {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 200px;
+}
+
+.mobile-header__actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.mobile-header__status {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+/* Sidebar backdrop for mobile */
+.sidebar-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(3, 8, 18, 0.75);
+  z-index: calc(var(--z-fixed, 300) - 1);
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.25s ease, visibility 0.25s ease;
+  backdrop-filter: blur(4px);
+}
+
+.sidebar-backdrop--visible {
+  opacity: 1;
+  visibility: visible;
+}
+
+@media (min-width: 768px) {
+  .sidebar-backdrop {
+    display: none;
+  }
+}
+
+@media (max-width: 767px) {
   .zo-nav {
     width: 56px;
   }
@@ -430,6 +584,19 @@
   }
   .zo-nav__item:hover .zo-nav__tooltip {
     opacity: 1;
+  }
+  
+  /* Override for open mobile nav */
+  .zo-nav--open .zo-nav__label,
+  .zo-nav--open .zo-nav__badge,
+  .zo-nav--open .zo-nav__progress,
+  .zo-nav--open .zo-nav__prompt,
+  .zo-nav--open .zo-nav__breadcrumbs {
+    display: flex;
+  }
+  
+  .zo-nav--open {
+    width: 280px;
   }
 }
 

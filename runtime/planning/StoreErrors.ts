@@ -1,4 +1,4 @@
-import { RuntimeError, RuntimeErrorCode } from "../service/errors";
+import { RuntimeError, ErrorCode } from "../service/errors";
 
 export type PlanningStoreErrorCode =
   | "PROJECT_NOT_FOUND"
@@ -38,7 +38,7 @@ export class PlanningStoreError extends RuntimeError {
     details?: Record<string, unknown>,
   ) {
     super(
-      code as RuntimeErrorCode,
+      code as ErrorCode,
       message || errorMessages[code],
       details,
     );

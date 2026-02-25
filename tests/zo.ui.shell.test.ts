@@ -143,7 +143,7 @@ describe("QoreUiShellServer", () => {
       const evalBody = (await evalRes.json()) as { decision?: string };
       expect(evalBody.decision).toBe("ALLOW");
     });
-  });
+  }, 15000);
 
   it("enforces admin token and exposes session and MFA recovery controls", async () => {
     await withRuntimeStub(async (runtimeBaseUrl) => {

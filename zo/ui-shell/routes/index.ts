@@ -16,6 +16,7 @@ import type { ConstellationService } from "../../constellation/service.js";
 import type { RiskService } from "../../risk/service.js";
 import type { AutonomyChecker } from "../../autonomy/checker.js";
 import type { PathService } from "../../path/service.js";
+import { ErrorFactory, errorToJson, type UserFacingError } from "../errors.js";
 
 // ---------------------------------------------------------------------------
 // Route Context – everything the route handlers need from the server
@@ -2161,4 +2162,13 @@ export async function handleApiRoute(
 
   // No matching route found
   return false;
+}
+
+// Helper to send standardized error responses
+function sendError(
+  ctx: RouteContext,
+  res: http.ServerResponse,
+  error: UserFacingError
+): void {
+  ctx.sendJson(res, error.status || 500, errorToJson(error));
 }
