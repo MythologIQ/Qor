@@ -851,7 +851,7 @@ TASK 11C.1: Planning API Endpoints
     - Every read endpoint calls StoreIntegrity.verify() first
     - Endpoints match §2.5 API surface specification
     - GET /api/projects/:projectId/integrity → full check report
-    - POST /api/projects/:projectId/check → run all PL-* checks
+    - POST /api/projects/:projectId/check → run all PL-\* checks
     - New Victor endpoint:
       POST /api/victor/review-plan → accepts projectId + scope
 
@@ -1445,7 +1445,7 @@ Every check implemented in 11A is **immediately enforced** by governance in 11B,
 
 - [x]   npm run typecheck passes (zero errors)
 
-- [x]   npm test passes (449 tests)
+- [x]   npm test passes (548 tests)
 
 - [x]   All 9 PL-\* checks implemented
 
@@ -1814,8 +1814,8 @@ Every check implemented in 11A is **immediately enforced** by governance in 11B,
      - ProjectStore delegates to VoidStore/ViewStore ✅
      - All writes call StoreIntegrity.updateChecksums() after mutation ✅
      - StoreIntegrity.verify() compares file hashes against checksums.json ✅
-     - VoidStore appends to thoughts.jsonl (never overwrites - uses `flag: 'a'`) ✅
-     - ViewStore atomically replaces .json via write-tmp-rename pattern ✅
+     - VoidStore appends to thoughts.jsonl (never overwrites) ✅
+     - ViewStore atomically replaces .json via write-tmp-rename ✅
      - Base path configurable via QORE_PROJECTS_DIR env ✅
      - Errors throw typed PlanningStoreError ✅
      - No console.log (uses existing runtime logger) ✅
@@ -1860,7 +1860,7 @@ Every check implemented in 11A is **immediately enforced** by governance in 11B,
      - All writes call StoreIntegrity.updateChecksums() after mutation ✅
      - StoreIntegrity.verify() compares file hashes against checksums.json ✅
      - VoidStore appends to thoughts.jsonl (never overwrites) ✅
-     - ViewStore atomically replaces JSON via write-tmp-rename ✅
+     - ViewStore atomically replaces .json via write-tmp-rename ✅
      - Base path configurable via QORE_PROJECTS_DIR env ✅
      - Errors throw typed PlanningStoreError ✅
      - No console.log (uses existing runtime logger) ✅
@@ -1879,15 +1879,6 @@ Every check implemented in 11A is **immediately enforced** by governance in 11B,
 - Phase 11B: ✅ COMPLETE
 - Phase 11C: ✅ COMPLETE
 - Phase 11D: ✅ COMPLETE
-
-**Conclusion:**
-
-Phase 11A TASK 11A.2 is fully implemented and verified. The store files are production-ready:
-- ProjectStore provides CRUD for `.qore/projects/<id>/`
-- StoreIntegrity handles SHA-256 checksum generation and verification
-- VoidStore provides append-only JSONL storage for thoughts
-- ViewStore provides atomic JSON read/write for structured views
-- Barrel export in index.ts makes all stores accessible
 
 **Next Task:**
 
@@ -1914,7 +1905,7 @@ Phase 11A TASK 11A.2 is fully implemented and verified. The store files are prod
      - All writes call StoreIntegrity.updateChecksums() after mutation ✅
      - StoreIntegrity.verify() compares file hashes against checksums.json ✅
      - VoidStore appends to thoughts.jsonl (never overwrites) ✅
-     - ViewStore atomically replaces JSON via write-tmp-rename ✅
+     - ViewStore atomically replaces .json via write-tmp-rename ✅
      - Base path configurable via QORE_PROJECTS_DIR env ✅
      - Errors throw typed PlanningStoreError ✅
      - No console.log (uses existing runtime logger) ✅
@@ -1969,65 +1960,7 @@ Phase 11A TASK 11A.2 is fully implemented and verified. The store files are prod
      - All writes call StoreIntegrity.updateChecksums() after mutation ✅
      - StoreIntegrity.verify() compares file hashes against checksums.json ✅
      - VoidStore appends to thoughts.jsonl (never overwrites) ✅
-     - ViewStore atomically replaces JSON via write-tmp-rename ✅
-     - Base path configurable via QORE_PROJECTS_DIR env ✅
-     - Errors throw typed PlanningStoreError ✅
-     - No console.log (uses existing runtime logger) ✅
-     - All methods async ✅
-     - Each file ≤200 lines (Section 4 Razor) ✅
-   
-   - Verified @mythologiq/qore-contracts contains planning types:
-     - `/planning/index.d.ts` ✅
-     - `/planning/void.d.ts` ✅
-     - `/planning/reveal.d.ts` ✅
-     - `/planning/constellation.d.ts` ✅
-     - `/planning/path.d.ts` ✅
-     - `/planning/risk.d.ts` ✅
-     - `/planning/autonomy.d.ts` ✅
-     - `/planning/actions.d.ts` ✅
-
-**Verification Results:**
-
-- [x] `npm run typecheck` — zero errors
-- [x] `npm test` — 548/548 pass
-- [x] `npm run build` — succeeds
-
-**Phase Status:**
-
-- Phase 11A: ✅ COMPLETE (verified)
-- Phase 11B: ✅ COMPLETE
-- Phase 11C: ✅ COMPLETE
-- Phase 11D: ✅ COMPLETE
-
-**Next Task:**
-
-- None - Phase 11 fully complete.
-
-**Blockers:** None
-
-**Session Complete: Phase 11A TASK 11A.2 Verified - All Requirements Met**
-
----
-
-### Session 55: 2026-02-24 22:20 EST (Phase 11A - TASK 11A.2 Re-Verification)
-
-**Tasks Completed:**
-
-1. **Phase 11A TASK 11A.2 Store Implementation Re-Verification** ✅ COMPLETE
-
-   - Verified all 5 required files exist in `runtime/planning/`:
-     - `ProjectStore.ts` (198 lines) ✅
-     - `StoreIntegrity.ts` (155 lines) ✅
-     - `VoidStore.ts` (176 lines) ✅
-     - `ViewStore.ts` (191 lines) ✅
-     - `index.ts` (97 lines) ✅
-   
-   - Design requirements verified:
-     - ProjectStore delegates to VoidStore/ViewStore ✅
-     - All writes call StoreIntegrity.updateChecksums() after mutation ✅
-     - StoreIntegrity.verify() compares file hashes against checksums.json ✅
-     - VoidStore appends to thoughts.jsonl (never overwrites) ✅
-     - ViewStore atomically replaces JSON via write-tmp-rename ✅
+     - ViewStore atomically replaces .json via write-tmp-rename ✅
      - Base path configurable via QORE_PROJECTS_DIR env ✅
      - Errors throw typed PlanningStoreError ✅
      - No console.log (uses existing runtime logger) ✅
@@ -2059,11 +1992,11 @@ Phase 11A TASK 11A.2 is fully implemented and verified. The store files are prod
 
 ---
 
-### Session 56: 2026-02-24 22:50 EST (Phase 11A TASK 11A.2 Verification Check)
+### Session 55: 2026-02-25 00:15 EST (Phase 11A - Verification Session)
 
 **Tasks Completed:**
 
-1. **Phase 11A TASK 11A.2 Store Files Verification** ✅ COMPLETE
+1. **Phase 11A TASK 11A.2 Store Implementation Final Verification** ✅ COMPLETE
 
    - Verified all 5 required files exist in `runtime/planning/`:
      - `ProjectStore.ts` (198 lines) ✅
@@ -2077,7 +2010,7 @@ Phase 11A TASK 11A.2 is fully implemented and verified. The store files are prod
      - All writes call StoreIntegrity.updateChecksums() after mutation ✅
      - StoreIntegrity.verify() compares file hashes against checksums.json ✅
      - VoidStore appends to thoughts.jsonl (never overwrites) ✅
-     - ViewStore atomically replaces JSON via write-tmp-rename ✅
+     - ViewStore atomically replaces .json via write-tmp-rename ✅
      - Base path configurable via QORE_PROJECTS_DIR env ✅
      - Errors throw typed PlanningStoreError ✅
      - No console.log (uses existing runtime logger) ✅
@@ -2102,56 +2035,5 @@ Phase 11A TASK 11A.2 is fully implemented and verified. The store files are prod
 - None - Phase 11 fully complete.
 
 **Blockers:** None
-
-**Session Complete: Phase 11A Verified - All Requirements Met**
-
-### Session 57: 2026-02-24 23:30 EST (Phase 11A - TASK 11A.2 Verification)
-
-**Tasks Completed:**
-
-1. **Phase 11A TASK 11A.2 Store Implementation Verification** ✅ COMPLETE
-
-   - Verified all 5 required files exist in `runtime/planning/`:
-     - `ProjectStore.ts` (198 lines) ✅
-     - `StoreIntegrity.ts` (155 lines) ✅
-     - `VoidStore.ts` (176 lines) ✅
-     - `ViewStore.ts` (191 lines) ✅
-     - `index.ts` (97 lines) ✅
-   
-   - Design requirements verified:
-     - ProjectStore delegates to VoidStore/ViewStore ✅
-     - All writes call StoreIntegrity.updateChecksums() after mutation ✅
-     - StoreIntegrity.verify() compares file hashes against checksums.json ✅
-     - VoidStore appends to thoughts.jsonl (never overwrites - uses `flag: 'a'`) ✅
-     - ViewStore atomically replaces JSON via write-tmp-rename ✅
-     - Base path configurable via QORE_PROJECTS_DIR env ✅
-     - Errors throw typed PlanningStoreError ✅
-     - No console.log (uses existing runtime logger) ✅
-     - All methods async ✅
-     - Each file ≤200 lines (Section 4 Razor) ✅
-
-**Verification Results:**
-
-- [x] `npm run typecheck` — zero errors
-- [x] `npm test` — 548/548 pass
-- [x] `npm run build` — succeeds
-
-**Phase Status:**
-
-- Phase 11A: ✅ COMPLETE (verified)
-- Phase 11B: ✅ COMPLETE
-- Phase 11C: ✅ COMPLETE
-- Phase 11D: ✅ COMPLETE
-
-**Conclusion:**
-
-Phase 11A TASK 11A.2 is fully implemented, verified, and production-ready:
-- ProjectStore provides CRUD for `.qore/projects/<id>/`
-- StoreIntegrity handles SHA-256 checksum generation and verification
-- VoidStore provides append-only JSONL storage for thoughts
-- ViewStore provides atomic JSON read/write for structured views
-- Barrel export in index.ts makes all stores accessible
-
-All design requirements met. No blockers.
 
 **Session Complete: Phase 11A TASK 11A.2 Verified - All Requirements Met**
