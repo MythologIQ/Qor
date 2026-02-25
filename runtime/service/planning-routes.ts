@@ -36,6 +36,12 @@ import {
 } from "../planning/PlanningLedger.js";
 import type { ApiErrorCode, ApiErrorResponse } from "@mythologiq/qore-contracts/schemas/ApiTypes";
 import type { PlanningAction as ContractPlanningAction, FullProjectState } from "@mythologiq/qore-contracts";
+import {
+  type UserFacingError,
+  type UserFacingErrorResponse,
+  formatUserError,
+  getPolicyError,
+} from "./errors.js";
 import { OptimizedResponder, createOptimizedResponder } from "./response-utils.js";
 
 export interface PlanningRoutesConfig {
@@ -664,6 +670,45 @@ export class PlanningRoutes {
       error: { code, message, traceId, details },
     };
     return this.sendJson(res, statusCode, payload);
+  }
+
+  /**
+   * Send a UserFacingError response with the standardized error format.
+   * This is the preferred method for API errors that the UI will display.
+   */
+  private sendUserFacingError(
+    res: http.ServerResponse,
+    statusCode: number,
+    error: UserFacingError,
+  ): boolean {
+    const payload: UserFacingErrorResponse = { error };
+    return this.sendJson(res, statusCode, payload);
+  }
+
+  /**
+   * Send a policy denied error with user-friendly messaging.
+   * Attempts to map policy rule IDs to helpful error messages.
+   */
+  private sendPolicyDeniedError(
+    res: http.ServerResponse,
+    reason: string,
+    traceId: string,
+    ruleId?: string,
+  ): boolean {
+    // Try to get a user-friendly error for this rule
+    const userError = ruleId ? getPolicyError(ruleId) : null;
+    
+    if (userError) {
+      userError.details = { ...userError.details, traceId };
+      return this.sendUserFacingError(res, 403, userError);
+    }
+
+    // Fallback to generic policy denied error
+    const genericError = formatUserError('POLICY_DENIED', {
+      detail: reason,
+    });
+    genericError.details = { ...genericError.details, traceId };
+    return this.sendUserFacingError(res, 403, genericError);
   }
 
   private handleError(res: http.ServerResponse, error: unknown, traceId: string): void {

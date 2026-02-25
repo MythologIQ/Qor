@@ -17,6 +17,7 @@
     "types": ["node", "vitest/globals"]
   },
   "include": [
+    "contracts/**/*.ts",
     "ledger/**/*.ts",
     "policy/**/*.ts",
     "risk/**/*.ts",

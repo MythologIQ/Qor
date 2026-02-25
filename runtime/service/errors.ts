@@ -397,3 +397,80 @@ export function isValidationError(error: unknown): error is ValidationError {
 export function isIntegrityError(error: unknown): error is IntegrityError {
   return error instanceof IntegrityError;
 }
+
+// ==========================================
+// PLANNING POLICY ERROR MESSAGES
+// ==========================================
+
+/**
+ * Pre-defined policy error messages for planning pipeline scenarios.
+ * These map policy rule IDs to user-friendly messages.
+ * 
+ * Used when governance blocks an action due to pipeline sequence violations.
+ */
+export const PolicyErrorMessages: Record<string, () => UserFacingError> = {
+  'plan-001': () => ({
+    code: 'POLICY_DENIED',
+    title: 'Cannot create clusters yet',
+    detail: 'Capture at least one thought in Void first. Clusters are formed from captured thoughts.',
+    resolution: 'Go to Void and capture your first thought.',
+    link: '/void',
+    severity: 'warning',
+  }),
+
+  'plan-002': () => ({
+    code: 'POLICY_DENIED',
+    title: 'Cannot create phases yet',
+    detail: 'Create at least one cluster in Reveal first. Phases are built from organized thoughts.',
+    resolution: 'Go to Reveal and create a cluster.',
+    link: '/reveal',
+    severity: 'warning',
+  }),
+
+  'plan-003': () => ({
+    code: 'POLICY_DENIED',
+    title: 'Cannot map constellation yet',
+    detail: 'Create at least two clusters in Reveal first. The constellation shows relationships between clusters.',
+    resolution: 'Go to Reveal and create at least two clusters.',
+    link: '/reveal',
+    severity: 'warning',
+  }),
+
+  'plan-004': () => ({
+    code: 'POLICY_DENIED',
+    title: 'Cannot add risks yet',
+    detail: 'Create at least one phase in Path first. Risks are associated with project phases.',
+    resolution: 'Go to Path and create a phase.',
+    link: '/path',
+    severity: 'warning',
+  }),
+
+  'plan-005': () => ({
+    code: 'POLICY_DENIED',
+    title: 'Cannot activate autonomy yet',
+    detail: 'Complete risk review first. Autonomy requires all risks to be reviewed and mitigated.',
+    resolution: 'Go to Risk and review all identified risks.',
+    link: '/risk',
+    severity: 'warning',
+  }),
+};
+
+/**
+ * Get a user-facing error from a policy rule ID.
+ * Returns null if no mapping exists for the rule.
+ */
+export function getPolicyError(ruleId: string): UserFacingError | null {
+  const factory = PolicyErrorMessages[ruleId];
+  return factory ? factory() : null;
+}
+
+// ==========================================
+// USER-FACING ERROR RESPONSE TYPE
+// ==========================================
+
+/**
+ * API response envelope for user-facing errors
+ */
+export interface UserFacingErrorResponse {
+  error: UserFacingError;
+}
