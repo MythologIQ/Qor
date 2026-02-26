@@ -908,3 +908,96 @@
 @media (min-width: 1024px) {
   .hide-desktop { display: none !important; }
 }
+
+/* ==========================================
+   VIRTUAL LIST COMPONENT
+   ========================================== */
+
+.virtual-list {
+  height: 100%;
+  overflow: hidden;
+  position: relative;
+}
+
+.virtual-list-scroll {
+  height: 100%;
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-surface-3) transparent;
+}
+
+.virtual-list-scroll::-webkit-scrollbar {
+  width: 8px;
+}
+
+.virtual-list-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.virtual-list-scroll::-webkit-scrollbar-thumb {
+  background: var(--color-surface-3);
+  border-radius: var(--radius-full);
+}
+
+.virtual-list-scroll::-webkit-scrollbar-thumb:hover {
+  background: var(--color-muted);
+}
+
+.virtual-list-content {
+  position: relative;
+  min-height: 100%;
+}
+
+.virtual-list-items {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+}
+
+.virtual-list-item {
+  position: absolute;
+  left: 0;
+  right: 0;
+  contain: layout style paint;
+  will-change: transform;
+}
+
+/* Loading placeholder */
+.virtual-list-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 200px;
+  color: var(--color-muted);
+}
+
+.virtual-list-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-16) var(--space-6);
+  text-align: center;
+  color: var(--color-muted);
+}
+
+.virtual-list-empty__icon {
+  font-size: 48px;
+  margin-bottom: var(--space-4);
+  opacity: 0.6;
+}
+
+.virtual-list-empty__title {
+  font-size: var(--text-lg);
+  font-weight: var(--font-semibold);
+  color: var(--color-text);
+  margin-bottom: var(--space-2);
+}
+
+.virtual-list-empty__desc {
+  font-size: var(--text-sm);
+  max-width: 300px;
+}
