@@ -221,6 +221,10 @@ describe("VoidStore Performance Benchmarks", () => {
         (_, i) => generateThought(i),
       );
       await store.addThoughtsBatch(thoughts, { skipDuplicates: false });
+      
+      // Warm-up read to ensure file system cache is primed
+      // This prevents the first benchmark from being artificially slow
+      await store.getThoughts({ offset: 0, limit: 1 });
     });
 
     it("getThoughts - paginated (page 1, limit 50)", async () => {

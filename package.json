@@ -54,7 +54,7 @@
     "release:artifacts": "node scripts/create-release-artifacts.mjs"
   },
   "dependencies": {
-    "@mythologiq/qore-contracts": "github:MythologIQ/qore-contracts#main",
+    "@mythologiq/qore-contracts": "file:contracts",
     "agentos-mcp-server": "file:../agent-os/extensions/mcp-server",
     "better-sqlite3": "^12.2.0",
     "proper-lockfile": "^4.1.2",

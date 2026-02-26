@@ -4,6 +4,14 @@ export default defineConfig({
   test: {
     environment: "node",
     include: ["tests/**/*.test.ts"],
-    testTimeout: 15000
+    testTimeout: 15000,
+    deps: {
+      optimizer: {
+        ssr: {
+          enabled: true,
+          include: ["@mythologiq/qore-contracts"]
+        }
+      }
+    }
   }
 });

@@ -15,7 +15,7 @@ export QORE_API_KEY=qore_dev_53864b4213623eaba716687ebcc28e08
 export QORE_UI_TIMEOUT_MS=120000
 
 # Assets directory (Command Center UI with full panels)
-export QORE_UI_ASSETS_DIR="/home/workspace/MythologIQ/Zo-Qore/zo/ui-shell/assets"
+export QORE_UI_ASSETS_DIR="/home/workspace/Projects/continuous/Zo-Qore/zo/ui-shell/assets"
 
 # Disable auth requirement for public access
 export QORE_UI_REQUIRE_AUTH=false

@@ -149,8 +149,8 @@ describe("GenesisPipeline", () => {
       pipeline.queueThought(testSessionId, thought.id);
     }
 
-    // Wait for debounce to trigger
-    await new Promise((r) => setTimeout(r, 100));
+    // Wait for debounce to trigger (4x debounce time to avoid race conditions)
+    await new Promise((r) => setTimeout(r, 200));
 
     // Should have 5 thought_added events but only 1 clustering_started
     const thoughtAddedCount = events.filter(
