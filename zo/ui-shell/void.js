@@ -27,6 +27,8 @@
   var existingTags = [];
   var currentTags = [];
   var isEditing = null;
+  var virtualList = null; // VirtualList instance for large lists
+  var VIRTUAL_LIST_THRESHOLD = 50; // Use virtual scrolling above this count
 
   // DOM Elements
   var container = null;
@@ -372,8 +374,136 @@
     }
   }
 
+  /**
+   * Render a single thought item for VirtualList
+   */
+  function renderThoughtItem(thought, index) {
+    var sourceIcon = thought.source === 'voice' ? '🎤' : '⌨️';
+    var sourceLabel = thought.source === 'voice' ? 'Voice capture' : 'Text capture';
+    var isEditingThis = isEditing === thought.thoughtId;
+    
+    var el = document.createElement('div');
+    el.className = 'void-thought-item' + (isEditingThis ? ' void-thought-item--editing' : '');
+    el.dataset.thoughtId = thought.thoughtId;
+    
+    el.innerHTML = 
+      '<div class="void-thought-header">' +
+        '<span class="void-thought-source" title="' + sourceLabel + '">' +
+          '<span aria-hidden="true">' + sourceIcon + '</span>' +
+        '</span>' +
+        '<span class="void-thought-time">' + formatTimeAgo(thought.capturedAt) + '</span>' +
+        '<div class="void-thought-actions">' +
+          '<button class="void-thought-edit" title="Edit">✏️</button>' +
+          '<button class="void-thought-delete" title="Delete">🗑️</button>' +
+        '</div>' +
+      '</div>' +
+      (isEditingThis
+        ? '<textarea class="void-thought-edit-input">' + escapeHtml(thought.content) + '</textarea>' +
+          '<div class="void-thought-edit-actions">' +
+            '<button class="btn btn--sm btn--secondary void-thought-cancel">Cancel</button>' +
+            '<button class="btn btn--sm btn--primary void-thought-save">Save</button>' +
+          '</div>'
+        : '<div class="void-thought-content">' + escapeHtml(thought.content) + '</div>') +
+      (thought.tags && thought.tags.length > 0
+        ? '<div class="void-thought-tags">' +
+            thought.tags.map(function(tag) { return '<span class="void-thought-tag">' + escapeHtml(tag) + '</span>'; }).join('') +
+          '</div>'
+        : '');
+    
+    // Attach handlers
+    var editBtn = el.querySelector('.void-thought-edit');
+    var deleteBtn = el.querySelector('.void-thought-delete');
+    
+    if (editBtn) {
+      editBtn.addEventListener('click', function() {
+        startEditThought(thought.thoughtId);
+      });
+    }
+    if (deleteBtn) {
+      deleteBtn.addEventListener('click', function() {
+        confirmDeleteThought(thought.thoughtId);
+      });
+    }
+    
+    if (isEditingThis) {
+      var saveBtn = el.querySelector('.void-thought-save');
+      var cancelBtn = el.querySelector('.void-thought-cancel');
+      if (saveBtn) {
+        saveBtn.addEventListener('click', function() {
+          saveEditThought(thought.thoughtId);
+        });
+      }
+      if (cancelBtn) {
+        cancelBtn.addEventListener('click', function() {
+          cancelEditThought();
+        });
+      }
+    }
+    
+    return el;
+  }
+
   function renderThoughtList() {
     if (!thoughtList) return;
+    
+    // Check if we should use virtual scrolling
+    if (typeof VirtualList !== 'undefined' && thoughts.length > VIRTUAL_LIST_THRESHOLD) {
+      renderThoughtListVirtual();
+      return;
+    }
+    
+    // Fallback to regular rendering for small lists
+    renderThoughtListRegular();
+  }
+
+  function renderThoughtListVirtual() {
+    if (!thoughtList) return;
+    
+    if (thoughts.length === 0) {
+      if (virtualList) {
+        virtualList.destroy();
+        virtualList = null;
+      }
+      thoughtList.innerHTML = '<div class="void-thought-empty" role="status">' +
+        '<span class="void-thought-empty-icon" aria-hidden="true">💡</span>' +
+        '<span class="void-thought-empty-text">No thoughts captured yet</span>' +
+        '</div>';
+      return;
+    }
+    
+    // Initialize virtual list if needed
+    if (!virtualList) {
+      // Ensure thoughtList has height for virtual scrolling
+      thoughtList.style.minHeight = '300px';
+      thoughtList.style.maxHeight = '60vh';
+      thoughtList.style.overflow = 'hidden';
+      
+      virtualList = new VirtualList({
+        container: thoughtList,
+        renderItem: renderThoughtItem,
+        getItemKey: function(thought) { return thought.thoughtId; },
+        itemHeight: 90, // Estimated height for thought item
+        overscan: 5,
+        onItemClick: function(e, thought, index) {
+          // Handle item click if needed
+        }
+      });
+    }
+    
+    virtualList.setItems(thoughts);
+  }
+
+  function renderThoughtListRegular() {
+    if (!thoughtList) return;
+    
+    // Destroy virtual list if it exists
+    if (virtualList) {
+      virtualList.destroy();
+      virtualList = null;
+      thoughtList.style.minHeight = '';
+      thoughtList.style.maxHeight = '';
+      thoughtList.style.overflow = '';
+    }
     
     if (thoughts.length === 0) {
       thoughtList.innerHTML = '<div class="void-thought-empty" role="status">' +

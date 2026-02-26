@@ -150,12 +150,48 @@ jobs:
         run: npm run assumptions:check
 
   # ============================================
+  # PERFORMANCE BENCHMARKS
+  # ============================================
+  performance:
+    name: Performance Benchmarks
+    runs-on: ubuntu-latest
+    needs: test
+    # Only run on main branch to avoid slowing down PRs
+    if: github.ref == 'refs/heads/main'
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      
+      - name: Install dependencies
+        run: npm ci
+      
+      - name: Run performance benchmarks
+        run: npm run test:perf
+        continue-on-error: true
+      
+      - name: Upload benchmark results
+        uses: actions/upload-artifact@v4
+        with:
+          name: benchmark-results
+          path: |
+            coverage/
+            benchmark-results.json
+          retention-days: 30
+
+  # ============================================
   # SUMMARY
   # ============================================
   summary:
     name: CI Summary
     runs-on: ubuntu-latest
-    needs: [quality, test, build, integrity]
+    needs: [quality, test, build, integrity, performance]
     if: always()
     
     steps:
@@ -169,6 +205,7 @@ jobs:
           echo "| Test | ${{ needs.test.result }} |" >> $GITHUB_STEP_SUMMARY
           echo "| Build | ${{ needs.build.result }} |" >> $GITHUB_STEP_SUMMARY
           echo "| Integrity | ${{ needs.integrity.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Performance | ${{ needs.performance.result }} |" >> $GITHUB_STEP_SUMMARY
           
           if [ "${{ needs.quality.result }}" != "success" ] || \
              [ "${{ needs.test.result }}" != "success" ] || \

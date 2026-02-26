@@ -21,6 +21,8 @@
     "lint": "eslint . --ext .ts",
     "test": "vitest run",
     "test:watch": "vitest",
+    "test:perf": "vitest run tests/performance/",
+    "test:perf:watch": "vitest tests/performance/",
     "start:ui": "node dist/zo/ui-shell/start.js",
     "start:standalone": "node dist/runtime/service/start.js",
     "zo:one-click": "bash deploy/zo/one-click-standalone.sh",
