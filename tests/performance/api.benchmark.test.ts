@@ -257,10 +257,14 @@ class MockApiServer {
   }
 }
 
-// HTTP client helpers
+// HTTP client helpers - improved with timeout and better error handling
 async function httpGet(port: number, path: string): Promise<{ status: number; body: unknown }> {
   const http = await import("http");
   return new Promise((resolve, reject) => {
+    const timeout = setTimeout(() => {
+      reject(new Error(`GET ${path} timed out`));
+    }, 5000);
+    
     const req = http.request(
       {
         hostname: "localhost",
@@ -269,17 +273,28 @@ async function httpGet(port: number, path: string): Promise<{ status: number; bo
         method: "GET",
       },
       (res) => {
+        clearTimeout(timeout);
         let body = "";
         res.on("data", (chunk) => (body += chunk));
         res.on("end", () => {
-          resolve({
-            status: res.statusCode || 0,
-            body: JSON.parse(body),
-          });
+          try {
+            resolve({
+              status: res.statusCode || 0,
+              body: body ? JSON.parse(body) : null,
+            });
+          } catch (e) {
+            resolve({
+              status: res.statusCode || 0,
+              body: body,
+            });
+          }
         });
       },
     );
-    req.on("error", reject);
+    req.on("error", (err) => {
+      clearTimeout(timeout);
+      reject(err);
+    });
     req.end();
   });
 }
@@ -291,6 +306,10 @@ async function httpPost(
 ): Promise<{ status: number; body: unknown }> {
   const http = await import("http");
   return new Promise((resolve, reject) => {
+    const timeout = setTimeout(() => {
+      reject(new Error(`POST ${path} timed out`));
+    }, 10000);
+    
     const body = JSON.stringify(data);
     const req = http.request(
       {
@@ -304,17 +323,28 @@ async function httpPost(
         },
       },
       (res) => {
+        clearTimeout(timeout);
         let responseBody = "";
         res.on("data", (chunk) => (responseBody += chunk));
         res.on("end", () => {
-          resolve({
-            status: res.statusCode || 0,
-            body: JSON.parse(responseBody),
-          });
+          try {
+            resolve({
+              status: res.statusCode || 0,
+              body: responseBody ? JSON.parse(responseBody) : null,
+            });
+          } catch (e) {
+            resolve({
+              status: res.statusCode || 0,
+              body: responseBody,
+            });
+          }
         });
       },
     );
-    req.on("error", reject);
+    req.on("error", (err) => {
+      clearTimeout(timeout);
+      reject(err);
+    });
     req.write(body);
     req.end();
   });
@@ -327,6 +357,10 @@ async function httpPut(
 ): Promise<{ status: number; body: unknown }> {
   const http = await import("http");
   return new Promise((resolve, reject) => {
+    const timeout = setTimeout(() => {
+      reject(new Error(`PUT ${path} timed out`));
+    }, 10000);
+    
     const body = JSON.stringify(data);
     const req = http.request(
       {
@@ -340,17 +374,28 @@ async function httpPut(
         },
       },
       (res) => {
+        clearTimeout(timeout);
         let responseBody = "";
         res.on("data", (chunk) => (responseBody += chunk));
         res.on("end", () => {
-          resolve({
-            status: res.statusCode || 0,
-            body: JSON.parse(responseBody),
-          });
+          try {
+            resolve({
+              status: res.statusCode || 0,
+              body: responseBody ? JSON.parse(responseBody) : null,
+            });
+          } catch (e) {
+            resolve({
+              status: res.statusCode || 0,
+              body: responseBody,
+            });
+          }
         });
       },
     );
-    req.on("error", reject);
+    req.on("error", (err) => {
+      clearTimeout(timeout);
+      reject(err);
+    });
     req.write(body);
     req.end();
   });
