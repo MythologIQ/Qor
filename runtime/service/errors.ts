@@ -240,6 +240,122 @@ export function formatUserError(
 }
 
 /**
+ * Error factory for creating common UserFacingError instances.
+ * Provides convenient methods for standard error scenarios.
+ */
+export const ErrorFactory = {
+  /**
+   * Authentication required
+   */
+  authRequired(link?: string): UserFacingError {
+    return {
+      code: 'AUTH_REQUIRED',
+      title: 'Authentication Required',
+      detail: 'You must be logged in to access this resource.',
+      resolution: 'Please log in and try again.',
+      link: link || '/login',
+      severity: 'warning',
+    };
+  },
+
+  /**
+   * Resource not found
+   */
+  notFound(resource: string, id?: string): UserFacingError {
+    return {
+      code: 'NOT_FOUND',
+      title: `${resource} Not Found`,
+      detail: `The ${resource.toLowerCase()}${id ? ` with ID "${id}"` : ''} could not be found.`,
+      resolution: `Please verify the identifier and try again.`,
+      severity: 'warning',
+      details: id ? { resource, id } : { resource },
+    };
+  },
+
+  /**
+   * Policy denied
+   */
+  policyDenied(reason: string, resolution: string, link?: string): UserFacingError {
+    return {
+      code: 'POLICY_DENIED',
+      title: 'Action Not Allowed',
+      detail: reason,
+      resolution,
+      link,
+      severity: 'warning',
+    };
+  },
+
+  /**
+   * Validation error
+   */
+  validationError(field: string, message: string): UserFacingError {
+    return {
+      code: 'VALIDATION_ERROR',
+      title: 'Validation Error',
+      detail: `Invalid value for "${field}": ${message}`,
+      resolution: `Please provide a valid value for "${field}".`,
+      severity: 'warning',
+      details: { field },
+    };
+  },
+
+  /**
+   * System error (catch-all for unexpected errors)
+   */
+  systemError(message?: string): UserFacingError {
+    return {
+      code: 'SYSTEM_ERROR',
+      title: 'Unexpected Error',
+      detail: message || 'An unexpected error occurred while processing your request.',
+      resolution: 'Please try again. If the problem persists, contact support.',
+      severity: 'error',
+    };
+  },
+
+  /**
+   * Storage unavailable
+   */
+  storageUnavailable(): UserFacingError {
+    return {
+      code: 'STORE_ERROR',
+      title: 'Storage Unavailable',
+      detail: 'The data storage system is currently unavailable.',
+      resolution: 'Please try again in a moment. If the problem persists, contact support.',
+      severity: 'critical',
+    };
+  },
+
+  /**
+   * Rate limited
+   */
+  rateLimited(retryAfter?: number): UserFacingError {
+    return {
+      code: 'RATE_LIMIT_EXCEEDED',
+      title: 'Too Many Requests',
+      detail: 'You have made too many requests in a short period.',
+      resolution: `Please wait${retryAfter ? ` ${retryAfter} seconds` : ' a moment'} before trying again.`,
+      severity: 'warning',
+      details: retryAfter ? { retryAfter } : undefined,
+    };
+  },
+
+  /**
+   * Integrity failure
+   */
+  integrityFailure(checkId: string, details: string): UserFacingError {
+    return {
+      code: 'INTEGRITY_FAILURE',
+      title: 'Data Integrity Issue',
+      detail: `Integrity check "${checkId}" failed: ${details}`,
+      resolution: 'Please review the data and correct any inconsistencies. Contact support if needed.',
+      severity: 'critical',
+      details: { checkId },
+    };
+  },
+};
+
+/**
  * Convert any error to a user-facing error
  */
 export function toUserError(error: unknown): UserFacingError {

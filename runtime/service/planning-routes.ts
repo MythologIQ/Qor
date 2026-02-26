@@ -41,6 +41,7 @@ import {
   type UserFacingErrorResponse,
   formatUserError,
   getPolicyError,
+  ErrorFactory,
 } from "./errors.js";
 import { OptimizedResponder, createOptimizedResponder } from "./response-utils.js";
 
@@ -661,14 +662,56 @@ export class PlanningRoutes {
   private sendError(
     res: http.ServerResponse,
     statusCode: number,
-    code: ApiErrorCode,
+    code: string,
     message: string,
     traceId: string,
-    details?: Record<string, unknown>,
+    additionalDetails?: Record<string, unknown>,
   ): boolean {
-    const payload: ApiErrorResponse = {
-      error: { code, message, traceId, details },
-    };
+    // Map API error codes to UserFacingError using ErrorFactory
+    let userError: UserFacingError;
+    
+    if (code === "UNAUTHORIZED") {
+      userError = ErrorFactory.authRequired();
+    } else if (code === "NOT_FOUND") {
+      userError = ErrorFactory.notFound("Resource");
+    } else if (code === "BAD_REQUEST") {
+      userError = {
+        code: "VALIDATION_ERROR",
+        title: "Invalid Request",
+        detail: message,
+        resolution: "Please check your request and try again.",
+        severity: "warning",
+      };
+    } else if (code === "POLICY_DENIED") {
+      userError = ErrorFactory.policyDenied(
+        message,
+        "Review the requirements and try again."
+      );
+    } else if (code === "PAYLOAD_TOO_LARGE") {
+      userError = {
+        code: "PAYLOAD_TOO_LARGE",
+        title: "Request Too Large",
+        detail: message,
+        resolution: "Reduce the size of your request and try again.",
+        severity: "error",
+      };
+    } else if (code === "BAD_JSON") {
+      userError = {
+        code: "VALIDATION_ERROR",
+        title: "Invalid JSON",
+        detail: "The request body contains invalid JSON.",
+        resolution: "Please ensure your request body is valid JSON and try again.",
+        severity: "warning",
+      };
+    } else {
+      // INTERNAL_ERROR or any other code
+      userError = ErrorFactory.systemError(message);
+    }
+    
+    // Add trace ID and additional details for debugging
+    userError.details = { ...userError.details, traceId, ...additionalDetails };
+    
+    const payload: UserFacingErrorResponse = { error: userError };
     return this.sendJson(res, statusCode, payload);
   }
 

@@ -71,7 +71,8 @@ describe("Planning API Security Audit", () => {
       });
       expect(res.status).toBe(401);
       const json = await res.json() as { error: { code: string } };
-      expect(json.error.code).toBe("UNAUTHORIZED");
+      // UserFacingError format: AUTH_REQUIRED instead of UNAUTHORIZED
+      expect(json.error.code).toBe("AUTH_REQUIRED");
     });
 
     it("rejects requests with invalid API key", async () => {
@@ -85,15 +86,16 @@ describe("Planning API Security Audit", () => {
   });
 
   describe("Input Validation", () => {
-    it("rejects malformed JSON", async () => {
+    it("rejects malformed JSON body", async () => {
       const res = await fetch(`${baseUrl}/api/projects`, {
         method: "POST",
         headers: { "Content-Type": "application/json", "x-qore-api-key": apiKey },
         body: "{invalid json",
       });
       expect(res.status).toBe(400);
-      const json = await res.json() as { error: { code: string } };
-      expect(json.error.code).toBe("BAD_JSON");
+      const json = await res.json() as { error: { code: string; details?: { traceId?: string } } };
+      // UserFacingError format: BAD_JSON errors are mapped to VALIDATION_ERROR
+      expect(json.error.code).toBe("VALIDATION_ERROR");
     });
 
     it("rejects missing required fields for project creation", async () => {
@@ -299,8 +301,9 @@ describe("Planning API Security Audit", () => {
         headers: { "Content-Type": "application/json" },
         body: "{invalid",
       });
-      const json = await res.json() as { error: { traceId: string } };
-      expect(json.error.traceId).toBeDefined();
+      const json = await res.json() as { error: { details?: { traceId?: string } } };
+      // UserFacingError format: traceId is in details object
+      expect(json.error.details?.traceId).toBeDefined();
     });
   });
 });
