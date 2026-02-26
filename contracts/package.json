@@ -7,52 +7,76 @@
   "types": "dist/index.d.ts",
   "exports": {
     ".": {
+      "import": "./dist/index.js",
       "require": "./dist/index.js",
-      "types": "./dist/index.d.ts"
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
     },
     "./schemas": {
+      "import": "./dist/schemas/index.js",
       "require": "./dist/schemas/index.js",
-      "types": "./dist/schemas/index.d.ts"
+      "types": "./dist/schemas/index.d.ts",
+      "default": "./dist/schemas/index.js"
     },
     "./schemas/shared.types": {
+      "import": "./dist/schemas/shared.types.js",
       "require": "./dist/schemas/shared.types.js",
-      "types": "./dist/schemas/shared.types.d.ts"
+      "types": "./dist/schemas/shared.types.d.ts",
+      "default": "./dist/schemas/shared.types.js"
     },
     "./schemas/IntentTypes": {
+      "import": "./dist/schemas/IntentTypes.js",
       "require": "./dist/schemas/IntentTypes.js",
-      "types": "./dist/schemas/IntentTypes.d.ts"
+      "types": "./dist/schemas/IntentTypes.d.ts",
+      "default": "./dist/schemas/IntentTypes.js"
     },
     "./schemas/DecisionTypes": {
+      "import": "./dist/schemas/DecisionTypes.js",
       "require": "./dist/schemas/DecisionTypes.js",
-      "types": "./dist/schemas/DecisionTypes.d.ts"
+      "types": "./dist/schemas/DecisionTypes.d.ts",
+      "default": "./dist/schemas/DecisionTypes.js"
     },
     "./schemas/ApiTypes": {
+      "import": "./dist/schemas/ApiTypes.js",
       "require": "./dist/schemas/ApiTypes.js",
-      "types": "./dist/schemas/ApiTypes.d.ts"
+      "types": "./dist/schemas/ApiTypes.d.ts",
+      "default": "./dist/schemas/ApiTypes.js"
     },
     "./schemas/ZoApiTypes": {
+      "import": "./dist/schemas/ZoApiTypes.js",
       "require": "./dist/schemas/ZoApiTypes.js",
-      "types": "./dist/schemas/ZoApiTypes.d.ts"
+      "types": "./dist/schemas/ZoApiTypes.d.ts",
+      "default": "./dist/schemas/ZoApiTypes.js"
     },
     "./schemas/McpTypes": {
+      "import": "./dist/schemas/McpTypes.js",
       "require": "./dist/schemas/McpTypes.js",
-      "types": "./dist/schemas/McpTypes.d.ts"
+      "types": "./dist/schemas/McpTypes.d.ts",
+      "default": "./dist/schemas/McpTypes.js"
     },
     "./schemas/ActionClassification": {
+      "import": "./dist/schemas/ActionClassification.js",
       "require": "./dist/schemas/ActionClassification.js",
-      "types": "./dist/schemas/ActionClassification.d.ts"
+      "types": "./dist/schemas/ActionClassification.d.ts",
+      "default": "./dist/schemas/ActionClassification.js"
     },
     "./runtime": {
+      "import": "./dist/runtime/index.js",
       "require": "./dist/runtime/index.js",
-      "types": "./dist/runtime/index.d.ts"
+      "types": "./dist/runtime/index.d.ts",
+      "default": "./dist/runtime/index.js"
     },
     "./runtime/interfaces": {
+      "import": "./dist/runtime/interfaces.js",
       "require": "./dist/runtime/interfaces.js",
-      "types": "./dist/runtime/interfaces.d.ts"
+      "types": "./dist/runtime/interfaces.d.ts",
+      "default": "./dist/runtime/interfaces.js"
     },
     "./runtime/QoreConfig": {
+      "import": "./dist/runtime/QoreConfig.js",
       "require": "./dist/runtime/QoreConfig.js",
-      "types": "./dist/runtime/QoreConfig.d.ts"
+      "types": "./dist/runtime/QoreConfig.d.ts",
+      "default": "./dist/runtime/QoreConfig.js"
     }
   },
   "files": [
