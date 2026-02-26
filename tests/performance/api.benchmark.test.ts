@@ -412,6 +412,14 @@ describe("API Performance Benchmarks", () => {
     await mkdir(tempDir, { recursive: true });
     server = new MockApiServer();
     port = await server.start(tempDir, projectId);
+    
+    // Warm-up request to ensure JIT compilation and module loading are complete
+    // This makes the first benchmarked request more consistent in CI environments
+    try {
+      await httpGet(port, "/health");
+    } catch {
+      // Ignore warm-up errors
+    }
   });
 
   afterAll(async () => {
