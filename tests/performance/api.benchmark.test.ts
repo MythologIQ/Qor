@@ -259,29 +259,28 @@ class MockApiServer {
 
 // HTTP client helpers
 async function httpGet(port: number, path: string): Promise<{ status: number; body: unknown }> {
+  const http = await import("http");
   return new Promise((resolve, reject) => {
-    const req = import("http").then((http) => {
-      const req = http.request(
-        {
-          hostname: "localhost",
-          port,
-          path,
-          method: "GET",
-        },
-        (res) => {
-          let body = "";
-          res.on("data", (chunk) => (body += chunk));
-          res.on("end", () => {
-            resolve({
-              status: res.statusCode || 0,
-              body: JSON.parse(body),
-            });
+    const req = http.request(
+      {
+        hostname: "localhost",
+        port,
+        path,
+        method: "GET",
+      },
+      (res) => {
+        let body = "";
+        res.on("data", (chunk) => (body += chunk));
+        res.on("end", () => {
+          resolve({
+            status: res.statusCode || 0,
+            body: JSON.parse(body),
           });
-        },
-      );
-      req.on("error", reject);
-      req.end();
-    });
+        });
+      },
+    );
+    req.on("error", reject);
+    req.end();
   });
 }
 
@@ -290,35 +289,34 @@ async function httpPost(
   path: string,
   data: unknown,
 ): Promise<{ status: number; body: unknown }> {
+  const http = await import("http");
   return new Promise((resolve, reject) => {
-    import("http").then((http) => {
-      const body = JSON.stringify(data);
-      const req = http.request(
-        {
-          hostname: "localhost",
-          port,
-          path,
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "Content-Length": Buffer.byteLength(body),
-          },
+    const body = JSON.stringify(data);
+    const req = http.request(
+      {
+        hostname: "localhost",
+        port,
+        path,
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Content-Length": Buffer.byteLength(body),
         },
-        (res) => {
-          let responseBody = "";
-          res.on("data", (chunk) => (responseBody += chunk));
-          res.on("end", () => {
-            resolve({
-              status: res.statusCode || 0,
-              body: JSON.parse(responseBody),
-            });
+      },
+      (res) => {
+        let responseBody = "";
+        res.on("data", (chunk) => (responseBody += chunk));
+        res.on("end", () => {
+          resolve({
+            status: res.statusCode || 0,
+            body: JSON.parse(responseBody),
           });
-        },
-      );
-      req.on("error", reject);
-      req.write(body);
-      req.end();
-    });
+        });
+      },
+    );
+    req.on("error", reject);
+    req.write(body);
+    req.end();
   });
 }
 
@@ -327,35 +325,34 @@ async function httpPut(
   path: string,
   data: unknown,
 ): Promise<{ status: number; body: unknown }> {
+  const http = await import("http");
   return new Promise((resolve, reject) => {
-    import("http").then((http) => {
-      const body = JSON.stringify(data);
-      const req = http.request(
-        {
-          hostname: "localhost",
-          port,
-          path,
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-            "Content-Length": Buffer.byteLength(body),
-          },
+    const body = JSON.stringify(data);
+    const req = http.request(
+      {
+        hostname: "localhost",
+        port,
+        path,
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          "Content-Length": Buffer.byteLength(body),
         },
-        (res) => {
-          let responseBody = "";
-          res.on("data", (chunk) => (responseBody += chunk));
-          res.on("end", () => {
-            resolve({
-              status: res.statusCode || 0,
-              body: JSON.parse(responseBody),
-            });
+      },
+      (res) => {
+        let responseBody = "";
+        res.on("data", (chunk) => (responseBody += chunk));
+        res.on("end", () => {
+          resolve({
+            status: res.statusCode || 0,
+            body: JSON.parse(responseBody),
           });
-        },
-      );
-      req.on("error", reject);
-      req.write(body);
-      req.end();
-    });
+        });
+      },
+    );
+    req.on("error", reject);
+    req.write(body);
+    req.end();
   });
 }
 
