@@ -52,9 +52,9 @@ describe("LocalApiServer", () => {
       const unauthorizedHealth = await fetch(`${base}/health`);
       expect(unauthorizedHealth.status).toBe(401);
       const unauthorizedHealthPayload = (await unauthorizedHealth.json()) as {
-        error: { code: string };
+        code: string;
       };
-      expect(unauthorizedHealthPayload.error.code).toBe("UNAUTHORIZED");
+      expect(unauthorizedHealthPayload.code).toBe("UNAUTHORIZED");
 
       const version = await fetch(`${base}/policy/version`, {
         headers: { "x-qore-api-key": apiKey },
@@ -72,8 +72,16 @@ describe("LocalApiServer", () => {
           action: "write",
           targetPath: "src/auth/service.ts",
           content: "password flow",
+          timestamp: new Date().toISOString(),
         }),
       });
+      
+      // Debug: log response if not 200
+      if (decision.status !== 200) {
+        const debugBody = await decision.clone().json();
+        console.log("DEBUG: Decision response not 200:", JSON.stringify(debugBody, null, 2));
+      }
+      
       expect(decision.status).toBe(200);
       const decisionJson = (await decision.json()) as {
         decision: string;
@@ -95,15 +103,15 @@ describe("LocalApiServer", () => {
       });
       expect(invalid.status).toBe(422);
       const invalidJson = (await invalid.json()) as {
-        error: { code: string; traceId: string };
+        code: string; traceId: string;
       };
-      expect(invalidJson.error.code).toBe("VALIDATION_ERROR");
-      expect(invalidJson.error.traceId).toMatch(/^trace_/);
+      expect(invalidJson.code).toBe("VALIDATION_ERROR");
+      expect(invalidJson.traceId).toMatch(/^trace_/);
 
       const notFound = await fetch(`${base}/nope`);
       expect(notFound.status).toBe(404);
-      const notFoundJson = (await notFound.json()) as { error: { code: string } };
-      expect(notFoundJson.error.code).toBe("NOT_FOUND");
+      const notFoundJson = (await notFound.json()) as { code: string };
+      expect(notFoundJson.code).toBe("NOT_FOUND");
 
       const badJson = await fetch(`${base}/evaluate`, {
         method: "POST",
@@ -111,8 +119,8 @@ describe("LocalApiServer", () => {
         body: "{",
       });
       expect(badJson.status).toBe(400);
-      const badJsonPayload = (await badJson.json()) as { error: { code: string } };
-      expect(badJsonPayload.error.code).toBe("BAD_JSON");
+      const badJsonPayload = (await badJson.json()) as { code: string };
+      expect(badJsonPayload.code).toBe("BAD_JSON");
 
       const unauthorized = await fetch(`${base}/evaluate`, {
         method: "POST",
@@ -125,8 +133,8 @@ describe("LocalApiServer", () => {
         }),
       });
       expect(unauthorized.status).toBe(401);
-      const unauthorizedPayload = (await unauthorized.json()) as { error: { code: string } };
-      expect(unauthorizedPayload.error.code).toBe("UNAUTHORIZED");
+      const unauthorizedPayload = (await unauthorized.json()) as { code: string };
+      expect(unauthorizedPayload.code).toBe("UNAUTHORIZED");
 
       const tooLarge = await fetch(`${base}/evaluate`, {
         method: "POST",
@@ -140,8 +148,8 @@ describe("LocalApiServer", () => {
         }),
       });
       expect(tooLarge.status).toBe(413);
-      const tooLargePayload = (await tooLarge.json()) as { error: { code: string } };
-      expect(tooLargePayload.error.code).toBe("PAYLOAD_TOO_LARGE");
+      const tooLargePayload = (await tooLarge.json()) as { code: string };
+      expect(tooLargePayload.code).toBe("PAYLOAD_TOO_LARGE");
     } finally {
       await api.stop();
       ledger.close();

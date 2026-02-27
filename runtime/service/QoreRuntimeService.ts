@@ -140,6 +140,7 @@ export class QoreRuntimeService {
     this.pruneReplayCache(nowMs);
 
     const riskGrade = this.policyEngine.classifyRisk(request.targetPath ?? "", request.content);
+    
     const triage = await this.evaluationRouter.computeTriage({
       id: request.requestId,
       timestamp: new Date().toISOString(),
@@ -171,6 +172,7 @@ export class QoreRuntimeService {
       decision = "ALLOW";
     }
 
+
     const isMutatingAction =
       request.action === "write" ||
       request.action === "execute" ||
@@ -182,6 +184,7 @@ export class QoreRuntimeService {
       requiredActions.push("mutating_action_requires_review");
       reasons.push("fail_closed_default_for_mutating_action");
     }
+
 
     const decisionId = `dec_${crypto.randomUUID()}`;
     const ledgerEntry = await this.ledgerManager.appendEntry({
@@ -209,6 +212,7 @@ export class QoreRuntimeService {
       reasons,
       requiredActions,
       policyVersion: this.cachedPolicyVersion,
+      timestamp: new Date().toISOString(),
       evaluatedAt: new Date().toISOString(),
     });
 

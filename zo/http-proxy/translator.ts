@@ -34,7 +34,7 @@ export function toDecisionRequest(body: ZoAskRequest, actorId: string): Decision
     .digest("hex")
     .slice(0, 24)}`;
 
-  return {
+  const result = {
     requestId,
     actorId,
     action: classifyZoPromptAction(prompt),
@@ -48,5 +48,6 @@ export function toDecisionRequest(body: ZoAskRequest, actorId: string): Decision
       contextHash,
     },
   };
+  return result;
 }
 

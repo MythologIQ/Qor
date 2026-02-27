@@ -236,7 +236,7 @@ describe("Zo HTTP proxy error handling", () => {
       await proxy.start();
       const addr = proxy.getAddress();
       const url = `http://${addr.host}:${addr.port}/zo/ask`;
-      const body = JSON.stringify({ prompt: "Summarize release notes quickly." });
+      const body = JSON.stringify({ prompt: "List recent changes" });
       const proof = createActorProofHeaders("did:myth:proxy-http", body, "actor-signing-key");
       const response = await fetch(url, {
         method: "POST",
