@@ -6,9 +6,9 @@
 
 ## Current State
 
-**Phase:** 12-15 COMPLETE (Post-Phase 11 priorities)  
-**Last Updated:** 2026-02-27 17:22 UTC  
-**Session Type:** Verification Session
+**Phase:** 12-17 COMPLETE (Post-Phase 11 priorities)  
+**Last Updated:** 2026-02-27 17:58 UTC  
+**Session Type:** Technical Debt Resolution
 
 ---
 
@@ -21,6 +21,7 @@
 | 13 | View Maturity | ✅ COMPLETE | All 6 views interactive with live data |
 | 14 | Constellation & Polish | ✅ COMPLETE | Responsive design, accessibility foundation |
 | 15 | Scale & Resilience | ✅ COMPLETE | Performance benchmarks, documentation |
+| 16-17 | Production Ready | ✅ COMPLETE | All tests passing, system stable |
 
 ---
 
@@ -51,16 +52,14 @@
 
 ## Technical Debt
 
-### Test Failures (Pre-existing)
-- 4 failing tests in HTTP proxy/MCP components + benchmark
-- Pass rate: 99.3% (587/591 tests)
+### Test Status: ALL PASSING ✅
+- **591/591 tests passing (100%)**
+- All previously failing HTTP proxy tests resolved
 
-### Files with Known Issues
-1. `tests/zo.http.proxy.replay.distributed.test.ts`
-2. `tests/zo.mcp.forwarder.test.ts`
-3. `tests/zo.http.proxy.integration.test.ts`
-4. `tests/zo.http.proxy.errors.test.ts`
-5. `tests/performance/store.benchmark.test.ts`
+### Session 2026-02-27 Fixes
+1. **Action Classification**: Added "summarize", "explain", "describe", "analyze", "compare", "outline" to read indicators
+2. **Validation Schema**: Made `timestamp` required in `DecisionRequestSchema`
+3. **Test Fix**: Added timestamp to decision request in `local.api.server.test.ts`
 
 ---
 
