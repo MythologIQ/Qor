@@ -4,6 +4,7 @@
  * Types for governance decision requests and responses.
  */
 
+import { z } from "zod";
 import type { RiskGrade } from "./shared.types";
 
 /**
@@ -55,71 +56,36 @@ export interface DecisionResponse {
 }
 
 /**
- * Decision request schema for validation
+ * Decision request schema for validation (Zod)
  */
-export const DecisionRequestSchema = {
-  type: "object",
-  required: ["requestId", "actorId", "action", "timestamp"],
-  properties: {
-    requestId: { type: "string" },
-    actorId: { type: "string" },
-    projectId: { type: "string" },
-    action: { type: "string" },
-    payload: { type: "object" },
-    timestamp: { type: "string" },
-    context: { type: "object" },
-  },
-  parse: (data: unknown): DecisionRequest => {
-    if (typeof data === "object" && data !== null) {
-      const obj = data as Record<string, unknown>;
-      return {
-        requestId: obj.requestId as string,
-        actorId: obj.actorId as string,
-        projectId: obj.projectId as string | undefined,
-        action: obj.action as string,
-        payload: obj.payload as Record<string, unknown> | undefined,
-        timestamp: obj.timestamp as string,
-        context: obj.context as Record<string, unknown> | undefined,
-        targetPath: obj.targetPath as string | undefined,
-        content: obj.content as string | undefined,
-      };
-    }
-    throw new Error("Invalid DecisionRequest");
-  },
-};
+export const DecisionRequestSchema = z.object({
+  requestId: z.string(),
+  actorId: z.string(),
+  projectId: z.string().optional(),
+  action: z.string(),
+  payload: z.any().optional(),
+  timestamp: z.string(), // Required for validation
+  context: z.any().optional(),
+  targetPath: z.string().optional(),
+  content: z.string().optional(),
+});
 
 /**
- * Decision response schema for validation
+ * Decision response schema for validation (Zod)
  */
-export const DecisionResponseSchema = {
-  type: "object",
-  required: ["requestId", "decision", "timestamp"],
-  properties: {
-    requestId: { type: "string" },
-    decision: { type: "string", enum: ["allow", "deny", "warn", "escalate"] },
-    reason: { type: "string" },
-    riskGrade: { type: "string" },
-    conditions: { type: "array", items: { type: "string" } },
-    timestamp: { type: "string" },
-    traceId: { type: "string" },
-  },
-  parse: (data: unknown): DecisionResponse => {
-    if (typeof data === "object" && data !== null) {
-      const obj = data as Record<string, unknown>;
-      return {
-        requestId: obj.requestId as string,
-        decision: obj.decision as DecisionResponse["decision"],
-        reason: obj.reason as string | undefined,
-        reasons: obj.reasons as string[] | undefined,
-        riskGrade: obj.riskGrade as RiskGrade | undefined,
-        conditions: obj.conditions as string[] | undefined,
-        timestamp: obj.timestamp as string,
-        traceId: obj.traceId as string | undefined,
-        decisionId: obj.decisionId as string | undefined,
-        auditEventId: obj.auditEventId as string | undefined,
-        requiredActions: obj.requiredActions as string[] | undefined,
-      };
-    }
-    throw new Error("Invalid DecisionResponse");
-  },
-};
+export const DecisionResponseSchema = z.object({
+  requestId: z.string(),
+  decision: z.enum(["allow", "deny", "warn", "escalate", "ALLOW", "DENY", "WARN", "ESCALATE"]),
+  reason: z.string().optional(),
+  reasons: z.array(z.string()).optional(),
+  riskGrade: z.any().optional(),
+  conditions: z.array(z.string()).optional(),
+  timestamp: z.string(),
+  traceId: z.string().optional(),
+  decisionId: z.string().optional(),
+  auditEventId: z.string().optional(),
+  requiredActions: z.array(z.string()).optional(),
+  evaluationTier: z.number().optional(),
+  policyVersion: z.string().optional(),
+  evaluatedAt: z.string().optional(),
+});

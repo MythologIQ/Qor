@@ -63,8 +63,12 @@ export function classifyToolAction(
   
   // Check for read tokens
   for (const token of READ_TOKENS) {
-    // Use word boundary matching to avoid substring collisions
-    const pattern = new RegExp(`\\b${token.replace("_", "_?")}`, "i");
+    // Use precise word boundary matching to avoid substring collisions
+    // Token format is "prefix_" - we need to match either:
+    // 1. The token with underscore followed by word chars (e.g., "list_file")
+    // 2. The base word at a boundary (e.g., "get" at end or before non-word)
+    const baseToken = token.replace(/_$/, ""); // Remove trailing underscore
+    const pattern = new RegExp(`\\b${baseToken}(_[a-z]+|$|[^a-z])`, "i");
     if (pattern.test(normalizedName)) {
       return "read";
     }
@@ -98,7 +102,8 @@ export function classifyZoPromptAction(prompt: string): ActionClassification {
   // Check for explicit read/query indicators
   const readIndicators = [
     "show", "list", "get", "read", "fetch", "find", "search",
-    "what", "which", "how many", "tell me about",
+    "what", "which", "how many", "tell me about", "summarize", "explain",
+    "describe", "analyze", "compare", "outline",
   ];
   
   for (const indicator of readIndicators) {
