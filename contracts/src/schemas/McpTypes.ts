@@ -86,6 +86,13 @@ export const McpResponseSchema = {
   parse: (data: unknown): McpResponse => {
     if (typeof data === "object" && data !== null) {
       const obj = data as Record<string, unknown>;
+      // Validate that id is present and is string or number
+      if (obj.id === undefined || obj.id === null) {
+        throw new Error("Invalid McpResponse: 'id' is required");
+      }
+      if (typeof obj.id !== "string" && typeof obj.id !== "number") {
+        throw new Error("Invalid McpResponse: 'id' must be string or number");
+      }
       return {
         id: obj.id as string | number,
         result: obj.result as Record<string, unknown> | undefined,

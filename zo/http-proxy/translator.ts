@@ -9,7 +9,9 @@ function extractPrompt(input: ZoAskRequest): string {
 }
 
 export function extractModelId(input: ZoAskRequest): string | undefined {
-  return typeof input.model === "string" && input.model.length > 0 ? input.model : undefined;
+  // Check both model and modelName (schema may map model -> modelName)
+  const model = input.model ?? input.modelName;
+  return typeof model === "string" && model.length > 0 ? model : undefined;
 }
 
 export function toDecisionRequest(body: ZoAskRequest, actorId: string): DecisionRequest {

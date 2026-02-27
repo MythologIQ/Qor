@@ -78,6 +78,7 @@ describe("Zo HTTP distributed replay protection", () => {
         apiKey: "proxy-key",
         actorSigningKey: "actor-signing-key",
         replayProtection: { strategy: "sqlite", sqlitePath: dbPath },
+        modelPolicy: { enforce: false },  // Disable model policy for this test
       },
     );
     const proxyB = new ZoHttpProxyServer(
@@ -88,6 +89,7 @@ describe("Zo HTTP distributed replay protection", () => {
         apiKey: "proxy-key",
         actorSigningKey: "actor-signing-key",
         replayProtection: { strategy: "sqlite", sqlitePath: dbPath },
+        modelPolicy: { enforce: false },  // Disable model policy for this test
       },
     );
 

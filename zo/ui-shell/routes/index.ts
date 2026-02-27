@@ -2160,7 +2160,19 @@ export async function handleApiRoute(
     return true;
   }
 
-  // No matching route found
+  // No matching route 
+  // ── Proxy planning API requests to runtime ─────────────────────────────────
+  const planningPattern = /^\/api\/projects\/[^/]+\/(void|reveal|constellation|path|risk|autonomy)/;
+  if (planningPattern.test(pathname)) {
+    const result = await ctx.fetchQoreJson(pathname, method, method !== "GET" ? await ctx.readBody(req) : undefined);
+    if (result.ok) {
+      ctx.sendJson(res, 200, result.body);
+    } else {
+      ctx.sendJson(res, result.ok ? 200 : 500, { error: result.error, detail: result.detail });
+    }
+    return true;
+  }
+
   return false;
 }
 

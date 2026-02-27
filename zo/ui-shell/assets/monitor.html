@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Zo-Qore Monitor</title>
+  <link rel="stylesheet" href="../tokens.css">
+  <link rel="stylesheet" href="../components.css">
+  <style>
+    body {
+      background: var(--color-bg);
+      color: var(--color-text);
+      font-family: var(--font-sans);
+      margin: 0;
+      padding: 0;
+      min-height: 100vh;
+    }
+    
+    .monitor-container {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: var(--space-6);
+    }
+    
+    .monitor-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: var(--space-8);
+      padding-bottom: var(--space-4);
+      border-bottom: var(--border-thin) solid var(--color-line);
+    }
+    
+    .monitor-title {
+      font-size: var(--text-2xl);
+      font-weight: var(--font-bold);
+      color: var(--color-text);
+    }
+    
+    .monitor-status {
+      display: flex;
+      gap: var(--space-6);
+    }
+    
+    .status-item {
+      display: flex;
+      align-items: center;
+      gap: var(--space-2);
+      font-size: var(--text-sm);
+      color: var(--color-muted);
+    }
+    
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: var(--radius-full);
+      background: var(--color-success);
+      box-shadow: 0 0 8px var(--color-success);
+    }
+    
+    .status-dot--warning {
+      background: var(--color-warning);
+      box-shadow: 0 0 8px var(--color-warning);
+    }
+    
+    .status-dot--error {
+      background: var(--color-error);
+      box-shadow: 0 0 8px var(--color-error);
+    }
+    
+    .phase-track {
+      display: flex;
+      gap: var(--space-3);
+      margin-bottom: var(--space-6);
+    }
+    
+    .phase {
+      padding: var(--space-3) var(--space-4);
+      background: var(--color-surface);
+      border: var(--border-thin) solid var(--color-line);
+      border-radius: var(--radius-lg);
+      font-size: var(--text-sm);
+      font-weight: var(--font-semibold);
+      color: var(--color-muted);
+      text-transform: uppercase;
+      letter-spacing: var(--tracking-wide);
+      transition: var(--transition-all);
+    }
+    
+    .phase--active {
+      border-color: var(--color-primary);
+      color: var(--color-text);
+      box-shadow: var(--shadow-glow-primary);
+    }
+    
+    .phase--complete {
+      background: var(--color-success-bg);
+      border-color: var(--color-success);
+      color: var(--color-success);
+    }
+    
+    .sentinel-orb {
+      width: 12px;
+      height: 12px;
+      border-radius: var(--radius-full);
+      background: var(--color-success);
+      animation: sentinel-pulse 2s ease-in-out infinite;
+    }
+    
+    @keyframes sentinel-pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.7; transform: scale(1.1); }
+    }
+    
+    .health-blockers {
+      background: var(--color-surface);
+      border: var(--border-thin) solid var(--color-line);
+      border-radius: var(--radius-xl);
+      padding: var(--space-6);
+      margin-bottom: var(--space-6);
+    }
+    
+    .health-blockers__title {
+      font-size: var(--text-lg);
+      font-weight: var(--font-semibold);
+      color: var(--color-text);
+      margin-bottom: var(--space-4);
+    }
+    
+    .blocker-item {
+      display: flex;
+      align-items: center;
+      gap: var(--space-3);
+      padding: var(--space-3);
+      background: var(--color-surface-2);
+      border-radius: var(--radius-lg);
+      margin-bottom: var(--space-2);
+    }
+    
+    .blocker-item:last-child {
+      margin-bottom: 0;
+    }
+    
+    .qore-runtime-ribbon {
+      background: linear-gradient(90deg, var(--color-surface), var(--color-surface-2));
+      border: var(--border-thin) solid var(--color-line);
+      border-radius: var(--radius-lg);
+      padding: var(--space-4) var(--space-5);
+      margin-bottom: var(--space-6);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    
+    .ribbon-status {
+      display: flex;
+      align-items: center;
+      gap: var(--space-3);
+    }
+    
+    .ribbon-label {
+      font-size: var(--text-sm);
+      color: var(--color-muted);
+    }
+    
+    .ribbon-value {
+      font-size: var(--text-sm);
+      font-weight: var(--font-semibold);
+      color: var(--color-text);
+    }
+  </style>
+</head>
+<body>
+  <div class="monitor-container">
+    <header class="monitor-header">
+      <h1 class="monitor-title">Zo-Qore Monitor</h1>
+      <div class="monitor-status">
+        <div class="status-item">
+          <div class="status-dot"></div>
+          <span>System Healthy</span>
+        </div>
+        <div class="status-item">
+          <div class="sentinel-orb" data-tooltip="Real-time governance monitoring and system health"></div>
+          <span>Sentinel Active</span>
+        </div>
+      </div>
+    </header>
+    
+    <div class="qore-runtime-ribbon">
+      <div class="ribbon-status">
+        <span class="ribbon-label">Qore Runtime:</span>
+        <span class="ribbon-value">Connected</span>
+      </div>
+      <div class="ribbon-status">
+        <span class="ribbon-label">Policy Version:</span>
+        <span class="ribbon-value" id="policy-version">Loading...</span>
+      </div>
+    </div>
+    
+    <div class="phase-track" id="phase-track">
+      <div class="phase phase--complete">Void</div>
+      <div class="phase phase--active">Reveal</div>
+      <div class="phase">Constellation</div>
+      <div class="phase">Path</div>
+      <div class="phase">Risk</div>
+      <div class="phase">Autonomy</div>
+    </div>
+    
+    <div class="health-blockers" id="health-blockers">
+      <h2 class="health-blockers__title">Health & Blockers</h2>
+      <p style="color: var(--color-muted);">No active blockers. All systems operational.</p>
+    </div>
+  </div>
+  
+  <script>
+    // Fetch policy version from API
+    fetch('/api/policy/version')
+      .then(res => res.json())
+      .then(data => {
+        document.getElementById('policy-version').textContent = data.policyVersion || 'Unknown';
+      })
+      .catch(() => {
+        document.getElementById('policy-version').textContent = 'Disconnected';
+      });
+  </script>
+</body>
+</html>

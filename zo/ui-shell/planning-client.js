@@ -1,264 +1,246 @@
 /**
- * PlanningClient - Client-side API wrapper for the planning pipeline
- * 
- * Provides methods for CRUD operations on all six planning views:
- * Void, Reveal, Constellation, Path, Risk, and Autonomy
+ * Planning API Client
+ *
+ * Client library for interacting with the planning pipeline API.
+ * Used by UI views to fetch and display planning data.
  */
-(function() {
+
+(function(global) {
   'use strict';
 
-  var API_BASE = '/api/projects';
+  /**
+   * Get project ID from URL query params or default
+   */
+  function getProjectId() {
+    var params = new URLSearchParams(window.location.search);
+    return params.get('project') || 'default-project';
+  }
 
+  /**
+   * Build API URL for planning endpoints
+   */
+  function buildUrl(path) {
+    var projectId = getProjectId();
+    return '/api/projects/' + encodeURIComponent(projectId) + path;
+  }
+
+  /**
+   * Generic fetch wrapper with error handling
+   */
+  function fetchApi(url, options) {
+    return fetch(url, Object.assign({
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    }, options)).then(function(res) {
+      if (!res.ok) {
+        return res.json().then(function(err) {
+          throw new Error(err.error?.message || 'API error: ' + res.status);
+        });
+      }
+      return res.json();
+    });
+  }
+
+  /**
+   * Planning API Client
+   */
   var PlanningClient = {
-    _currentProjectId: 'default-project',
-    _apiKey: null,
-
-    setProjectId: function(projectId) {
-      this._currentProjectId = projectId;
+    // --- Nav State ---
+    
+    /**
+     * Get navigation state including pipeline status
+     */
+    getNavState: function() {
+      return fetchApi('/api/project/' + encodeURIComponent(getProjectId()) + '/nav-state');
     },
 
-    getCurrentProjectId: function() {
-      var params = new URLSearchParams(window.location.search);
-      return params.get('project') || this._currentProjectId;
-    },
+    // --- Void (Thoughts) ---
 
-    setApiKey: function(key) {
-      this._apiKey = key;
-    },
-
-    _fetch: function(url, options) {
-      var headers = {};
-      if (this._apiKey) {
-        headers['Authorization'] = 'Bearer ' + this._apiKey;
-      }
-      if (options && options.body && typeof options.body === 'object') {
-        headers['Content-Type'] = 'application/json';
-        options.body = JSON.stringify(options.body);
-      }
-      var opts = options || {};
-      opts.headers = Object.assign({}, headers, opts.headers);
-      return fetch(url, opts).then(function(resp) {
-        if (!resp.ok) {
-          return resp.json().then(function(err) {
-            var e = new Error(err.message || 'API Error');
-            e.status = resp.status;
-            e.data = err;
-            throw e;
-          });
-        }
-        return resp.json();
+    /**
+     * Get all thoughts for current project
+     */
+    getThoughts: function() {
+      return fetchApi(buildUrl('/void/thoughts')).then(function(data) {
+        return data.thoughts || [];
       });
     },
 
-    // ========== NAV-STATE ==========
-    getNavState: function(projectId) {
-      projectId = projectId || this.getCurrentProjectId();
-      return this._fetch('/api/project/' + projectId + '/nav-state');
-    },
-
-    // ========== INTEGRITY ==========
-    checkIntegrity: function(projectId) {
-      projectId = projectId || this.getCurrentProjectId();
-      return this._fetch('/api/projects/' + projectId + '/integrity');
-    },
-
-    runChecks: function(projectId) {
-      projectId = projectId || this.getCurrentProjectId();
-      return this._fetch('/api/projects/' + projectId + '/check', { method: 'POST' });
-    },
-
-    // ========== VICTOR ==========
-    getVictorReview: function(projectId) {
-      projectId = projectId || this.getCurrentProjectId();
-      return this._fetch('/api/victor/review-plan', {
-        method: 'POST',
-        body: { projectId: projectId }
-      });
-    },
-
-    // ========== VOID - Thoughts ==========
-    getThoughts: function(projectId) {
-      projectId = projectId || this.getCurrentProjectId();
-      return this._fetch(API_BASE + '/' + projectId + '/void/thoughts')
-        .then(function(data) { return data.thoughts || []; });
-    },
-
+    /**
+     * Add a new thought
+     */
     addThought: function(content, source, capturedBy, tags) {
-      var projectId = this.getCurrentProjectId();
-      return this._fetch(API_BASE + '/' + projectId + '/void/thoughts', {
+      return fetchApi(buildUrl('/void/thoughts'), {
         method: 'POST',
-        body: {
-          content: content,
-          source: source || 'text',
-          capturedBy: capturedBy || 'user',
-          tags: tags || []
-        }
+        body: JSON.stringify({ content: content, source: source, capturedBy: capturedBy, tags: tags })
       });
     },
 
-    updateThoughtStatus: function(thoughtId, status) {
-      var projectId = this.getCurrentProjectId();
-      return this._fetch(API_BASE + '/' + projectId + '/void/thoughts/' + thoughtId + '/status', {
-        method: 'PUT',
-        body: { status: status }
+    // --- Reveal (Clusters) ---
+
+    /**
+     * Get all clusters for current project
+     */
+    getClusters: function() {
+      return fetchApi(buildUrl('/reveal/clusters')).then(function(data) {
+        return data.clusters || [];
       });
     },
 
-    // ========== REVEAL - Clusters ==========
-    getClusters: function(projectId) {
-      projectId = projectId || this.getCurrentProjectId();
-      return this._fetch(API_BASE + '/' + projectId + '/reveal/clusters')
-        .then(function(data) { return data.clusters || []; });
-    },
-
-    createCluster: function(label, thoughtIds, notes) {
-      var projectId = this.getCurrentProjectId();
-      return this._fetch(API_BASE + '/' + projectId + '/reveal/clusters', {
+    /**
+     * Create a new cluster
+     */
+    createCluster: function(label, thoughtIds, notes, actorId) {
+      return fetchApi(buildUrl('/reveal/clusters'), {
         method: 'POST',
-        body: {
-          label: label,
-          thoughtIds: thoughtIds || [],
-          notes: notes || ''
-        }
+        body: JSON.stringify({ label: label, thoughtIds: thoughtIds, notes: notes, actorId: actorId })
       });
     },
 
-    updateCluster: function(clusterId, updates) {
-      var projectId = this.getCurrentProjectId();
-      return this._fetch(API_BASE + '/' + projectId + '/reveal/clusters/' + clusterId, {
-        method: 'PUT',
-        body: updates
-      });
+    // --- Constellation (Map) ---
+
+    /**
+     * Get constellation map
+     */
+    getConstellation: function() {
+      return fetchApi(buildUrl('/constellation/map'));
     },
 
-    deleteCluster: function(clusterId) {
-      var projectId = this.getCurrentProjectId();
-      return this._fetch(API_BASE + '/' + projectId + '/reveal/clusters/' + clusterId, {
-        method: 'DELETE'
-      });
-    },
-
-    // ========== CONSTELLATION - Map ==========
-    getConstellation: function(projectId) {
-      projectId = projectId || this.getCurrentProjectId();
-      return this._fetch(API_BASE + '/' + projectId + '/constellation/map')
-        .then(function(data) { return data.map; });
-    },
-
-    saveConstellation: function(mapData) {
-      var projectId = this.getCurrentProjectId();
-      return this._fetch(API_BASE + '/' + projectId + '/constellation/map', {
+    /**
+     * Save constellation map
+     */
+    saveConstellation: function(nodes, edges, actorId) {
+      return fetchApi(buildUrl('/constellation/map'), {
         method: 'POST',
-        body: mapData
+        body: JSON.stringify({ nodes: nodes, edges: edges, actorId: actorId })
       });
     },
 
-    // ========== PATH - Phases ==========
-    getPhases: function(projectId) {
-      projectId = projectId || this.getCurrentProjectId();
-      return this._fetch(API_BASE + '/' + projectId + '/path/phases')
-        .then(function(data) { return data.phases || []; });
+    // --- Path (Phases) ---
+
+    /**
+     * Get all phases
+     */
+    getPhases: function() {
+      return fetchApi(buildUrl('/path/phases')).then(function(data) {
+        return data.phases || [];
+      });
     },
 
-    createPhase: function(phaseData) {
-      var projectId = this.getCurrentProjectId();
-      return this._fetch(API_BASE + '/' + projectId + '/path/phases', {
+    /**
+     * Create a new phase
+     */
+    createPhase: function(name, objective, sourceClusterIds, tasks, actorId) {
+      return fetchApi(buildUrl('/path/phases'), {
         method: 'POST',
-        body: phaseData
-      });
-    },
-
-    updatePhase: function(phaseId, updates) {
-      var projectId = this.getCurrentProjectId();
-      return this._fetch(API_BASE + '/' + projectId + '/path/phases/' + phaseId, {
-        method: 'PUT',
-        body: updates
-      });
-    },
-
-    deletePhase: function(phaseId) {
-      var projectId = this.getCurrentProjectId();
-      return this._fetch(API_BASE + '/' + projectId + '/path/phases/' + phaseId, {
-        method: 'DELETE'
-      });
-    },
-
-    // ========== RISK - Register ==========
-    getRisks: function(projectId) {
-      projectId = projectId || this.getCurrentProjectId();
-      return this._fetch(API_BASE + '/' + projectId + '/risk/register')
-        .then(function(data) { return data.risks || []; });
-    },
-
-    addRisk: function(riskData) {
-      var projectId = this.getCurrentProjectId();
-      return this._fetch(API_BASE + '/' + projectId + '/risk/register', {
-        method: 'POST',
-        body: riskData
-      });
-    },
-
-    updateRisk: function(riskId, updates) {
-      var projectId = this.getCurrentProjectId();
-      return this._fetch(API_BASE + '/' + projectId + '/risk/register/' + riskId, {
-        method: 'PUT',
-        body: updates
-      });
-    },
-
-    deleteRisk: function(riskId) {
-      var projectId = this.getCurrentProjectId();
-      return this._fetch(API_BASE + '/' + projectId + '/risk/register/' + riskId, {
-        method: 'DELETE'
-      });
-    },
-
-    // ========== AUTONOMY - Config ==========
-    getAutonomyConfig: function(projectId) {
-      projectId = projectId || this.getCurrentProjectId();
-      return this._fetch(API_BASE + '/' + projectId + '/autonomy/config')
-        .then(function(data) { return data.config; });
-    },
-
-    saveAutonomyConfig: function(config) {
-      var projectId = this.getCurrentProjectId();
-      return this._fetch(API_BASE + '/' + projectId + '/autonomy/config', {
-        method: 'POST',
-        body: config
-      });
-    },
-
-    // ========== PROJECT ==========
-    getProject: function(projectId) {
-      projectId = projectId || this.getCurrentProjectId();
-      return this._fetch(API_BASE + '/' + projectId);
-    },
-
-    createProject: function(name, description, createdBy) {
-      return this._fetch(API_BASE, {
-        method: 'POST',
-        body: {
+        body: JSON.stringify({
           name: name,
-          description: description || '',
-          createdBy: createdBy || 'user'
-        }
+          objective: objective,
+          sourceClusterIds: sourceClusterIds,
+          tasks: tasks,
+          actorId: actorId
+        })
       });
     },
 
-    // ========== LEDGER ==========
-    getLedger: function(projectId, limit) {
-      projectId = projectId || this.getCurrentProjectId();
-      var url = API_BASE + '/' + projectId + '/ledger';
-      if (limit) url += '?limit=' + limit;
-      return this._fetch(url);
+    // --- Risk (Register) ---
+
+    /**
+     * Get all risk entries
+     */
+    getRisks: function() {
+      return fetchApi(buildUrl('/risk/register')).then(function(data) {
+        return data.risks || [];
+      });
+    },
+
+    /**
+     * Add a new risk entry
+     */
+    addRisk: function(phaseId, description, likelihood, impact, mitigation, owner, actorId) {
+      return fetchApi(buildUrl('/risk/register'), {
+        method: 'POST',
+        body: JSON.stringify({
+          phaseId: phaseId,
+          description: description,
+          likelihood: likelihood,
+          impact: impact,
+          mitigation: mitigation,
+          owner: owner,
+          actorId: actorId
+        })
+      });
+    },
+
+    // --- Autonomy (Config) ---
+
+    /**
+     * Get autonomy config
+     */
+    getAutonomyConfig: function() {
+      return fetchApi(buildUrl('/autonomy/config'));
+    },
+
+    /**
+     * Save autonomy config
+     */
+    saveAutonomyConfig: function(config, actorId) {
+      return fetchApi(buildUrl('/autonomy/config'), {
+        method: 'POST',
+        body: JSON.stringify(Object.assign({}, config, { actorId: actorId }))
+      });
+    },
+
+    // --- Integrity & Ledger ---
+
+    /**
+     * Get integrity check results
+     */
+    checkIntegrity: function() {
+      return fetchApi(buildUrl('/integrity'));
+    },
+
+    /**
+     * Run a specific integrity check
+     */
+    runCheck: function(checkId) {
+      return fetchApi(buildUrl('/check'), {
+        method: 'POST',
+        body: JSON.stringify({ checkId: checkId })
+      });
+    },
+
+    /**
+     * Get ledger entries
+     */
+    getLedger: function(filters) {
+      var url = buildUrl('/ledger');
+      if (filters) {
+        var params = new URLSearchParams();
+        if (filters.view) params.set('view', filters.view);
+        if (filters.action) params.set('action', filters.action);
+        var qs = params.toString();
+        if (qs) url += '?' + qs;
+      }
+      return fetchApi(url).then(function(data) {
+        return data.entries || [];
+      });
+    },
+
+    // --- Victor Review ---
+
+    /**
+     * Request Victor review of planning data
+     */
+    requestVictorReview: function(scope) {
+      return fetchApi('/api/victor/review-plan', {
+        method: 'POST',
+        body: JSON.stringify({ projectId: getProjectId(), scope: scope })
+      });
     }
   };
 
   // Expose globally
-  window.PlanningClient = PlanningClient;
+  global.PlanningClient = PlanningClient;
 
-  // Dispatch ready event
-  document.dispatchEvent(new CustomEvent('planning:client-ready', {
-    detail: { PlanningClient: PlanningClient }
-  }));
-})();
+})(typeof window !== 'undefined' ? window : global);

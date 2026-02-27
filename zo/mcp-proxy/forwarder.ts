@@ -72,11 +72,9 @@ export class McpForwarder {
       const json = await response.json();
       try {
         return McpResponseSchema.parse(json) as McpResponse;
-      } catch (error) {
-        if (this.isZodError(error)) {
-          throw new UpstreamProtocolError("Upstream MCP response failed schema validation");
-        }
-        throw error;
+      } catch {
+        // Schema validation failed - response doesn't match MCP protocol
+        throw new UpstreamProtocolError("Upstream MCP response failed schema validation");
       }
     } catch (error) {
       if (error instanceof Error && error.name === "AbortError") {
@@ -86,16 +84,6 @@ export class McpForwarder {
     } finally {
       clearTimeout(timeout);
     }
-  }
-
-  private isZodError(error: unknown): error is ZodError {
-    return (
-      error instanceof ZodError ||
-      (typeof error === "object" &&
-        error !== null &&
-        "issues" in error &&
-        Array.isArray((error as { issues?: unknown }).issues))
-    );
   }
 }
 

@@ -56,14 +56,14 @@ function showApp() {
 // Navigation
 function getNavHtml(currentPage) {
   const pages = [
-    { id: 'dashboard', label: 'Dashboard', href: 'index.html', icon: '⌂' },
-    { id: 'emails', label: 'Emails', href: 'emails.html', icon: '✉' },
-    { id: 'calendar', label: 'Calendar', href: 'calendar.html', icon: '📅' },
-    { id: 'tasks', label: 'Tasks', href: 'tasks.html', icon: '☑' },
-    { id: 'victor', label: 'Victor Chat', href: 'victor.html', icon: '💬' },
-    { id: 'victor-dashboard', label: 'Victor Config', href: 'victor-dashboard.html', icon: '⚙' },
-    { id: 'builder', label: 'Builder', href: '/ui/', icon: '🧱' },
-    { id: 'logs', label: 'Logs', href: 'logs.html', icon: '📋' }
+    { id: 'dashboard', label: 'Dashboard', href: '/index.html', icon: '⌂' },
+    { id: 'emails', label: 'Emails', href: '/emails.html', icon: '✉' },
+    { id: 'calendar', label: 'Calendar', href: '/calendar.html', icon: '📅' },
+    { id: 'tasks', label: 'Tasks', href: '/tasks.html', icon: '☑' },
+    { id: 'victor', label: 'Victor Chat', href: '/victor.html', icon: '💬' },
+    { id: 'builder', label: 'Builder', href: '/builder/', icon: '🧱' },
+    { id: 'settings', label: 'Settings', href: '/victor-dashboard.html', icon: '⚙' },
+    { id: 'logs', label: 'Logs', href: '/logs.html', icon: '📋' }
   ];
   
   return `

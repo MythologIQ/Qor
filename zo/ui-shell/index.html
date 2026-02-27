@@ -4,22 +4,22 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Zo-Qore Command Center</title>
-  <link rel="icon" type="image/png" href="/favicon.png">
+  <link rel="icon" type="image/png" href="/ui/favicon.png">
   <!-- Design System: Tokens first, then Components -->
-  <link rel="stylesheet" href="tokens.css?v=1">
-  <link rel="stylesheet" href="components.css?v=1">
+  <link rel="stylesheet" href="/ui/tokens.css?v=1">
+  <link rel="stylesheet" href="/ui/components.css?v=1">
   <!-- View-specific styles -->
-  <link rel="stylesheet" href="legacy-roadmap.css?v=101">
-  <link rel="stylesheet" href="void.css?v=1">
-  <link rel="stylesheet" href="reveal.css?v=1">
-  <link rel="stylesheet" href="constellation.css?v=1">
-  <link rel="stylesheet" href="path.css?v=1">
-  <link rel="stylesheet" href="autonomy.css?v=1">
-  <link rel="stylesheet" href="zo-nav.css?v=1">
-  <link rel="stylesheet" href="empty-state.css?v=1">
-  <link rel="stylesheet" href="void-stt.css?v=1">
-    <link rel="stylesheet" href="risk-register.css?v=1">
-  <link rel="stylesheet" href="onboarding.css?v=1">
+  <link rel="stylesheet" href="/ui/legacy-roadmap.css?v=101">
+  <link rel="stylesheet" href="/ui/void.css?v=1">
+  <link rel="stylesheet" href="/ui/reveal.css?v=1">
+  <link rel="stylesheet" href="/ui/constellation.css?v=1">
+  <link rel="stylesheet" href="/ui/path.css?v=1">
+  <link rel="stylesheet" href="/ui/autonomy.css?v=1">
+  <link rel="stylesheet" href="/ui/zo-nav.css?v=1">
+  <link rel="stylesheet" href="/ui/empty-state.css?v=1">
+  <link rel="stylesheet" href="/ui/void-stt.css?v=1">
+  <link rel="stylesheet" href="/ui/risk-register.css?v=1">
+  <link rel="stylesheet" href="/ui/onboarding.css?v=1">
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Orbitron:wght@500;700;800&display=swap">
 </head>
 <body>
@@ -114,7 +114,7 @@
     })();
   </script>
 <aside class="zoqore-side-banner zoqore-side-rail" aria-hidden="true">
-    <img src="/zoqore-side-banner.png" alt="">
+    <img src="/ui/zoqore-side-banner.png" alt="">
     <div class="side-beta-callout" aria-hidden="false">
       <span class="side-beta-eyebrow">Open Source Beta</span>
       <h3>Build Zo-Qore With Us</h3>
@@ -128,7 +128,7 @@
     <header id="header">
       <div class="header-content">
         <div class="brand-left">
-          <img src="/favicon.png" alt="Zo-Qore logo" class="brand-icon">
+          <img src="/ui/favicon.png" alt="Zo-Qore logo" class="brand-icon">
           <div>
             <h1>Zo-Qore</h1>
             <div class="brand-subtitle">Command Center</div>
@@ -829,30 +829,30 @@
   </div>
 
   <!-- Navigation & Empty States -->
-  <script src="zo-nav.js?v=1"></script>
-  <script src="empty-state.js?v=1"></script>
-  <script src="empty-reveal.js?v=1"></script>
-  <script src="empty-constellation.js?v=1"></script>
-  <script src="empty-path.js?v=1"></script>
-  <script src="empty-risk.js?v=1"></script>
-  <script src="empty-autonomy.js?v=1"></script>
-  <script src="shared/planning-client.js?v=1"></script>
-  <script src="void-stt.js?v=1"></script>
+  <script src="/ui/zo-nav.js?v=1"></script>
+  <script src="/ui/empty-state.js?v=1"></script>
+  <script src="/ui/empty-reveal.js?v=1"></script>
+  <script src="/ui/empty-constellation.js?v=1"></script>
+  <script src="/ui/empty-path.js?v=1"></script>
+  <script src="/ui/empty-risk.js?v=1"></script>
+  <script src="/ui/empty-autonomy.js?v=1"></script>
+  <script src="/ui/planning-client.js?v=1"></script>
+  <script src="/ui/void-stt.js?v=1"></script>
 
   <!-- Core Components -->
-  <script src="virtual-list.js?v=1"></script>
-  <script src="components.js?v=1"></script>
-  <script src="void.js?v=1"></script>
-  <script src="reveal.js?v=1"></script>
-  <script src="reveal-drag.js?v=1"></script>
-    <script src="risk-register.js?v=1"></script>
-  <script src="path.js?v=1"></script>
-  <script src="autonomy.js?v=1"></script>
-  <script src="constellation-tree.js?v=1"></script>
-  <script src="constellation-spatial.js?v=1"></script>
-  <script src="constellation-graph.js?v=1"></script>
-  <script src="onboarding.js?v=1"></script>
-  <script type="module" src="legacy/main.js?v=101"></script>
+  <script src="/ui/virtual-list.js?v=1"></script>
+  <script src="/ui/components.js?v=1"></script>
+  <script src="/ui/void.js?v=1"></script>
+  <script src="/ui/reveal.js?v=1"></script>
+  <script src="/ui/reveal-drag.js?v=1"></script>
+    <script src="/ui/risk-register.js?v=1"></script>
+  <script src="/ui/path.js?v=1"></script>
+  <script src="/ui/autonomy.js?v=1"></script>
+  <script src="/ui/constellation-tree.js?v=1"></script>
+  <script src="/ui/constellation-spatial.js?v=1"></script>
+  <script src="/ui/constellation-graph.js?v=1"></script>
+  <script src="/ui/onboarding.js?v=1"></script>
+  <script type="module" src="/ui/legacy/main.js?v=101"></script>
 
   <!-- Initialize Navigation -->
   <script>
@@ -920,7 +920,7 @@
       
       // Register Service Worker for offline capability
       if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.register('/sw.js')
+        navigator.serviceWorker.register('/ui/sw.js')
           .then(function(registration) {
             console.log('[SW] Service Worker registered:', registration.scope);
           })
