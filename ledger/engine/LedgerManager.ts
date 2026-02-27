@@ -129,7 +129,7 @@ export class LedgerManager {
 
     this.lastHash = entryHash;
     return {
-      id: Number(info.lastInsertRowid),
+      id: String(info.lastInsertRowid),
       timestamp,
       eventType: request.eventType,
       agentDid: request.agentDid,
@@ -271,7 +271,7 @@ export class LedgerManager {
 
   private mapRowToEntry(row: LedgerRow): LedgerEntry {
     return {
-      id: row.id,
+      id: String(row.id),
       timestamp: row.timestamp,
       eventType: row.event_type,
       agentDid: row.agent_did,

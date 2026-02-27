@@ -12,6 +12,7 @@ export async function evaluateFallbackCommand(
     action: "execute",
     targetPath: request.workingDirectory ?? "shell",
     content: request.command,
+    timestamp: new Date().toISOString(),
     context: {
       source: "fallback-wrapper",
     },

@@ -96,7 +96,7 @@ export class ZoHttpProxyServer {
           actorId,
           model: selected.model,
           target: "zo/ask_prompt",
-          content: parsed.prompt,
+          content: parsed.prompt ?? "",
           traceId,
         });
         this.emitPromptEvent({
@@ -104,7 +104,7 @@ export class ZoHttpProxyServer {
           actorId,
           model: selected.model,
           target: "zo/ask_prompt",
-          content: parsed.prompt,
+          content: parsed.prompt ?? "",
           traceId,
         });
         const decision = await this.runtime.evaluate(toDecisionRequest(parsed, actorId));
@@ -115,7 +115,7 @@ export class ZoHttpProxyServer {
             actorId,
             model: selected.model,
             target: "zo/ask_prompt",
-            content: parsed.prompt,
+            content: parsed.prompt ?? "",
             traceId,
             reason: decision.decision,
           });
@@ -147,7 +147,7 @@ export class ZoHttpProxyServer {
           actorId,
           model: selected.model,
           target: "zo/ask_prompt",
-          content: parsed.prompt,
+          content: parsed.prompt ?? "",
           traceId,
         });
         const upstream = await this.forwarder.forward(JSON.stringify(parsed));
@@ -160,10 +160,10 @@ export class ZoHttpProxyServer {
           payload: {
             traceId,
             decisionId: decision.decisionId,
-            upstreamStatus: upstream.statusCode,
+            upstreamStatus: upstream.statusCode ?? 500,
           },
         });
-        this.sendJson(res, upstream.statusCode, upstream.body);
+        this.sendJson(res, upstream.statusCode ?? 500, upstream.body);
       } catch (error) {
         this.handleError(res, traceId, error);
       }
@@ -380,7 +380,7 @@ export class ZoHttpProxyServer {
     const currentModel = this.resolveModelId(body);
     const catalog = resolveCatalog(this.options.modelSelection?.catalog);
     const recommendation = recommendModel({
-      content: body.prompt,
+      content: body.input ?? body.prompt ?? "",
       mode,
       currentModel: currentModel === "unknown" ? undefined : currentModel,
       catalog,

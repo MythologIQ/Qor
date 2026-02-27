@@ -134,7 +134,7 @@ export class ZoMcpProxyServer {
 
     this.server = this.createServer(async (req, res) => {
       const traceId = `trace_${crypto.randomUUID()}`;
-      let responseId: McpRequest["id"] = null;
+      let responseId: McpRequest["id"] | undefined = undefined;
       try {
         if ((req.method ?? "GET") === "GET" && (req.url ?? "/") === "/metrics") {
           this.ensureAuthorized(req, requireAuth, apiKey);
@@ -142,7 +142,7 @@ export class ZoMcpProxyServer {
         }
 
         if ((req.method ?? "GET") !== "POST" || (req.url ?? "/") !== "/mcp") {
-          return this.sendJsonRpcError(res, null, -32601, "Method not found", traceId);
+          return this.sendJsonRpcError(res, undefined, -32601, "Method not found", traceId);
         }
 
         this.metrics.incTotal();
@@ -153,24 +153,24 @@ export class ZoMcpProxyServer {
           const key = this.rateLimitKey(req, actorId);
           if (!this.limiter.allow(key)) {
             this.metrics.incRateLimited();
-            return this.sendJsonRpcError(res, null, -32040, "Rate limit exceeded", traceId);
+            return this.sendJsonRpcError(res, undefined, -32040, "Rate limit exceeded", traceId);
           }
         }
 
         const body = await this.readJsonBody(req, 256 * 1024);
         const mcpRequest = McpRequestSchema.parse(body.parsed);
-        responseId = mcpRequest.id ?? null;
+        responseId = mcpRequest.id;
         this.verifyMutualTlsActorBinding(req, actorId);
         this.verifySignedActorContext(req, actorId, body.rawBody, requireSignedActor, keyring);
         const selected = this.applyModelSelection(mcpRequest);
-        const model = selected.model;
+        const model = selected.model ?? "";
         this.enforceModelPolicy(model);
         const decisionRequest = toDecisionRequest(mcpRequest, actorId);
         this.emitPromptEvent({
           stage: "PROMPT_BUILD_STARTED",
           actorId,
           model,
-          target: decisionRequest.targetPath,
+          target: decisionRequest.targetPath ?? "",
           content: decisionRequest.content ?? "",
           traceId,
         });
@@ -178,7 +178,7 @@ export class ZoMcpProxyServer {
           stage: "PROMPT_BUILD_COMPLETED",
           actorId,
           model,
-          target: decisionRequest.targetPath,
+          target: decisionRequest.targetPath ?? "",
           content: decisionRequest.content ?? "",
           traceId,
         });
@@ -190,7 +190,7 @@ export class ZoMcpProxyServer {
             stage: "PROMPT_DISPATCH_BLOCKED",
             actorId,
             model,
-            target: decisionRequest.targetPath,
+            target: decisionRequest.targetPath ?? "",
             content: decisionRequest.content ?? "",
             traceId,
             reason: decision.decision,
@@ -211,7 +211,7 @@ export class ZoMcpProxyServer {
           const code = decision.decision === "DENY" ? -32011 : -32010;
           return this.sendJsonRpcError(
             res,
-            mcpRequest.id ?? null,
+            mcpRequest.id ?? undefined,
             code,
             `Governance ${decision.decision.toLowerCase()}`,
             traceId,
@@ -235,7 +235,7 @@ export class ZoMcpProxyServer {
           stage: "PROMPT_DISPATCHED",
           actorId,
           model,
-          target: decisionRequest.targetPath,
+          target: decisionRequest.targetPath ?? "",
           content: decisionRequest.content ?? "",
           traceId,
         });
@@ -437,7 +437,7 @@ export class ZoMcpProxyServer {
   private handleError(
     res: http.ServerResponse,
     traceId: string,
-    id: McpRequest["id"] | null,
+    id: McpRequest["id"] | undefined,
     error: unknown,
   ): void {
     if (this.isZodError(error)) {
@@ -520,7 +520,7 @@ export class ZoMcpProxyServer {
       if (this.options.tls?.requireClientCert) {
         const socket = req.socket as tls.TLSSocket;
         if (!socket.authorized) {
-          return this.sendJsonRpcError(res, null, -32030, "Unauthorized client certificate", "trace_tls");
+          return this.sendJsonRpcError(res, undefined, -32030, "Unauthorized client certificate", "trace_tls");
         }
       }
       return handler(req, res);
@@ -737,7 +737,7 @@ export class ZoMcpProxyServer {
     traceId: string,
     data?: Record<string, unknown>,
   ): void {
-    const payload: McpResponse = {
+    const payload = {
       jsonrpc: "2.0",
       id: id ?? null,
       error: {
@@ -745,7 +745,7 @@ export class ZoMcpProxyServer {
         message,
         data: { traceId, ...(data ?? {}) },
       },
-    };
+    } as McpResponse;
     this.sendJson(res, 200, payload);
   }
 }

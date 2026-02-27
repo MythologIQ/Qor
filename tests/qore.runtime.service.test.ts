@@ -39,6 +39,7 @@ describe("QoreRuntimeService", () => {
         actorId: "did:myth:tester",
         action: "read",
         targetPath: "docs/README.md",
+        timestamp: new Date().toISOString(),
       }),
     ).rejects.toBeInstanceOf(RuntimeError);
   });
@@ -66,6 +67,7 @@ describe("QoreRuntimeService", () => {
         action: "read" as const,
         targetPath: "docs/README.md",
         content: "documentation update",
+        timestamp: new Date().toISOString(),
       };
 
       const first = await service.evaluate(request);
@@ -108,6 +110,7 @@ describe("QoreRuntimeService", () => {
         actorId: "did:myth:tester",
         action: "read",
         targetPath: "docs/README.md",
+        timestamp: new Date().toISOString(),
       });
 
       await expect(
@@ -116,6 +119,7 @@ describe("QoreRuntimeService", () => {
           actorId: "did:myth:tester",
           action: "read",
           targetPath: "docs/OTHER.md",
+          timestamp: new Date().toISOString(),
         }),
       ).rejects.toBeInstanceOf(RuntimeError);
     } finally {
@@ -144,6 +148,7 @@ describe("QoreRuntimeService", () => {
         actorId: "did:myth:tester",
         action: "write",
         targetPath: "docs/note.md",
+        timestamp: new Date().toISOString(),
       });
 
       expect(["ESCALATE", "DENY"]).toContain(result.decision);

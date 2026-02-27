@@ -156,42 +156,24 @@ describe("QoreLogicManager", () => {
 
     const skipped = await manager.archiveFailedVerdict(
       {
-        id: "v-pass",
-        eventId: "evt-pass",
-        timestamp: new Date().toISOString(),
         decision: "PASS",
-        riskGrade: "L1",
-        confidence: 0.9,
-        heuristicResults: [],
-        agentTrustAtVerdict: 0.8,
         summary: "safe",
-        details: "none",
+        details: { note: "none" },
         agentDid: "did:myth:test",
-        matchedPatterns: [],
-        actions: [],
-      } as SentinelVerdict,
+      },
       "vector-a",
     );
     expect(skipped).toBeNull();
 
     const archived = await manager.archiveFailedVerdict(
       {
-        id: "v-block",
-        eventId: "evt-block",
-        timestamp: new Date().toISOString(),
         decision: "BLOCK",
-        riskGrade: "L3",
-        confidence: 0.1,
-        heuristicResults: [],
-        agentTrustAtVerdict: 0.2,
         summary: "unsafe",
-        details: "detected write escalation",
+        details: { reason: "detected write escalation" },
         agentDid: "did:myth:test",
-        matchedPatterns: ["write-escalation"],
-        actions: [],
-      } as SentinelVerdict,
+      },
       "vector-b",
-      "env:test",
+      { env: "test" },
     );
 
     expect(archived).not.toBeNull();

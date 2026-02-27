@@ -39,7 +39,7 @@ export type DecisionType =
  */
 export interface DecisionResponse {
   requestId: string;
-  decision: "allow" | "deny" | "warn" | "escalate";
+  decision: DecisionType;
   reason?: string;
   reasons?: string[];  // Plural form
   riskGrade?: RiskGrade;
@@ -49,6 +49,9 @@ export interface DecisionResponse {
   decisionId?: string;
   auditEventId?: string;
   requiredActions?: string[];
+  evaluationTier?: number;
+  policyVersion?: string;
+  evaluatedAt?: string;
 }
 
 /**

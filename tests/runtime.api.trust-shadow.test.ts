@@ -34,54 +34,36 @@ describe("ShadowGenomeManager", () => {
 
     const entry1 = await manager.archiveFailure({
       verdict: {
-        id: "v1",
-        eventId: "e1",
-        timestamp: new Date().toISOString(),
         decision: "BLOCK",
-        riskGrade: "L3",
-        confidence: 0.2,
-        heuristicResults: [],
-        agentDid: "did:myth:a1",
-        agentTrustAtVerdict: 0.4,
         summary: "blocked",
-        details: "unsafe write",
-        matchedPatterns: ["p1"],
-        actions: [],
+        details: { reason: "unsafe write", eventId: "e1" },
+        agentDid: "did:myth:a1",
       },
       inputVector: "vec-1",
-      causalVector: "avoid unsafe write",
+      causalVector: { constraint: "avoid unsafe write" },
       decisionRationale: "policy breach",
     });
 
     const entry2 = await manager.archiveFailure({
       verdict: {
-        id: "v2",
-        eventId: "e2",
-        timestamp: new Date().toISOString(),
         decision: "QUARANTINE",
-        riskGrade: "L3",
-        confidence: 0.1,
-        heuristicResults: [],
-        agentDid: "did:myth:a1",
-        agentTrustAtVerdict: 0.2,
         summary: "quarantined",
-        details: "critical violation",
-        matchedPatterns: ["p2"],
-        actions: [],
+        details: { reason: "critical violation", eventId: "e2" },
+        agentDid: "did:myth:a1",
       },
       inputVector: "vec-2",
-      causalVector: "avoid critical secret access",
+      causalVector: { constraint: "avoid critical secret access" },
     });
 
-    expect(entry1.id).toBe(1);
-    expect(entry2.id).toBe(2);
+    expect(entry1.id).toBeDefined();
+    expect(entry2.id).toBeDefined();
 
     const agentEntries = await manager.getEntriesByAgent("did:myth:a1", 10);
     expect(agentEntries).toHaveLength(2);
 
     const constraints = await manager.getNegativeConstraintsForAgent("did:myth:a1");
-    expect(constraints).toContain("avoid unsafe write");
-    expect(constraints).toContain("avoid critical secret access");
+    expect(constraints).toContainEqual({ constraint: "avoid unsafe write" });
+    expect(constraints).toContainEqual({ constraint: "avoid critical secret access" });
 
     const patterns = await manager.analyzeFailurePatterns();
     const modes = patterns.map((item) => item.failureMode);

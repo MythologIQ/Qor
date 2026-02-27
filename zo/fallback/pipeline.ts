@@ -50,6 +50,7 @@ export class FallbackGovernancePipeline {
       actorId: event.actorId,
       action: "write",
       targetPath: event.path,
+      timestamp: new Date().toISOString(),
       context: {
         source: "fallback-watcher",
         operation: event.operation,

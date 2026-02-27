@@ -62,6 +62,7 @@ function getNavHtml(currentPage) {
     { id: 'tasks', label: 'Tasks', href: 'tasks.html', icon: '☑' },
     { id: 'victor', label: 'Victor Chat', href: 'victor.html', icon: '💬' },
     { id: 'victor-dashboard', label: 'Victor Config', href: 'victor-dashboard.html', icon: '⚙' },
+    { id: 'builder', label: 'Builder', href: '/ui/', icon: '🧱' },
     { id: 'logs', label: 'Logs', href: 'logs.html', icon: '📋' }
   ];
   

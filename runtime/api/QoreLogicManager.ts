@@ -57,7 +57,8 @@ export class QoreLogicManager {
   ): Promise<string> {
     const id = crypto.randomUUID();
     const now = new Date();
-    const slaDeadline = new Date(now.getTime() + this.config.qorelogic.l3SLA * 1000);
+    const l3SLA = this.config.qorelogic?.l3SLA ?? 3600; // Default 1 hour
+    const slaDeadline = new Date(now.getTime() + l3SLA * 1000);
     const fullRequest: L3ApprovalRequest = {
       ...request,
       id,
@@ -71,9 +72,9 @@ export class QoreLogicManager {
 
     await this.ledgerManager.appendEntry({
       eventType: "L3_QUEUED",
-      agentDid: request.agentDid,
-      agentTrustAtAction: request.agentTrust,
-      artifactPath: request.filePath,
+      agentDid: request.agentDid ?? "unknown",
+      agentTrustAtAction: request.agentTrust ?? 0,
+      artifactPath: request.filePath ?? "",
       riskGrade: request.riskGrade,
       payload: { sentinelSummary: request.sentinelSummary, flags: request.flags },
     });
@@ -121,16 +122,16 @@ export class QoreLogicManager {
 
     await this.ledgerManager.appendEntry({
       eventType: decision === "APPROVED" ? "L3_APPROVED" : "L3_REJECTED",
-      agentDid: request.agentDid,
-      agentTrustAtAction: request.agentTrust,
-      artifactPath: request.filePath,
+      agentDid: request.agentDid ?? "unknown",
+      agentTrustAtAction: request.agentTrust ?? 0,
+      artifactPath: request.filePath ?? "",
       riskGrade: request.riskGrade,
       overseerDid: request.overseerDid,
       overseerDecision: decision,
       payload: { conditions },
     });
 
-    await this.trustEngine.updateTrust(request.agentDid, decision === "APPROVED" ? "success" : "failure");
+    await this.trustEngine.updateTrust(request.agentDid ?? "unknown", decision === "APPROVED" ? "success" : "failure");
     this.l3Queue.splice(index, 1);
     await this.persistL3Queue();
     this.eventBus.emit("qorelogic.l3Decided", { request, decision });
@@ -141,7 +142,7 @@ export class QoreLogicManager {
     await this.ledgerManager.appendEntry({
       eventType: "SYSTEM_EVENT",
       agentDid: identity.did,
-      agentTrustAtAction: identity.trustScore,
+      agentTrustAtAction: identity.trustScore ?? 0,
       payload: { action: "AGENT_REGISTERED", persona },
     });
     return identity;
@@ -150,7 +151,7 @@ export class QoreLogicManager {
   async archiveFailedVerdict(
     verdict: SentinelVerdict,
     inputVector: string,
-    environmentContext?: string,
+    environmentContext?: Record<string, unknown>,
   ): Promise<ShadowGenomeEntry | null> {
     if (verdict.decision === "PASS") return null;
     return this.shadowGenomeManager.archiveFailure({
@@ -162,12 +163,12 @@ export class QoreLogicManager {
     });
   }
 
-  async getAgentNegativeConstraints(agentDid: string): Promise<string[]> {
+  async getAgentNegativeConstraints(agentDid: string): Promise<Record<string, unknown>[]> {
     return this.shadowGenomeManager.getNegativeConstraintsForAgent(agentDid);
   }
 
   async getFailurePatterns(): Promise<
-    { failureMode: FailureMode; count: number; agentDids: string[]; recentCauses: string[] }[]
+    { failureMode: FailureMode; count: number; agentDids: string[]; recentCauses: Record<string, unknown>[] }[]
   > {
     return this.shadowGenomeManager.analyzeFailurePatterns();
   }

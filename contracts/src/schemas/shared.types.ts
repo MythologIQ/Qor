@@ -55,6 +55,8 @@ export interface AgentIdentity {
   publicKey?: string;
   trustStage?: string;
   isQuarantined?: boolean;
+  verificationsCompleted?: number;
+  createdAt?: string;
 }
 
 /**

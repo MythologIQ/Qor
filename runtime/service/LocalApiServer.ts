@@ -459,12 +459,11 @@ When asked to check emails or calendar, USE THE TOOLS. Do not say you could chec
     details?: Record<string, unknown>,
   ): void {
     const payload: ApiErrorResponse = {
-      error: {
-        code,
-        message,
-        traceId,
-        details,
-      },
+      code,
+      message,
+      traceId,
+      details,
+      error: code, // Alias for backward compatibility
     };
     this.sendJson(res, statusCode, payload);
   }

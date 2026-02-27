@@ -8,7 +8,7 @@
  * Zo Ask request from external clients
  */
 export interface ZoAskRequest {
-  input: string;
+  input?: string;
   conversationId?: string;
   modelName?: string;
   model?: string;  // Alias for modelName
@@ -29,9 +29,10 @@ export interface ZoAskRequest {
  */
 export const ZoAskRequestSchema = {
   type: "object",
-  required: ["input"],
+  required: [],  // No single required field - input OR prompt must be provided (checked in parse)
   properties: {
     input: { type: "string" },
+    prompt: { type: "string" },  // Alias for input
     conversationId: { type: "string" },
     modelName: { type: "string" },
     personaId: { type: "string" },
@@ -41,8 +42,12 @@ export const ZoAskRequestSchema = {
   parse: (data: unknown): ZoAskRequest => {
     if (typeof data === "object" && data !== null) {
       const obj = data as Record<string, unknown>;
+      const input = (obj.input as string) || (obj.prompt as string);
+      if (!input) {
+        throw new Error("Invalid ZoAskRequest: either 'input' or 'prompt' is required");
+      }
       return {
-        input: (obj.input as string) || (obj.prompt as string) || "",
+        input,
         conversationId: obj.conversationId as string | undefined,
         modelName: (obj.modelName as string) || (obj.model as string),
         personaId: obj.personaId as string | undefined,

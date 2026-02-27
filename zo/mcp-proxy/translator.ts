@@ -53,7 +53,7 @@ export function toDecisionRequest(request: McpRequest, actorId: string): Decisio
       : undefined;
   const action = classifyToolAction(
     request.method,
-    typeof toolName === "string" ? toolName : undefined,
+    typeof toolName === "string" ? toolName : "unknown",
   );
   const targetPath = extractTargetPath(methodSource, request.params);
   const content = extractContent(request.params);
@@ -72,6 +72,7 @@ export function toDecisionRequest(request: McpRequest, actorId: string): Decisio
     action,
     targetPath,
     content,
+    timestamp: new Date().toISOString(),
     context: {
       mcpMethod: request.method,
       mcpId: request.id ?? null,

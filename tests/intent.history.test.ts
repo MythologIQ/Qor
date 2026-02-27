@@ -22,6 +22,8 @@ describe("IntentHistoryLog", () => {
       intentId: "11111111-1111-4111-8111-111111111111",
       timestamp: new Date().toISOString(),
       event: "CREATED",
+      previousStatus: "NONE",
+      newStatus: "PENDING",
       actor: "tester",
     });
     await log.appendEntry({
@@ -46,6 +48,8 @@ describe("IntentHistoryLog", () => {
       intentId: "22222222-2222-4222-8222-222222222222",
       timestamp: new Date().toISOString(),
       event: "CREATED",
+      previousStatus: "NONE",
+      newStatus: "PENDING",
       actor: "tester",
     });
 

@@ -139,7 +139,7 @@ export class QoreRuntimeService {
     }
     this.pruneReplayCache(nowMs);
 
-    const riskGrade = this.policyEngine.classifyRisk(request.targetPath, request.content);
+    const riskGrade = this.policyEngine.classifyRisk(request.targetPath ?? "", request.content);
     const triage = await this.evaluationRouter.computeTriage({
       id: request.requestId,
       timestamp: new Date().toISOString(),
@@ -164,7 +164,7 @@ export class QoreRuntimeService {
     if (tier >= 3 || riskGrade === "L3") {
       decision = "DENY";
       requiredActions.push("human_review_required");
-    } else if (tier === 2 || this.config.qorelogic.strictMode) {
+    } else if (tier === 2 || this.config.qorelogic?.strictMode) {
       decision = "ESCALATE";
       requiredActions.push("l3_approval");
     } else {

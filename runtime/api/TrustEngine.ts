@@ -26,8 +26,10 @@ export class TrustEngine {
     const identity = this.agents.get(agentDid);
     if (!identity) return 0.5;
     const delta = outcome === "success" ? 0.05 : -0.1;
-    identity.trustScore = Math.max(0, Math.min(1, identity.trustScore + delta));
-    identity.version += 1;
+    const currentScore = identity.trustScore ?? 0.5;
+    const currentVersion = identity.version ?? 0;
+    identity.trustScore = Math.max(0, Math.min(1, currentScore + delta));
+    identity.version = currentVersion + 1;
     return identity.trustScore;
   }
 

@@ -6,6 +6,7 @@
  */
 
 import { FailSafeEvent, FailSafeEventType } from '@mythologiq/qore-contracts/schemas/shared.types';
+import * as crypto from "crypto";
 
 type EventCallback<T = unknown> = (event: FailSafeEvent<T>) => void;
 
@@ -57,8 +58,10 @@ export class EventBus {
      */
     emit<T = unknown>(eventType: FailSafeEventType, payload: T): void {
         const event: FailSafeEvent<T> = {
+            id: `evt_${crypto.randomUUID()}`,
             type: eventType,
             timestamp: new Date().toISOString(),
+            source: "EventBus",
             payload
         };
 

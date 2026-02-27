@@ -5,8 +5,8 @@ type ArchiveRequest = {
   verdict: SentinelVerdict;
   inputVector: string;
   decisionRationale?: string;
-  environmentContext?: string;
-  causalVector?: string;
+  environmentContext?: Record<string, unknown>;
+  causalVector?: Record<string, unknown>;
 };
 
 export class ShadowGenomeManager {
@@ -14,17 +14,15 @@ export class ShadowGenomeManager {
 
   async archiveFailure(request: ArchiveRequest): Promise<ShadowGenomeEntry> {
     const entry: ShadowGenomeEntry = {
-      schemaVersion: "1.0.0",
-      id: this.entries.length + 1,
-      createdAt: new Date().toISOString(),
+      id: crypto.randomUUID(),
+      pattern: request.inputVector,
+      context: request.environmentContext ?? {},
+      outcome: "failure",
+      timestamp: new Date().toISOString(),
+      confidence: 0.5,
       agentDid: request.verdict.agentDid,
-      inputVector: request.inputVector,
-      decisionRationale: request.decisionRationale,
-      environmentContext: request.environmentContext,
-      failureMode: this.mapVerdict(request.verdict.decision),
       causalVector: request.causalVector,
-      remediationStatus: "UNRESOLVED",
-      remediationNotes: `archived:${crypto.randomUUID()}`,
+      failureMode: this.mapVerdict(request.verdict.decision),
     };
     this.entries.push(entry);
     return entry;
@@ -34,28 +32,30 @@ export class ShadowGenomeManager {
     return this.entries.filter((entry) => entry.agentDid === agentDid).slice(-limit);
   }
 
-  async getNegativeConstraintsForAgent(agentDid: string): Promise<string[]> {
+  async getNegativeConstraintsForAgent(agentDid: string): Promise<Record<string, unknown>[]> {
     return this.entries
-      .filter((entry) => entry.agentDid === agentDid && Boolean(entry.causalVector))
-      .map((entry) => entry.causalVector as string);
+      .filter((entry) => entry.agentDid === agentDid && entry.causalVector)
+      .map((entry) => entry.causalVector as Record<string, unknown>);
   }
 
   async analyzeFailurePatterns(): Promise<
-    { failureMode: FailureMode; count: number; agentDids: string[]; recentCauses: string[] }[]
+    { failureMode: FailureMode; count: number; agentDids: string[]; recentCauses: Record<string, unknown>[] }[]
   > {
-    const byMode = new Map<FailureMode, ShadowGenomeEntry[]>();
+    const byMode = new Map<FailureMode | undefined, ShadowGenomeEntry[]>();
     for (const entry of this.entries) {
       const group = byMode.get(entry.failureMode) ?? [];
       group.push(entry);
       byMode.set(entry.failureMode, group);
     }
 
-    return Array.from(byMode.entries()).map(([failureMode, items]) => ({
-      failureMode,
-      count: items.length,
-      agentDids: Array.from(new Set(items.map((item) => item.agentDid))),
-      recentCauses: items.slice(-5).map((item) => item.causalVector ?? "unknown"),
-    }));
+    return Array.from(byMode.entries())
+      .filter(([mode]) => mode !== undefined)
+      .map(([failureMode, items]) => ({
+        failureMode: failureMode as FailureMode,
+        count: items.length,
+        agentDids: Array.from(new Set(items.map((item) => item.agentDid).filter((d): d is string => d !== undefined))),
+        recentCauses: items.slice(-5).map((item) => item.causalVector ?? {}),
+      }));
   }
 
   close(): void {

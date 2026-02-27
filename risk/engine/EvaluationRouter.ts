@@ -53,10 +53,10 @@ export interface RoutingThresholds {
 }
 
 export interface LedgerTierConfig {
-  tier0_enabled: boolean;
-  tier1_enabled: boolean;
-  tier2_enabled: boolean;
-  tier3_enabled: boolean;
+  tier0_enabled?: boolean;
+  tier1_enabled?: boolean;
+  tier2_enabled?: boolean;
+  tier3_enabled?: boolean;
 }
 
 const DEFAULT_THRESHOLDS: RoutingThresholds = {
@@ -132,20 +132,50 @@ export class EvaluationRouter {
     const routing = config.evaluation?.routing;
     const ledger = config.evaluation?.ledger;
     if (routing) {
+      // Normalize ledger config - handle both full LedgerTierConfig and simplified form
+      const normalizedLedger: LedgerTierConfig = ledger && 'tier0_enabled' in ledger 
+        ? ledger 
+        : { ...DEFAULT_LEDGER, ...(ledger || {}) };
+      
       return new EvaluationRouter(
         {
-          tier2RiskThreshold: routing.tier2_risk_threshold,
-          tier3RiskThreshold: routing.tier3_risk_threshold,
-          tier2NoveltyThreshold: routing.tier2_novelty_threshold,
-          tier3NoveltyThreshold: routing.tier3_novelty_threshold,
-          tier2ConfidenceThreshold: routing.tier2_confidence_threshold,
-          tier3ConfidenceThreshold: routing.tier3_confidence_threshold,
+          tier2RiskThreshold: this.toRiskGrade(routing.tier2_risk_threshold) ?? "R2",
+          tier3RiskThreshold: this.toRiskGrade(routing.tier3_risk_threshold) ?? "R3",
+          tier2NoveltyThreshold: this.toNoveltyLevel(routing.tier2_novelty_threshold) ?? "high",
+          tier3NoveltyThreshold: this.toNoveltyLevel(routing.tier3_novelty_threshold) ?? "medium",
+          tier2ConfidenceThreshold: this.toConfidenceLevel(routing.tier2_confidence_threshold) ?? "low",
+          tier3ConfidenceThreshold: this.toConfidenceLevel(routing.tier3_confidence_threshold) ?? "low",
         },
-        ledger ?? DEFAULT_LEDGER,
+        normalizedLedger,
         eventBus,
       );
     }
     return new EvaluationRouter(DEFAULT_THRESHOLDS, DEFAULT_LEDGER, eventBus);
+  }
+
+  private static toRiskGrade(value: number | undefined): RiskGrade | undefined {
+    if (value === undefined) return undefined;
+    if (value === 0) return "R0";
+    if (value === 1) return "R1";
+    if (value === 2) return "R2";
+    if (value === 3) return "R3";
+    return "R1";
+  }
+
+  private static toNoveltyLevel(value: number | undefined): NoveltyLevel | undefined {
+    if (value === undefined) return undefined;
+    if (value === 0) return "low";
+    if (value === 1) return "medium";
+    if (value === 2) return "high";
+    return "medium";
+  }
+
+  private static toConfidenceLevel(value: number | undefined): ConfidenceLevel | undefined {
+    if (value === undefined) return undefined;
+    if (value === 0) return "high";
+    if (value === 1) return "medium";
+    if (value === 2) return "low";
+    return "medium";
   }
 
   async computeTriage(event: CortexEvent): Promise<TriageSignals> {
@@ -355,13 +385,13 @@ export class EvaluationRouter {
   private shouldWriteLedger(tier: EvaluationTier): boolean {
     switch (tier) {
       case 0:
-        return this.ledgerConfig.tier0_enabled;
+        return this.ledgerConfig.tier0_enabled ?? false;
       case 1:
-        return this.ledgerConfig.tier1_enabled;
+        return this.ledgerConfig.tier1_enabled ?? false;
       case 2:
-        return this.ledgerConfig.tier2_enabled;
+        return this.ledgerConfig.tier2_enabled ?? false;
       case 3:
-        return this.ledgerConfig.tier3_enabled;
+        return this.ledgerConfig.tier3_enabled ?? true;
       default:
         return false;
     }

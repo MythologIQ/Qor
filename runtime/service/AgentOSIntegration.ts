@@ -88,6 +88,7 @@ export class AgentOSIntegration {
         requiredActions: ["fix_violations_before_proceeding"],
         policyVersion: "victor-agent-os",
         evaluatedAt: new Date().toISOString(),
+        timestamp: new Date().toISOString(),
       };
     }
 
@@ -111,6 +112,7 @@ export class AgentOSIntegration {
     });
 
     // Append Victor's stance to the reasons
+    response.reasons = response.reasons ?? [];
     if (compliance.victorStance === "support") {
       response.reasons.push("Victor: Support");
     } else if (compliance.victorStance === "challenge") {

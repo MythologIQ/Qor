@@ -38,6 +38,7 @@ export function toDecisionRequest(body: ZoAskRequest, actorId: string): Decision
     action: classifyZoPromptAction(prompt),
     targetPath: "zo/ask_prompt",
     content: prompt,
+    timestamp: new Date().toISOString(),
     context: {
       surface: "zo_http_api",
       model,
