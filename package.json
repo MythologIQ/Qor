@@ -25,6 +25,14 @@
     "test:perf:watch": "vitest tests/performance/",
     "start:ui": "node dist/zo/ui-shell/start.js",
     "start:standalone": "node dist/runtime/service/start.js",
+    "ops:migrate": "tsx scripts/migrate.ts",
+    "ops:backup": "tsx scripts/backup.ts",
+    "ops:deploy": "bash scripts/deploy.sh",
+    "ops:health": "curl http://localhost:3000/health | jq",
+    "docker:build": "docker build -t zo-qore:latest .",
+    "docker:run": "docker-compose up -d",
+    "docker:stop": "docker-compose down",
+    "docker:logs": "docker-compose logs -f",
     "zo:one-click": "bash deploy/zo/one-click-standalone.sh",
     "zo:install:full": "bash deploy/zo/install-zo-full.sh",
     "zo:uninstall": "bash deploy/zo/install-zo-full.sh --uninstall",
@@ -75,6 +83,7 @@
     "duckdb": "^1.4.4",
     "eslint": "^9.35.0",
     "rimraf": "^6.0.1",
+    "tsx": "^4.19.2",
     "typescript": "^5.9.2",
     "vitest": "^3.2.4"
   }

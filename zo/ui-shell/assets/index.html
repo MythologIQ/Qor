@@ -37,53 +37,66 @@
     </nav>
     
     <div class="app-content">
-      <h1 style="margin-bottom: 24px;">Command Center</h1>
-      
+      <section class="page-hero">
+        <div>
+          <div class="hero-kicker">EXECUTIVE CONSOLE</div>
+          <h1 class="hero-title">Command Center</h1>
+          <p class="hero-meta">Real-time brief of inbox, calendar, and commitments. Make fast decisions from one surface.</p>
+        </div>
+        <div>
+          <div class="status-pill" id="status-pill">SYSTEM ONLINE</div>
+          <div class="hero-actions" style="margin-top: 12px;">
+            <a href="victor.html" class="btn btn-primary">Open Chat</a>
+            <a href="tasks.html" class="btn btn-secondary">Review Tasks</a>
+          </div>
+        </div>
+      </section>
+
       <div class="grid grid-4" id="stats-grid">
-        <div class="card">
-          <div style="font-size: 32px; margin-bottom: 8px;">✉</div>
-          <div style="font-size: 24px; font-weight: bold;" id="email-count">-</div>
-          <div style="color: #7a8fb8; font-size: 14px;">Unread Emails</div>
+        <div class="card stat-card">
+          <div class="stat-icon">✉</div>
+          <div class="stat-value" id="email-count">-</div>
+          <div class="stat-label">Unread Emails</div>
         </div>
-        <div class="card">
-          <div style="font-size: 32px; margin-bottom: 8px;">📅</div>
-          <div style="font-size: 24px; font-weight: bold;" id="event-count">-</div>
-          <div style="color: #7a8fb8; font-size: 14px;">Today's Events</div>
+        <div class="card stat-card">
+          <div class="stat-icon">📅</div>
+          <div class="stat-value" id="event-count">-</div>
+          <div class="stat-label">Today's Events</div>
         </div>
-        <div class="card">
-          <div style="font-size: 32px; margin-bottom: 8px;">☑</div>
-          <div style="font-size: 24px; font-weight: bold;" id="task-count">-</div>
-          <div style="color: #7a8fb8; font-size: 14px;">Active Tasks</div>
+        <div class="card stat-card">
+          <div class="stat-icon">☑</div>
+          <div class="stat-value" id="task-count">-</div>
+          <div class="stat-label">Active Tasks</div>
         </div>
-        <div class="card">
-          <div style="font-size: 32px; margin-bottom: 8px;">⚡</div>
-          <div style="font-size: 24px; font-weight: bold; color: #22c55e;" id="status">ONLINE</div>
-          <div style="color: #7a8fb8; font-size: 14px;">System Status</div>
+        <div class="card stat-card">
+          <div class="stat-icon">⚡</div>
+          <div class="stat-value" id="status">ONLINE</div>
+          <div class="stat-label">System Status</div>
         </div>
       </div>
-      
-      <div class="grid grid-2" style="margin-top: 24px;">
+
+      <div class="grid grid-2" style="margin-top: 18px;">
         <div class="card">
           <div class="card-header">
             <h2 class="card-title">Recent Emails</h2>
-            <a href="emails.html" class="btn btn-secondary">View All →</a>
+            <a href="emails.html" class="btn btn-secondary">View All</a>
           </div>
           <div id="recent-emails" class="loading"><div class="spinner"></div></div>
         </div>
-        
+
         <div class="card">
           <div class="card-header">
             <h2 class="card-title">Upcoming Events</h2>
-            <a href="calendar.html" class="btn btn-secondary">View All →</a>
+            <a href="calendar.html" class="btn btn-secondary">View All</a>
           </div>
           <div id="upcoming-events" class="loading"><div class="spinner"></div></div>
         </div>
       </div>
-      
-      <div class="card" style="margin-top: 24px;">
+
+      <div class="card" style="margin-top: 18px;">
         <div class="card-header">
           <h2 class="card-title">Active Tasks</h2>
-          <a href="tasks.html" class="btn btn-secondary">View All →</a>
+          <a href="tasks.html" class="btn btn-secondary">View All</a>
         </div>
         <div id="active-tasks" class="loading"><div class="spinner"></div></div>
       </div>
@@ -116,9 +129,11 @@
         document.getElementById('email-count').textContent = emails.length;
         
         const emailHtml = emails.slice(0, 3).map(e => `
-          <div style="padding: 12px; border-bottom: 1px solid #2f4a70;">
-            <div style="font-weight: 500; margin-bottom: 4px;">${escapeHtml(e.subject)}</div>
-            <div style="font-size: 13px; color: #7a8fb8;">${escapeHtml(e.from)} • ${e.date}</div>
+          <div class="list-row">
+            <div class="list-row-main">
+              <div class="list-row-title">${escapeHtml(e.subject)}</div>
+              <div class="list-row-sub">${escapeHtml(e.from)} • ${e.date}</div>
+            </div>
           </div>
         `).join('') || '<div class="empty-state">No emails</div>';
         document.getElementById('recent-emails').innerHTML = emailHtml;
@@ -129,9 +144,11 @@
         document.getElementById('event-count').textContent = events.length;
         
         const eventHtml = events.slice(0, 3).map(e => `
-          <div style="padding: 12px; border-bottom: 1px solid #2f4a70;">
-            <div style="font-weight: 500; margin-bottom: 4px;">${escapeHtml(e.summary)}</div>
-            <div style="font-size: 13px; color: #7a8fb8;">${formatTime(e.start)} ${e.location ? '• ' + escapeHtml(e.location) : ''}</div>
+          <div class="list-row">
+            <div class="list-row-main">
+              <div class="list-row-title">${escapeHtml(e.summary)}</div>
+              <div class="list-row-sub">${formatTime(e.start)} ${e.location ? '• ' + escapeHtml(e.location) : ''}</div>
+            </div>
           </div>
         `).join('') || '<div class="empty-state">No events</div>';
         document.getElementById('upcoming-events').innerHTML = eventHtml;
@@ -142,11 +159,11 @@
         document.getElementById('task-count').textContent = activeTasks.length;
         
         const taskHtml = activeTasks.slice(0, 5).map(t => `
-          <div style="padding: 12px; border-bottom: 1px solid #2f4a70; display: flex; align-items: center; gap: 12px;">
-            <input type="checkbox" ${t.completed ? 'checked' : ''} onchange="toggleTask('${t.id}')" style="width: 18px; height: 18px;">
-            <div style="flex: 1;">
-              <div style="${t.completed ? 'text-decoration: line-through; color: #7a8fb8;' : ''}">${escapeHtml(t.text)}</div>
-              ${t.dueDate ? `<div style="font-size: 12px; color: #7a8fb8;">Due: ${t.dueDate}</div>` : ''}
+          <div class="task-item">
+            <input type="checkbox" class="task-checkbox" ${t.completed ? 'checked' : ''} onchange="toggleTask('${t.id}')">
+            <div class="task-content">
+              <div class="task-text ${t.completed ? 'completed' : ''}">${escapeHtml(t.text)}</div>
+              ${t.dueDate ? `<div class="task-meta">Due: ${t.dueDate}</div>` : ''}
             </div>
             <span class="badge badge-${t.priority === 'high' ? 'error' : t.priority === 'medium' ? 'warning' : 'info'}">${t.priority}</span>
           </div>
@@ -156,7 +173,10 @@
       } catch (err) {
         console.error('Dashboard load error:', err);
         document.getElementById('status').textContent = 'ERROR';
-        document.getElementById('status').style.color = '#ef4444';
+        document.getElementById('status-pill').textContent = 'SYSTEM ERROR';
+        document.getElementById('status-pill').style.borderColor = 'rgba(255, 94, 115, 0.56)';
+        document.getElementById('status-pill').style.background = 'rgba(255, 94, 115, 0.15)';
+        document.getElementById('status-pill').style.color = '#ffdce2';
       }
     }
     
