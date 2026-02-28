@@ -486,9 +486,103 @@ The design system and component library is the single highest-leverage investmen
 - Error responses are consistent across all API endpoints
 - Support for automated error recovery flows (links to resolution views)
 
-**Next Steps (Phase 12 remaining tasks):**
-1. **API contract consistency audit (5A)** - Ensure all endpoints follow uniform patterns (URL naming, HTTP methods, response envelopes, status codes)
-2. **Pre-commit/CI hooks (2A)** - Automate quality pipeline (husky hooks, GitHub Actions workflow, branch protection)
+**✓ COMPLETED: Task 5A - API Contract Audit + Consistency Pass**
 
-**Phase 13 Preview:**
-With error standardization complete, the next phase will focus on **View Maturity** - implementing view-specific interactions using the established component library and error system for consistent UX across all six views.
+**Phase 1: Non-Breaking Additions (COMPLETED)**
+
+1. **API Consistency Audit (`docs/api-consistency-audit.md`)** - Comprehensive analysis:
+   - Identified all non-compliant areas against Phase 12 standards
+   - Documented response envelope inconsistencies (most endpoints return raw data instead of `{ data: T, meta }`)
+   - Found ID generation inconsistencies (mix of UUID and timestamp-based IDs)
+   - Identified missing CRUD methods (no PUT/PATCH/DELETE for individual resources)
+   - Documented pagination gaps (only `/void/thoughts` has full pagination support)
+   - Created remediation plan with P0-P3 priorities
+
+2. **Standardized Helper Methods (`runtime/service/planning-routes.ts`)** - New response utilities:
+   - `sendData<T>(res, statusCode, data, meta?)` - Wraps data in `{ data, meta }` envelope
+   - `sendPaginatedData<T>(res, data, pagination)` - Paginated responses with `hasMore` field
+   - `sendCreated<T>(res, resource)` - 201 responses with timestamp
+   - `sendUpdated<T>(res, resource)` - 200 responses with timestamp
+   - `sendDeleted(res)` - 204 No Content responses
+   - `generateId(prefix)` - Consistent UUID-based ID generation (`{prefix}_{uuid8}`)
+
+**Phase 2: Response Envelope Migration (COMPLETED - BREAKING)**
+
+**What was changed:**
+
+All API endpoints migrated to standardized response format:
+
+**GET Endpoints** - Now return `{ data: T, meta: { timestamp } }`:
+- `GET /api/projects` - Returns projects array in data envelope
+- `GET /api/projects/:id` - Returns project in data envelope
+- `GET /api/projects/:id/integrity` - Returns integrity summary with userErrors
+- `POST /api/projects/:id/check` - Returns check result with userError
+- `GET /api/projects/:id/void/thoughts` - Already using paginated format (kept)
+- `GET /api/projects/:id/reveal/clusters` - Returns clusters array (not wrapped object)
+- `GET /api/projects/:id/constellation/map` - Returns map data
+- `GET /api/projects/:id/path/phases` - Returns phases array (not wrapped object)
+- `GET /api/projects/:id/risk/register` - Returns risks array (not wrapped object)
+- `GET /api/projects/:id/autonomy/config` - Returns config data
+- `GET /api/projects/:id/ledger` - Returns entries array (not wrapped object)
+- `GET /api/projects/:id/export` - Returns export data
+- `POST /api/projects/:id/query` - Returns query result
+- `POST /api/victor/review-plan` - Returns review data
+
+**POST/PUT Endpoints** - Now return created/updated resources:
+- `POST /api/projects` - Returns created project with `sendCreated()` (201)
+- `POST /api/projects/:id/void/thoughts` - Returns created thought
+- `POST /api/projects/:id/reveal/clusters` - Returns created cluster (not `{ success: true }`)
+- `POST /api/projects/:id/constellation/map` - Returns updated constellation
+- `POST /api/projects/:id/path/phases` - Returns created phase with tasks
+- `POST /api/projects/:id/risk/register` - Returns created risk
+- `POST /api/projects/:id/autonomy/config` - Returns updated config
+
+**DELETE Endpoints** - Now return 204 No Content:
+- `DELETE /api/projects/:id` - Returns `sendDeleted()` (204) instead of `{ success: true }`
+
+**ID Generation** - Consistent UUID-based format:
+- All resource IDs now use `generateId(prefix)` → `{prefix}_{uuid8}`
+- Replaced timestamp-based IDs (`Date.now().toString(36)`) for:
+  - Clusters: `cluster_{uuid}` instead of `cluster_{timestamp}`
+  - Phases: `phase_{uuid}` instead of `phase_{timestamp}`
+  - Tasks: `task_{uuid}` instead of `task_{timestamp}_{index}`
+  - Risks: `risk_{uuid}` instead of `risk_{timestamp}`
+- Projects and thoughts already using UUID format
+
+**Verification:**
+- ✓ TypeScript compilation passes (`npm run typecheck`)
+- ✓ All endpoints use standardized helper methods
+- ✓ POST endpoints return created resources (not `{ success: true }`)
+- ✓ DELETE endpoints return 204 No Content
+- ✓ All GET endpoints return `{ data, meta }` envelope
+- ✓ Consistent UUID-based ID generation across all resources
+
+**Breaking Changes:**
+⚠️ **API clients must update to handle new response format:**
+- All responses now wrapped in `{ data: T, meta?: {...} }`
+- POST responses return full resource instead of `{ success: true }`
+- DELETE responses return 204 No Content (empty body) instead of 200 with JSON
+- Resource IDs are now UUID-based (8 chars) instead of timestamp-based
+
+**Impact:**
+- ✅ Complete consistency across all API endpoints
+- ✅ Predictable response structure for frontend clients
+- ✅ Prevents ID collisions with UUID generation
+- ✅ Standard REST semantics (201 Created, 204 No Content, etc.)
+- ✅ Foundation for future pagination on all list endpoints
+- ⚠️ Requires frontend changes to unwrap `data` from responses
+
+---
+
+## Phase 12 Complete: Interaction Foundation Sealed
+
+**Delivered:**
+1. ✅ Design tokens + component library (1A) - Complete visual language & 15 production components
+2. ✅ Error message standardization (4A) - User-facing error system with actionable guidance
+3. ✅ API contract audit + consistency pass (5A) - Standardized response format across all endpoints
+
+**Remaining for Full Phase 12:**
+- **Task 2A** - Pre-commit/CI hooks automation
+
+**Next Phase: Phase 13 - View Maturity**
+With design system, error handling, and API consistency complete, Phase 13 will focus on implementing view-specific interactions using the established component library for consistent UX across all six views.

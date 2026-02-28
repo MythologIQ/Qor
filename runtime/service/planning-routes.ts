@@ -101,7 +101,9 @@ export class PlanningRoutes {
     try {
       // GET /api/projects - List all projects (stub)
       if (method === "GET" && url === "/api/projects") {
-        return this.sendJson(res, 200, { projects: [] });
+        return this.sendData(res, 200, [], {
+          timestamp: new Date().toISOString(),
+        });
       }
 
       // POST /api/projects - Create new project
@@ -118,10 +120,10 @@ export class PlanningRoutes {
           if (!name || !createdBy) {
             return this.sendError(res, 400, "BAD_REQUEST" as ApiErrorCode, "name and createdBy required", traceId);
           }
-          const finalProjectId = newProjectId ?? `proj_${randomUUID().slice(0, 8)}`;
+          const finalProjectId = newProjectId ?? this.generateId("proj");
           const store = createProjectStore(finalProjectId, projectsDir);
           const project = await store.create({ name, description: description ?? "", createdBy });
-          return this.sendJson(res, 201, project);
+          return this.sendCreated(res, project);
         }
       }
 
@@ -151,13 +153,15 @@ export class PlanningRoutes {
         if (!project) {
           return this.sendError(res, 404, "NOT_FOUND" as ApiErrorCode, "Project not found", traceId);
         }
-        return this.sendJson(res, 200, project);
+        return this.sendData(res, 200, project, {
+          timestamp: new Date().toISOString(),
+        });
       }
 
       // DELETE /api/projects/:projectId - Delete project
       if (method === "DELETE" && url === `/api/projects/${projectId}`) {
         await projectStore.delete();
-        return this.sendJson(res, 200, { success: true });
+        return this.sendDeleted(res);
       }
 
       // GET /api/projects/:projectId/integrity - Check integrity
@@ -167,10 +171,12 @@ export class PlanningRoutes {
         
         // Convert failed checks to user-facing errors
         const userErrors = integrityChecksToUserErrors(summary.results);
-        
-        return this.sendJson(res, 200, {
+
+        return this.sendData(res, 200, {
           ...summary,
           userErrors, // Add user-friendly error messages for failed checks
+        }, {
+          timestamp: new Date().toISOString(),
         });
       }
 
@@ -190,13 +196,15 @@ export class PlanningRoutes {
         
         const integrityChecker = createIntegrityChecker(projectsDir, projectId);
         const result = await integrityChecker.runCheck(projectId, checkId as CheckId);
-        
+
         // Convert to user-facing error if check failed
         const userError = integrityCheckToUserError(result);
-        
-        return this.sendJson(res, 200, {
+
+        return this.sendData(res, 200, {
           ...result,
           userError, // Add user-friendly error message if check failed (null otherwise)
+        }, {
+          timestamp: new Date().toISOString(),
         });
       }
 
@@ -249,7 +257,7 @@ export class PlanningRoutes {
         }
 
         const thought = {
-          thoughtId: `thought_${randomUUID().slice(0, 8)}`,
+          thoughtId: this.generateId("thought"),
           projectId,
           content,
           source,
@@ -260,7 +268,7 @@ export class PlanningRoutes {
         };
 
         await voidStore.addThought(thought, capturedBy);
-        return this.responder.sendJson(req, res, 201, thought);
+        return this.sendCreated(res, thought);
       }
 
       // POST /api/projects/:projectId/void/thoughts/batch - Batch import thoughts
@@ -309,8 +317,11 @@ export class PlanningRoutes {
       // GET /api/projects/:projectId/reveal/clusters - List clusters
       if (method === "GET" && url === `/api/projects/${projectId}/reveal/clusters`) {
         const revealStore = new ViewStore(projectsDir, projectId, "reveal", { ledger: planningLedger, integrity: storeIntegrity });
-        const clusters = await revealStore.read<{ clusters?: Array<{ clusterId: string }> }>();
-        return this.sendJson(res, 200, clusters ?? { clusters: [] });
+        const data = await revealStore.read<{ clusters?: Array<{ clusterId: string }> }>();
+        const clusters = data?.clusters ?? [];
+        return this.sendData(res, 200, clusters, {
+          timestamp: new Date().toISOString(),
+        });
       }
 
       // POST /api/projects/:projectId/reveal/clusters - Create cluster
@@ -328,6 +339,17 @@ export class PlanningRoutes {
 
         const revealStore = new ViewStore(projectsDir, projectId, "reveal", { ledger: planningLedger, integrity: storeIntegrity });
 
+        const newCluster = {
+          clusterId: this.generateId("cluster"),
+          projectId,
+          label,
+          thoughtIds,
+          notes: notes ?? "",
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+          status: "formed" as const,
+        };
+
         const { response } = await planningGovernance.evaluateAndExecute(
           actorId,
           toContractAction("create"),
@@ -335,16 +357,6 @@ export class PlanningRoutes {
           async () => {
             const existing = (await revealStore.read<{ clusters?: Array<{ clusterId: string }> }>()) ?? { clusters: [] };
             const clusters = existing.clusters ?? [];
-            const newCluster = {
-              clusterId: `cluster_${Date.now().toString(36)}`,
-              projectId,
-              label,
-              thoughtIds,
-              notes: notes ?? "",
-              createdAt: new Date().toISOString(),
-              updatedAt: new Date().toISOString(),
-              status: "formed" as const,
-            };
             clusters.push(newCluster);
             await revealStore.write({ clusters });
           }
@@ -353,14 +365,16 @@ export class PlanningRoutes {
         if (!response.allowed) {
           return this.sendError(res, 403, "POLICY_DENIED" as ApiErrorCode, response.reason ?? "Policy denied", traceId);
         }
-        return this.sendJson(res, 201, { success: true });
+        return this.sendCreated(res, newCluster);
       }
 
       // GET /api/projects/:projectId/constellation/map - Get constellation
       if (method === "GET" && url === `/api/projects/${projectId}/constellation/map`) {
         const constellationStore = new ViewStore(projectsDir, projectId, "constellation", { ledger: planningLedger, integrity: storeIntegrity });
-        const map = await constellationStore.read<{ nodes?: unknown[]; edges?: unknown[] }>();
-        return this.sendJson(res, 200, map ?? { nodes: [], edges: [] });
+        const data = await constellationStore.read<{ nodes?: unknown[]; edges?: unknown[] }>();
+        return this.sendData(res, 200, data ?? { nodes: [], edges: [] }, {
+          timestamp: new Date().toISOString(),
+        });
       }
 
       // POST /api/projects/:projectId/constellation/map - Save constellation
@@ -377,34 +391,39 @@ export class PlanningRoutes {
 
         const constellationStore = new ViewStore(projectsDir, projectId, "constellation", { ledger: planningLedger, integrity: storeIntegrity });
 
+        const constellation = {
+          constellationId: `const_${projectId}`,
+          projectId,
+          nodes,
+          edges,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+          status: "mapped" as const,
+        };
+
         const { response } = await planningGovernance.evaluateAndExecute(
           actorId,
           toContractAction("create"),
           projectId,
           async () => {
-            await constellationStore.write({
-              constellationId: `const_${projectId}`,
-              projectId,
-              nodes,
-              edges,
-              createdAt: new Date().toISOString(),
-              updatedAt: new Date().toISOString(),
-              status: "mapped",
-            });
+            await constellationStore.write(constellation);
           }
         );
 
         if (!response.allowed) {
           return this.sendError(res, 403, "POLICY_DENIED" as ApiErrorCode, response.reason ?? "Policy denied", traceId);
         }
-        return this.sendJson(res, 200, { success: true });
+        return this.sendUpdated(res, constellation);
       }
 
       // GET /api/projects/:projectId/path/phases - Get phases
       if (method === "GET" && url === `/api/projects/${projectId}/path/phases`) {
         const pathStore = new ViewStore(projectsDir, projectId, "path", { ledger: planningLedger, integrity: storeIntegrity });
-        const phases = await pathStore.read<{ phases?: unknown[] }>();
-        return this.sendJson(res, 200, phases ?? { phases: [] });
+        const data = await pathStore.read<{ phases?: unknown[] }>();
+        const phases = data?.phases ?? [];
+        return this.sendData(res, 200, phases, {
+          timestamp: new Date().toISOString(),
+        });
       }
 
       // POST /api/projects/:projectId/path/phases - Create phase
@@ -423,33 +442,35 @@ export class PlanningRoutes {
 
         const pathStore = new ViewStore(projectsDir, projectId, "path", { ledger: planningLedger, integrity: storeIntegrity });
 
+        const existing = (await pathStore.read<{ phases?: unknown[] }>()) ?? { phases: [] };
+        const phases = existing.phases ?? [];
+        const ordinal = phases.length + 1;
+        const phaseId = this.generateId("phase");
+        const newPhase = {
+          phaseId,
+          projectId,
+          ordinal,
+          name,
+          objective,
+          sourceClusterIds,
+          tasks: (tasks ?? []).map((t, i) => ({
+            taskId: this.generateId(`task`),
+            phaseId,
+            title: t.title,
+            description: t.description,
+            acceptance: t.acceptance,
+            status: "pending" as const,
+          })),
+          status: "planned" as const,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        };
+
         const { response } = await planningGovernance.evaluateAndExecute(
           actorId,
           toContractAction("create"),
           projectId,
           async () => {
-            const existing = (await pathStore.read<{ phases?: unknown[] }>()) ?? { phases: [] };
-            const phases = existing.phases ?? [];
-            const ordinal = phases.length + 1;
-            const newPhase = {
-              phaseId: `phase_${Date.now().toString(36)}`,
-              projectId,
-              ordinal,
-              name,
-              objective,
-              sourceClusterIds,
-              tasks: (tasks ?? []).map((t, i) => ({
-                taskId: `task_${Date.now().toString(36)}_${i}`,
-                phaseId: `phase_${Date.now().toString(36)}`,
-                title: t.title,
-                description: t.description,
-                acceptance: t.acceptance,
-                status: "pending" as const,
-              })),
-              status: "planned" as const,
-              createdAt: new Date().toISOString(),
-              updatedAt: new Date().toISOString(),
-            };
             phases.push(newPhase);
             await pathStore.write({ phases });
           }
@@ -458,14 +479,17 @@ export class PlanningRoutes {
         if (!response.allowed) {
           return this.sendError(res, 403, "POLICY_DENIED" as ApiErrorCode, response.reason ?? "Policy denied", traceId);
         }
-        return this.sendJson(res, 201, { success: true });
+        return this.sendCreated(res, newPhase);
       }
 
       // GET /api/projects/:projectId/risk/register - Get risks
       if (method === "GET" && url === `/api/projects/${projectId}/risk/register`) {
         const riskStore = new ViewStore(projectsDir, projectId, "risk", { ledger: planningLedger, integrity: storeIntegrity });
-        const risks = await riskStore.read<{ risks?: unknown[] }>();
-        return this.sendJson(res, 200, risks ?? { risks: [] });
+        const data = await riskStore.read<{ risks?: unknown[] }>();
+        const risks = data?.risks ?? [];
+        return this.sendData(res, 200, risks, {
+          timestamp: new Date().toISOString(),
+        });
       }
 
       // POST /api/projects/:projectId/risk/register - Add risk
@@ -486,6 +510,20 @@ export class PlanningRoutes {
 
         const riskStore = new ViewStore(projectsDir, projectId, "risk", { ledger: planningLedger, integrity: storeIntegrity });
 
+        const newRisk = {
+          riskId: this.generateId("risk"),
+          projectId,
+          phaseId,
+          description,
+          likelihood,
+          impact,
+          mitigation,
+          owner,
+          status: "identified" as const,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        };
+
         const { response } = await planningGovernance.evaluateAndExecute(
           actorId,
           toContractAction("create"),
@@ -493,19 +531,6 @@ export class PlanningRoutes {
           async () => {
             const existing = (await riskStore.read<{ risks?: unknown[] }>()) ?? { risks: [] };
             const risks = existing.risks ?? [];
-            const newRisk = {
-              riskId: `risk_${Date.now().toString(36)}`,
-              projectId,
-              phaseId,
-              description,
-              likelihood,
-              impact,
-              mitigation,
-              owner,
-              status: "identified" as const,
-              createdAt: new Date().toISOString(),
-              updatedAt: new Date().toISOString(),
-            };
             risks.push(newRisk);
             await riskStore.write({ risks });
           }
@@ -514,14 +539,16 @@ export class PlanningRoutes {
         if (!response.allowed) {
           return this.sendError(res, 403, "POLICY_DENIED" as ApiErrorCode, response.reason ?? "Policy denied", traceId);
         }
-        return this.sendJson(res, 201, { success: true });
+        return this.sendCreated(res, newRisk);
       }
 
       // GET /api/projects/:projectId/autonomy/config - Get autonomy config
       if (method === "GET" && url === `/api/projects/${projectId}/autonomy/config`) {
         const autonomyStore = new ViewStore(projectsDir, projectId, "autonomy", { ledger: planningLedger, integrity: storeIntegrity });
         const config = await autonomyStore.read();
-        return this.sendJson(res, 200, config ?? { guardrails: [], approvalGates: [], allowedActions: [], blockedActions: [], victorMode: "support" });
+        return this.sendData(res, 200, config ?? { guardrails: [], approvalGates: [], allowedActions: [], blockedActions: [], victorMode: "support" }, {
+          timestamp: new Date().toISOString(),
+        });
       }
 
       // POST /api/projects/:projectId/autonomy/config - Save autonomy config
@@ -541,30 +568,32 @@ export class PlanningRoutes {
 
         const autonomyStore = new ViewStore(projectsDir, projectId, "autonomy", { ledger: planningLedger, integrity: storeIntegrity });
 
+        const config = {
+          autonomyId: `autonomy_${projectId}`,
+          projectId,
+          guardrails: guardrails ?? [],
+          approvalGates: approvalGates ?? [],
+          allowedActions: allowedActions ?? [],
+          blockedActions: blockedActions ?? [],
+          victorMode: victorMode ?? "support",
+          status: "active" as const,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        };
+
         const { response } = await planningGovernance.evaluateAndExecute(
           actorId,
           toContractAction("create"),
           projectId,
           async () => {
-            await autonomyStore.write({
-              autonomyId: `autonomy_${projectId}`,
-              projectId,
-              guardrails: guardrails ?? [],
-              approvalGates: approvalGates ?? [],
-              allowedActions: allowedActions ?? [],
-              blockedActions: blockedActions ?? [],
-              victorMode: victorMode ?? "support",
-              status: "active",
-              createdAt: new Date().toISOString(),
-              updatedAt: new Date().toISOString(),
-            });
+            await autonomyStore.write(config);
           }
         );
 
         if (!response.allowed) {
           return this.sendError(res, 403, "POLICY_DENIED" as ApiErrorCode, response.reason ?? "Policy denied", traceId);
         }
-        return this.sendJson(res, 200, { success: true });
+        return this.sendUpdated(res, config);
       }
 
       // POST /api/projects/:projectId/query - Query project state (Agent Interface)
@@ -579,7 +608,9 @@ export class PlanningRoutes {
           const { createPlanningAgentInterface } = await import("../planning/PlanningAgentInterface.js");
           const agentInterface = createPlanningAgentInterface(projectsDir, projectId);
           const result = await agentInterface.query(question);
-          return this.sendJson(res, 200, result);
+          return this.sendData(res, 200, result, {
+            timestamp: new Date().toISOString(),
+          });
         } catch (err) {
           this.logger.error("Query failed", { projectId, question, error: err });
           return this.sendError(res, 500, "INTERNAL_ERROR" as ApiErrorCode, "Query failed", traceId);
@@ -600,7 +631,9 @@ export class PlanningRoutes {
           } else {
             result = await exportProject(projectId, { format });
           }
-          return this.sendJson(res, 200, result);
+          return this.sendData(res, 200, result, {
+            timestamp: new Date().toISOString(),
+          });
         } catch (err) {
           this.logger.error("Export failed", { projectId, format, view, error: err });
           const msg = err instanceof Error ? err.message : "Export failed";
@@ -614,7 +647,9 @@ export class PlanningRoutes {
         const view = urlObj.searchParams.get("view") as PlanningView | null;
         const action = urlObj.searchParams.get("action") as PlanningAction | null;
         const entries = await planningLedger.getEntries({ view: view ?? undefined, action: action ?? undefined });
-        return this.sendJson(res, 200, { entries });
+        return this.sendData(res, 200, entries, {
+          timestamp: new Date().toISOString(),
+        });
       }
 
       // POST /api/victor/review-plan - Victor review endpoint
@@ -635,7 +670,9 @@ export class PlanningRoutes {
           const reviewProjectStore = createProjectStore(reviewProjectId, projectsDir);
           const projectState = await reviewProjectStore.getFullProjectState();
           const review = await reviewPlanningProject(projectState);
-          return this.sendJson(res, 200, review);
+          return this.sendData(res, 200, review, {
+            timestamp: new Date().toISOString(),
+          });
         } catch (err) {
           this.logger.error("Failed to load Victor planning review", { error: err });
           return this.sendError(res, 500, "INTERNAL_ERROR" as ApiErrorCode, "Victor review unavailable", traceId);
@@ -767,6 +804,84 @@ export class PlanningRoutes {
     });
     genericError.details = { ...genericError.details, traceId };
     return this.sendUserFacingError(res, 403, genericError);
+  }
+
+  /**
+   * Send a successful data response with standardized envelope.
+   * All success responses should use this format: { data: T, meta?: {...} }
+   */
+  private sendData<T>(
+    res: http.ServerResponse,
+    statusCode: number,
+    data: T,
+    meta?: {
+      timestamp?: string;
+      integrity?: unknown;
+      pagination?: { page: number; limit: number; total: number; hasMore: boolean };
+      [key: string]: unknown;
+    }
+  ): boolean {
+    const payload = { data, ...(meta && { meta }) };
+    return this.sendJson(res, statusCode, payload);
+  }
+
+  /**
+   * Send a paginated response with full metadata.
+   * Includes page, limit, total, and hasMore fields.
+   */
+  private sendPaginatedData<T>(
+    res: http.ServerResponse,
+    data: T[],
+    pagination: { page: number; limit: number; total: number }
+  ): boolean {
+    const hasMore = pagination.page * pagination.limit < pagination.total;
+    return this.sendData(res, 200, data, {
+      pagination: { ...pagination, hasMore },
+      timestamp: new Date().toISOString(),
+    });
+  }
+
+  /**
+   * Send a created resource response (201).
+   * Includes timestamp in meta.
+   */
+  private sendCreated<T>(
+    res: http.ServerResponse,
+    resource: T
+  ): boolean {
+    return this.sendData(res, 201, resource, {
+      timestamp: new Date().toISOString(),
+    });
+  }
+
+  /**
+   * Send a successful update response (200).
+   * Includes timestamp in meta.
+   */
+  private sendUpdated<T>(
+    res: http.ServerResponse,
+    resource: T
+  ): boolean {
+    return this.sendData(res, 200, resource, {
+      timestamp: new Date().toISOString(),
+    });
+  }
+
+  /**
+   * Send a successful delete response (204 No Content).
+   */
+  private sendDeleted(res: http.ServerResponse): boolean {
+    res.statusCode = 204;
+    res.end();
+    return true;
+  }
+
+  /**
+   * Generate consistent resource ID using UUIDv4.
+   * Format: {prefix}_{8-char-uuid}
+   */
+  private generateId(prefix: string): string {
+    return `${prefix}_${randomUUID().slice(0, 8)}`;
   }
 
   private handleError(res: http.ServerResponse, error: unknown, traceId: string): void {
