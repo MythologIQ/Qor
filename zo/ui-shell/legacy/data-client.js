@@ -14,7 +14,9 @@ export class DataClient {
     this.onGenesis = options.onGenesis;
     this.ws = null;
     this.reconnectTimer = null;
+    this.pollTimer = null;
     this.reconnectAttempts = 0;
+    this.lastConnection = 'connecting';
   }
 
   start() {
@@ -22,9 +24,15 @@ export class DataClient {
     this.fetchHub();
     this.fetchSkills();
     this.fetchDashboard();
+    if (!this.pollTimer) {
+      this.pollTimer = setInterval(() => {
+        this.fetchHub();
+      }, 5000);
+    }
   }
 
   connect() {
+    this.lastConnection = 'connecting';
     this.onConnection('connecting');
     const wsProto = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
     this.ws = new WebSocket(`${wsProto}//${window.location.host}`);
@@ -35,6 +43,7 @@ export class DataClient {
         clearTimeout(this.reconnectTimer);
         this.reconnectTimer = null;
       }
+      this.lastConnection = 'connected';
       this.onConnection('connected');
     };
 
@@ -64,8 +73,12 @@ export class DataClient {
       }
     };
 
-    this.ws.onerror = () => this.onConnection('disconnected');
+    this.ws.onerror = () => {
+      this.lastConnection = 'disconnected';
+      this.onConnection('disconnected');
+    };
     this.ws.onclose = () => {
+      this.lastConnection = 'disconnected';
       this.onConnection('disconnected');
       this.scheduleReconnect();
     };
@@ -86,8 +99,16 @@ export class DataClient {
       const res = await fetch('/api/hub');
       if (!res.ok) throw new Error(`Hub request failed (${res.status})`);
       const payload = await res.json();
+      if (this.lastConnection !== 'connected') {
+        this.lastConnection = 'connected';
+        this.onConnection('connected');
+      }
       this.onHub(payload);
     } catch (error) {
+      if (this.lastConnection !== 'disconnected') {
+        this.lastConnection = 'disconnected';
+        this.onConnection('disconnected');
+      }
       this.onError('Unable to load hub data.', () => this.fetchHub());
       console.error(error);
     }

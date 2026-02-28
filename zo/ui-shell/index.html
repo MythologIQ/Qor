@@ -218,114 +218,38 @@
       </section>
 
       <section id="panel-run" class="panel route-panel run-panel-redesign" data-route="run">
-        <!-- Panic Stop Zone - Top Center Prominent -->
-        <div class="run-panic-zone">
-          <button id="panic-stop-main" class="panic-stop-btn" type="button">
-            <span class="panic-icon">&#9724;</span>
-            <span class="panic-label">Panic Stop</span>
-          </button>
-        </div>
-
-        <div class="run-redesign-layout">
-          <!-- Left Sidebar with Circular Gauge at top -->
-          <aside class="run-sidebar">
-            <!-- Circular Phases Gauge - Top of sidebar -->
-            <div class="circular-phases-container sidebar-gauge">
-              <svg id="circular-phases-svg" viewBox="0 0 300 300" xmlns="http://www.w3.org/2000/svg">
+        <div class="run-main-area">
+          <div class="visualization-window">
+            <div class="visualization-header">
+              <h3 id="viz-phase-title">Plan Phase</h3>
+              <span id="viz-phase-badge" class="viz-phase-badge">ACTIVE</span>
+            </div>
+            <div class="visualization-viewport">
+              <svg id="phase-visualization-svg" viewBox="0 0 950 340" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg">
                 <defs>
-                  <linearGradient id="arc-gradient-active" x1="0%" y1="0%" x2="100%" y2="0%">
-                    <stop offset="0%" style="stop-color:var(--primary)"/>
-                    <stop offset="100%" style="stop-color:var(--accent)"/>
-                  </linearGradient>
-                  <!-- Center circle gradient - dark with subtle depth -->
-                  <radialGradient id="center-gradient" cx="50%" cy="50%" r="50%" fx="35%" fy="35%">
-                    <stop offset="0%" stop-color="#1e293b" stop-opacity="1"/>
-                    <stop offset="60%" stop-color="#0f172a" stop-opacity="1"/>
-                    <stop offset="100%" stop-color="#020617" stop-opacity="1"/>
-                  </radialGradient>
-                  <!-- Inner center - slightly lighter for depth -->
-                  <radialGradient id="center-gradient-inner" cx="50%" cy="50%" r="50%" fx="30%" fy="30%">
-                    <stop offset="0%" stop-color="#334155" stop-opacity="0.6"/>
-                    <stop offset="40%" stop-color="#1e293b" stop-opacity="0.8"/>
-                    <stop offset="80%" stop-color="#0f172a" stop-opacity="1"/>
-                    <stop offset="100%" stop-color="#020617" stop-opacity="1"/>
-                  </radialGradient>
-                  <!-- Cyan glow for ring -->
-                  <filter id="glow-cyan" x="-50%" y="-50%" width="200%" height="200%">
-                    <feGaussianBlur stdDeviation="3" result="blur"/>
-                    <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
-                  </filter>
-                  <filter id="glow-red" x="-50%" y="-50%" width="200%" height="200%">
-                    <feGaussianBlur stdDeviation="4" result="blur"/>
-                    <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
-                  </filter>
-                  <filter id="glow-arc" x="-50%" y="-50%" width="200%" height="200%">
-                    <feGaussianBlur stdDeviation="3" result="blur"/>
-                    <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
-                  </filter>
+                  <marker id="viz-arrow" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+                    <path d="M0,0 L0,8 L8,4 z" class="viz-arrow-head"/>
+                  </marker>
+                  <symbol id="sym-file-node" viewBox="0 0 40 50">
+                    <rect class="file-node-bg" x="2" y="2" width="36" height="46" rx="3"/>
+                    <path class="file-node-fold" d="M28,2 L38,12 L28,12 Z"/>
+                  </symbol>
                 </defs>
-                <!-- Phase Arcs (JS populates both tracks and fills here) -->
-                <g id="phase-arcs-fills"></g>
-                <!-- Phase Labels (positioned outside arcs by JS) -->
-                <g id="phase-labels-group"></g>
-                <!-- Center Debug Indicator (rendered on top of arcs) -->
-                <g id="debug-indicator-center"></g>
+                <g id="viz-background-layer"></g>
+                <g id="viz-connections-layer"></g>
+                <g id="viz-nodes-layer"></g>
+                <g id="viz-annotations-layer"></g>
               </svg>
             </div>
-
-            <div class="run-sidebar-section">
-              <h3>Deployment</h3>
-              <div id="run-deployment-info" class="deployment-info-compact"></div>
-            </div>
-            <div class="run-sidebar-section">
-              <h3>Recent Actions</h3>
-              <div id="run-recent-actions" class="recent-actions-compact"></div>
-            </div>
-            <div class="run-sidebar-section">
-              <h3>Performance</h3>
-              <div id="run-performance" class="performance-compact"></div>
-            </div>
-            <div class="run-sidebar-section run-blockers-section">
-              <h3>Blockers</h3>
-              <div id="run-blockers" class="blockers-panel-compact"></div>
-            </div>
-            <div id="action-feedback" class="action-feedback">No recent actions.</div>
-          </aside>
-
-          <!-- Main Area - Phase Visualization Window -->
-          <div class="run-main-area">
-            <div class="visualization-window">
-              <div class="visualization-header">
-                <h3 id="viz-phase-title">Plan Phase</h3>
-                <span id="viz-phase-badge" class="viz-phase-badge">ACTIVE</span>
-              </div>
-              <div class="visualization-viewport">
-                <svg id="phase-visualization-svg" viewBox="0 0 950 340" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg">
-                  <defs>
-                    <marker id="viz-arrow" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
-                      <path d="M0,0 L0,8 L8,4 z" class="viz-arrow-head"/>
-                    </marker>
-                    <symbol id="sym-file-node" viewBox="0 0 40 50">
-                      <rect class="file-node-bg" x="2" y="2" width="36" height="46" rx="3"/>
-                      <path class="file-node-fold" d="M28,2 L38,12 L28,12 Z"/>
-                    </symbol>
-                  </defs>
-                  <g id="viz-background-layer"></g>
-                  <g id="viz-connections-layer"></g>
-                  <g id="viz-nodes-layer"></g>
-                  <g id="viz-annotations-layer"></g>
-                </svg>
-              </div>
-              <div id="viz-legend" class="visualization-legend"></div>
-            </div>
+            <div id="viz-legend" class="visualization-legend"></div>
           </div>
         </div>
       </section>
 
       <section id="panel-skills" class="panel route-panel skills-panel" data-route="skills">
         <div class="panel-headline">
-          <h2>Prompt Pipeline</h2>
-          <p class="panel-subline">Intent-first orchestration with context, skill fit, persona, template deck, and model recommendation.</p>
+          <h2>Comms</h2>
+          <p class="panel-subline">Persistent project chat with automated equipment routing and a Magic Mirror trace before model dispatch.</p>
         </div>
 
         <section class="intent-shell prompt-pipeline-shell">
@@ -344,44 +268,41 @@
 
               <div class="prompt-row">
                 <label class="intent-label" for="intent-input">Intent</label>
-                <textarea id="intent-input" class="intent-input" rows="2" placeholder="What should be achieved? Define outcome and constraints."></textarea>
+                <textarea id="intent-input" class="intent-input" rows="3" placeholder="What should be achieved? Define outcome and constraints."></textarea>
               </div>
 
               <div class="prompt-row">
                 <label class="intent-label" for="intent-context-input">Context</label>
-                <textarea id="intent-context-input" class="intent-input" rows="2" placeholder="Repository details, dependencies, deadlines, constraints, and acceptance criteria."></textarea>
+                <textarea id="intent-context-input" class="intent-input" rows="3" placeholder="Project context, constraints, deadlines, and acceptance criteria."></textarea>
+              </div>
+
+              <div class="prompt-row">
+                <div class="comms-auto-note">
+                  <strong>Auto Equip:</strong> Persona, skill, workflow, and tool selections are inferred from project phase, skill inventory, and prompt intent.
+                </div>
               </div>
 
               <div class="prompt-row prompt-row-inline">
-                <div>
-                  <label class="intent-label" for="intent-persona">Agent Persona</label>
-                  <select id="intent-persona" class="intent-select">
-                    <option value="systems">Systems Engineer</option>
-                    <option value="security">Security Auditor</option>
-                    <option value="performance">Performance Optimizer</option>
-                    <option value="product">Product Implementer</option>
-                  </select>
-                </div>
                 <div>
                   <label class="intent-label" for="intent-skill-select">Execution Skill</label>
                   <select id="intent-skill-select" class="intent-select">
                     <option value="">Auto (Recommended)</option>
                   </select>
                 </div>
-                <div>
-                  <label class="intent-label" for="intent-model-mode">Model Selection Mode</label>
-                  <select id="intent-model-mode" class="intent-select">
-                    <option value="auto">Auto Best Value</option>
-                    <option value="suggest">Suggest Only</option>
-                    <option value="manual">Manual Override</option>
-                  </select>
-                </div>
               </div>
             </div>
 
             <aside id="intent-flow-pipeline" class="prompt-side card flow-stage" data-flow-state="pending">
-              <h3>Pipeline Guidance</h3>
+              <h3>Magic Mirror</h3>
               <div class="prompt-guidance-grid">
+                <article class="guidance-tile tile-model">
+                  <h4>Equipped Armory</h4>
+                  <div id="mirror-equipment" class="prompt-insight">Awaiting prompt analysis...</div>
+                </article>
+                <article class="guidance-tile tile-practices">
+                  <h4>Injected Context</h4>
+                  <div id="mirror-injections" class="prompt-practices">Context injection trace appears here.</div>
+                </article>
                 <article class="guidance-tile tile-context">
                   <h4>Intent Buffer</h4>
                   <div id="intent-context" class="intent-context"></div>
@@ -399,16 +320,13 @@
                   <div id="intent-vendor-practices" class="prompt-practices">Vendor prompting best practices for selected model will appear here.</div>
                 </article>
               </div>
-              <div class="prompt-wishlist">
-                <strong>Wishlist:</strong> Persona Management UI is planned for a future release. Add Projects tab with project selector and sub-tabs for Kanban, Gantt Sheet, and Roadmap. Add dedicated Agent Persona and Workflows tabs.
-              </div>
             </aside>
           </div>
 
           <div class="intent-results-grid">
             <section id="intent-flow-chat" class="flow-stage intent-result-panel" data-flow-state="idle">
               <div class="intent-result-head">
-                <h4 class="intent-chat-label">Chat OUTPUT</h4>
+                <h4 class="intent-chat-label">Project Chat</h4>
                 <button id="intent-chat-logs" class="hub-action-btn ghost small" type="button" disabled>Chat Logs</button>
               </div>
               <div class="intent-chat-id-row">Session/Chat ID: <span id="intent-chat-id">pending</span></div>
@@ -526,22 +444,54 @@
       <section id="panel-persona" class="panel route-panel" data-route="persona">
         <div class="panel-headline">
           <h2>Agent Persona</h2>
-          <p class="panel-subline">Configure and manage reusable persona profiles for prompt generation.</p>
+          <p class="panel-subline">Set identity and reasoning posture used by Comms automation.</p>
         </div>
-        <section class="card coming-soon-card">
-          <h3>Coming Soon</h3>
-          <p>Persona profile management UI is in progress. This tab will support persona creation, tuning, and selection presets.</p>
+        <section class="card">
+          <h3>Persona Loadout</h3>
+          <div class="prompt-row prompt-row-inline">
+            <div>
+              <label class="intent-label" for="intent-persona">Agent Persona</label>
+              <select id="intent-persona" class="intent-select">
+                <option value="systems">Systems Engineer</option>
+                <option value="security">Security Auditor</option>
+                <option value="performance">Performance Optimizer</option>
+                <option value="product">Product Implementer</option>
+              </select>
+            </div>
+          </div>
+          <p class="intent-action-note">This applies globally to prompt generation until changed.</p>
         </section>
       </section>
 
       <section id="panel-workflows" class="panel route-panel" data-route="workflows">
         <div class="panel-headline">
           <h2>Workflows</h2>
-          <p class="panel-subline">Create and orchestrate reusable execution workflows for common task patterns.</p>
+          <p class="panel-subline">Automation routing and model strategy for project execution.</p>
         </div>
-        <section class="card coming-soon-card">
-          <h3>Coming Soon</h3>
-          <p>Workflow authoring and sequencing controls are in progress. This tab will host reusable multi-step execution flows.</p>
+        <section class="card">
+          <h3>Execution Routing</h3>
+          <div class="prompt-row prompt-row-inline">
+            <div>
+              <label class="intent-label" for="intent-model-mode">Model Selection Mode</label>
+              <select id="intent-model-mode" class="intent-select">
+                <option value="auto">Auto Best Value</option>
+                <option value="suggest">Suggest Only</option>
+                <option value="manual">Manual Override</option>
+              </select>
+            </div>
+          </div>
+          <div id="intent-model-manual-row" class="prompt-row" style="display:none">
+            <label class="intent-label" for="intent-model-select">Manual Model</label>
+            <select id="intent-model-select" class="intent-select">
+              <option value="">Select a model...</option>
+            </select>
+            <div id="intent-model-detail" class="model-detail"></div>
+          </div>
+          <article class="guidance-tile tile-task">
+            <h4>Suggested Loadout</h4>
+            <ul id="mirror-suggestions" class="prompt-practices"></ul>
+          </article>
+          <p class="intent-action-note">Workflow and tool route suggestions are produced from task classification and available inventory.</p>
         </section>
       </section>
 
@@ -718,9 +668,16 @@
             <article class="card governance-card queue-card">
               <div class="governance-card-head">
                 <h3>L3 Verification Queue</h3>
-                <button class="hub-action-btn primary small" type="button">Process All</button>
+                <div class="governance-head-actions">
+                  <button id="governance-panic-stop" class="hub-action-btn small" type="button">Panic Stop</button>
+                </div>
               </div>
+              <div id="action-feedback" class="action-feedback">No recent actions.</div>
               <div id="l3-queue"></div>
+            </article>
+            <article class="card governance-card">
+              <h3>Active Blockers</h3>
+              <div id="governance-blockers"></div>
             </article>
             <article class="card governance-card audit-card">
               <div class="governance-card-head">
@@ -932,4 +889,3 @@
   </script>
 </body>
 </html>
-

@@ -161,59 +161,63 @@ export class InsightsPanel {
 
   }
 
-  renderRun(state) {
-    const hub = state.hub;
+  renderRun(state, phase) {
+    const hub = state.hub || {};
     const activePlan = hub.activePlan || { phases: [], blockers: [] };
-    const blockers = (activePlan.blockers || []).filter((item) => !item.resolvedAt);
+    const phases = Array.isArray(activePlan.phases) ? activePlan.phases : [];
+    const running = Boolean(hub.sentinelStatus?.running);
 
-    this.el.sprintInfo.innerHTML = hub.currentSprint
-      ? `<h3>Current Deployment</h3><div class="metric-list">
-          <div class="metric-row"><span>Current deployment</span><strong>${escapeHtml(hub.currentSprint.name)}</strong></div>
-          <div class="metric-row"><span>Status</span><strong>${escapeHtml(hub.currentSprint.status || 'active')}</strong></div>
-          <div class="metric-row"><span>Phase lock</span><strong>${escapeHtml(activePlan.currentPhaseId || 'n/a')}</strong></div>
-          <div class="metric-row"><span>Plan ID</span><strong>${escapeHtml(String(activePlan.id || 'none').slice(0, 12))}</strong></div>
-        </div>`
-      : '<h3>Current Deployment</h3><span class="empty-state">No active sprint.</span>';
-
-    if ((activePlan.phases || []).length === 0) {
-      this.el.roadmapSvg.innerHTML = '<span class="empty-state">No active plan.</span>';
-      this.el.phaseGrid.innerHTML = '';
-      this.el.blockers.innerHTML = '';
-      return;
+    if (this.el.vizPhaseTitle) {
+      this.el.vizPhaseTitle.textContent = `${phase?.title || 'Plan'} Phase`;
+    }
+    if (this.el.vizPhaseBadge) {
+      this.el.vizPhaseBadge.textContent = running ? 'ACTIVE' : 'PAUSED';
+      this.el.vizPhaseBadge.classList.toggle('warn', !running);
+    }
+    if (this.el.vizLegend) {
+      this.el.vizLegend.innerHTML = `
+        <span><i class="legend-dot active"></i> Active</span>
+        <span><i class="legend-dot completed"></i> Completed</span>
+        <span><i class="legend-dot pending"></i> Pending</span>
+      `;
     }
 
-    this.el.roadmapSvg.innerHTML = `<div class="metric-list">${activePlan.phases.map((phase) => `<div class="metric-row"><span>${escapeHtml(phase.title)}</span><strong>${escapeHtml(phase.status)}</strong></div>`).join('')}</div>`;
-    this.el.phaseGrid.innerHTML = activePlan.phases.map((phase) => `
-      <article class="phase-card ${escapeHtml(phase.status || 'pending')}">
-        <div class="phase-title">${escapeHtml(phase.title)}</div>
-        <div class="phase-status">${escapeHtml(phase.status || 'pending')}</div>
-        <div class="phase-progress"><div class="phase-progress-bar" style="width:${Number(phase.progress || 0)}%"></div></div>
-      </article>
-    `).join('');
+    if (this.el.phaseVisualizationSvg) {
+      const nodesLayer = this.el.phaseVisualizationSvg.querySelector('#viz-nodes-layer');
+      const connLayer = this.el.phaseVisualizationSvg.querySelector('#viz-connections-layer');
+      if (nodesLayer && connLayer) {
+        const stagePhases = phases.length > 0 ? phases : [
+          { title: 'Plan', status: 'active' },
+          { title: 'Build', status: 'pending' },
+          { title: 'Verify', status: 'pending' },
+          { title: 'Deploy', status: 'pending' },
+        ];
+        connLayer.innerHTML = stagePhases.slice(1).map((_, idx) => {
+          const x1 = 120 + (idx * 220);
+          const x2 = x1 + 150;
+          return `<line x1="${x1}" y1="170" x2="${x2}" y2="170" class="viz-connector" marker-end="url(#viz-arrow)"></line>`;
+        }).join('');
+        nodesLayer.innerHTML = stagePhases.map((item, idx) => {
+          const x = 40 + (idx * 220);
+          const status = String(item.status || 'pending').toLowerCase();
+          return `
+            <g transform="translate(${x},120)" class="viz-node ${escapeHtml(status)}">
+              <rect x="0" y="0" rx="14" ry="14" width="150" height="96"></rect>
+              <text x="12" y="32">${escapeHtml(String(item.title || `Phase ${idx + 1}`))}</text>
+              <text x="12" y="58" class="viz-node-status">${escapeHtml(status)}</text>
+            </g>
+          `;
+        }).join('');
+      }
+    }
 
-    this.el.blockers.innerHTML = blockers.length > 0
-      ? blockers.map((blocker) => `<div class="blocker-item"><strong>${escapeHtml(blocker.title)}</strong><div>${escapeHtml(blocker.reason || 'No reason provided')}</div></div>`).join('')
-      : '<span class="empty-state">No active blockers.</span>';
-
-    const artifacts = activePlan.phases.flatMap((phase) => phase.artifacts || []);
-    const touched = artifacts.filter((artifact) => artifact.touched).length;
-    const unverified = Math.max(0, artifacts.length - touched, Number(hub.sentinelStatus?.queueDepth || 0));
-    const severe = (hub.recentVerdicts || []).filter((v) => ['BLOCK', 'ESCALATE', 'QUARANTINE'].includes(String(v.decision || ''))).length;
-
-    this.el.workspaceHealth.innerHTML = `
-      <div class="metric-list">
-        <div class="metric-row"><span>Critical blockers</span><strong>${blockers.filter((b) => b.severity === 'hard').length}</strong></div>
-        <div class="metric-row"><span>Unverified changes</span><strong>${unverified}</strong></div>
-        <div class="metric-row"><span>Error pressure</span><strong>${severe}</strong></div>
-        <div class="metric-row"><span>CPU load</span><strong>No data</strong></div>
-        <div class="metric-row"><span>Memory utilization</span><strong>No data</strong></div>
-      </div>
-    `;
   }
 
   renderGovernance(state) {
     const governance = resolveGovernanceState(state.hub);
     const status = state.hub.sentinelStatus || {};
+    const activePlan = state.hub.activePlan || { blockers: [] };
+    const blockers = (activePlan.blockers || []).filter((item) => !item.resolvedAt);
     const l3Queue = state.hub.l3Queue || [];
     const trust = state.hub.trustSummary || { totalAgents: 0, avgTrust: 0, quarantined: 0, stageCounts: { CBT: 0, KBT: 0, IBT: 0 } };
     const alerts = (state.hub.recentVerdicts || []).filter((v) => ['WARN', 'BLOCK', 'ESCALATE', 'QUARANTINE'].includes(String(v.decision || '')));
@@ -265,6 +269,17 @@ export class InsightsPanel {
       ${fallbackNote ? `<div class="gov-queue-meta">${fallbackNote.replace(/<[^>]+>/g, '')}</div>` : ''}
       `
       : '<div class="gov-queue-meta">No pending approvals.</div>';
+
+    if (this.el.governanceBlockers) {
+      this.el.governanceBlockers.innerHTML = blockers.length > 0
+        ? blockers.map((blocker) => `
+            <div class="run-blocker-row">
+              <strong>${escapeHtml(blocker.title || 'Blocker')}</strong>
+              <span>${escapeHtml(blocker.reason || 'No reason provided')}</span>
+            </div>
+          `).join('')
+        : '<div class="gov-queue-meta">No active blockers.</div>';
+    }
 
     this.el.trustSummary.innerHTML = `
       <div class="gov-policy-row"><span>MODE</span><span class="policy-state">${escapeHtml(governance.modeLabel)}</span></div>

@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Victor - Chat</title>
-  <link rel="icon" href="/failsafe-icon.png">
+  <link rel="icon" href="/victor-icon.png">
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #0a1220; color: #e7efff; min-height: 100vh; }
@@ -162,7 +162,7 @@
         <main class="main">
           <header class="header">
             <div class="header-left">
-              <img src="/failsafe-icon.png" alt="Victor" class="victor-avatar">
+              <img src="/victor-icon.png" alt="Victor" class="victor-avatar">
               <div class="victor-info">
                 <h1>Victor</h1>
                 <p>Executive Ally</p>
@@ -190,7 +190,7 @@
           
           <div class="messages" id="messages">
             <div class="empty-state" id="empty-state">
-              <img src="/failsafe-icon.png" alt="Victor">
+              <img src="/victor-icon.png" alt="Victor">
               <p>Start a conversation with Victor</p>
             </div>
           </div>
@@ -329,7 +329,7 @@
       if (!session || session.messages.length === 0) {
         container.innerHTML = `
           <div class="empty-state">
-            <img src="/failsafe-icon.png" alt="Victor">
+            <img src="/victor-icon.png" alt="Victor">
             <p>Start a conversation with Victor</p>
           </div>
         `;
@@ -339,7 +339,7 @@
       container.innerHTML = session.messages.map(m => `
         <div class="message ${m.role}">
           ${m.role === 'assistant' 
-            ? '<img src="/failsafe-icon.png" alt="Victor" class="message-avatar">'
+            ? '<img src="/victor-icon.png" alt="Victor" class="message-avatar">'
             : '<div class="message-avatar">K</div>'
           }
           <div class="message-content">${escapeHtml(m.content)}</div>
@@ -434,7 +434,7 @@
           if (lastMsg.role === 'user') {
             container.innerHTML += `
               <div class="message assistant">
-                <img src="/failsafe-icon.png" alt="Victor" class="message-avatar">
+                <img src="/victor-icon.png" alt="Victor" class="message-avatar">
                 <div class="loading"><span></span><span></span><span></span></div>
               </div>
             `;

@@ -44,6 +44,7 @@ import {
   ErrorFactory,
 } from "./errors.js";
 import { OptimizedResponder, createOptimizedResponder } from "./response-utils.js";
+import { integrityCheckToUserError, integrityChecksToUserErrors } from "../planning/IntegrityErrors.js";
 
 export interface PlanningRoutesConfig {
   projectsDir?: string;
@@ -163,7 +164,14 @@ export class PlanningRoutes {
       if (method === "GET" && url === `/api/projects/${projectId}/integrity`) {
         const integrityChecker = createIntegrityChecker(projectsDir, projectId);
         const summary = await integrityChecker.runAllChecks(projectId);
-        return this.sendJson(res, 200, summary);
+        
+        // Convert failed checks to user-facing errors
+        const userErrors = integrityChecksToUserErrors(summary.results);
+        
+        return this.sendJson(res, 200, {
+          ...summary,
+          userErrors, // Add user-friendly error messages for failed checks
+        });
       }
 
       // POST /api/projects/:projectId/check - Run specific check
@@ -182,7 +190,14 @@ export class PlanningRoutes {
         
         const integrityChecker = createIntegrityChecker(projectsDir, projectId);
         const result = await integrityChecker.runCheck(projectId, checkId as CheckId);
-        return this.sendJson(res, 200, result);
+        
+        // Convert to user-facing error if check failed
+        const userError = integrityCheckToUserError(result);
+        
+        return this.sendJson(res, 200, {
+          ...result,
+          userError, // Add user-friendly error message if check failed (null otherwise)
+        });
       }
 
       // GET /api/projects/:projectId/void/thoughts - List thoughts (with pagination)

@@ -46,6 +46,13 @@
    * Planning API Client
    */
   var PlanningClient = {
+    /**
+     * Compatibility: return active project id for legacy callers.
+     */
+    getCurrentProjectId: function() {
+      return getProjectId();
+    },
+
     // --- Nav State ---
     
     /**

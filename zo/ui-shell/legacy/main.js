@@ -42,9 +42,11 @@ const elements = {
   homeResource: document.getElementById('home-resource'),
   homeNextgen: document.getElementById('home-nextgen'),
 
-  hubActions: document.getElementById('hub-actions'),
   actionFeedback: document.getElementById('action-feedback'),
-  workspaceHealth: document.getElementById('workspace-health'),
+  vizPhaseTitle: document.getElementById('viz-phase-title'),
+  vizPhaseBadge: document.getElementById('viz-phase-badge'),
+  vizLegend: document.getElementById('viz-legend'),
+  phaseVisualizationSvg: document.getElementById('phase-visualization-svg'),
 
   skillPhaseLabel: document.getElementById('skill-phase-label'),
   skillRecommended: document.getElementById('skill-recommended'),
@@ -75,6 +77,9 @@ const elements = {
   intentTaskNature: document.getElementById('intent-task-nature'),
   intentModelRecommendation: document.getElementById('intent-model-recommendation'),
   intentVendorPractices: document.getElementById('intent-vendor-practices'),
+  mirrorEquipment: document.getElementById('mirror-equipment'),
+  mirrorInjections: document.getElementById('mirror-injections'),
+  mirrorSuggestions: document.getElementById('mirror-suggestions'),
   intentGenerate: document.getElementById('intent-generate'),
   intentCopy: document.getElementById('intent-copy'),
   intentOutput: document.getElementById('intent-output'),
@@ -106,6 +111,7 @@ const elements = {
 
   sentinelStatus: document.getElementById('sentinel-status'),
   l3Queue: document.getElementById('l3-queue'),
+  governanceBlockers: document.getElementById('governance-blockers'),
   trustSummary: document.getElementById('trust-summary'),
   sentinelAlerts: document.getElementById('sentinel-alerts'),
 
@@ -411,9 +417,13 @@ const insights = new InsightsPanel({
   homeForensic: elements.homeForensic,
   homeResource: elements.homeResource,
   homeNextgen: elements.homeNextgen,
-  workspaceHealth: elements.workspaceHealth,
+  vizPhaseTitle: elements.vizPhaseTitle,
+  vizPhaseBadge: elements.vizPhaseBadge,
+  vizLegend: elements.vizLegend,
+  phaseVisualizationSvg: elements.phaseVisualizationSvg,
   sentinelStatus: elements.sentinelStatus,
   l3Queue: elements.l3Queue,
+  governanceBlockers: elements.governanceBlockers,
   trustSummary: elements.trustSummary,
   sentinelAlerts: elements.sentinelAlerts,
   reportsSummary: elements.reportsSummary,
@@ -438,6 +448,9 @@ const intentAssistant = new IntentAssistant({
     taskNature: elements.intentTaskNature,
     modelRecommendation: elements.intentModelRecommendation,
     vendorPractices: elements.intentVendorPractices,
+    mirrorEquipment: elements.mirrorEquipment,
+    mirrorInjections: elements.mirrorInjections,
+    mirrorSuggestions: elements.mirrorSuggestions,
     generate: elements.intentGenerate,
     copy: elements.intentCopy,
     output: elements.intentOutput,
@@ -457,15 +470,9 @@ const intentAssistant = new IntentAssistant({
   },
   getPhase: () => lastPhase,
   getSelectedSkill: () => stateStore.get().skills.find((item) => item.key === stateStore.get().selectedSkillKey) || null,
-  getFallbackSkill: () => selectPreferredSkill(lastGrouped, (key) => skillsPanel.isFavorite(key))
+  getFallbackSkill: () => selectPreferredSkill(lastGrouped, (key) => skillsPanel.isFavorite(key)),
+  getSkillInventory: () => Array.isArray(stateStore.get().skills) ? stateStore.get().skills : []
 });
-
-function renderHubActions() {
-  elements.hubActions.innerHTML = `
-    <button class="hub-action-btn primary" type="button" data-action="refresh">Refresh Snapshot</button>
-    <button class="hub-action-btn" type="button" data-action="resume">Resume Monitoring</button>
-  `;
-}
 
 const projectsPanel = new ProjectsPanel({
   elements: {
@@ -568,35 +575,6 @@ projectCreateName?.addEventListener('keydown', (e) => {
   if (e.key === 'Enter') projectCreateSave?.click();
   if (e.key === 'Escape') hideCreateForm();
 });
-
-function setupActions() {
-  elements.hubActions.addEventListener('click', async (event) => {
-    const button = event.target.closest('[data-action]');
-    if (!button) return;
-    const action = button.getAttribute('data-action');
-    button.disabled = true;
-    try {
-      if (action === 'refresh') {
-        await dataClient.fetchHub();
-        renderActionFeedback('Snapshot updated. Latest telemetry synced.', 'ok');
-      }
-      if (action === 'resume') {
-        await dataClient.postAction('/api/actions/resume-monitoring');
-        renderActionFeedback('Run started. Sentinel resumed and policies validated.', 'ok');
-      }
-      if (action === 'panic') {
-        await dataClient.postAction('/api/actions/panic-stop');
-        renderActionFeedback('Monitoring stopped. Risk state elevated until resumed.', 'warn');
-      }
-      clearError();
-    } catch (error) {
-      renderActionFeedback(`Action failed: ${String(error)}`, 'err');
-      showError(String(error), () => dataClient.fetchHub());
-    } finally {
-      button.disabled = false;
-    }
-  });
-}
 
 function renderIngestStatus(message, isError = false) {
   elements.skillIngestStatus.textContent = message;
@@ -876,8 +854,9 @@ function setupGovernanceAlertBadge() {
     applyRoute('governance');
   });
 
-  elements.governancePanicStop?.addEventListener('click', async () => {
-    elements.governancePanicStop.disabled = true;
+  const handlePanicStop = async (button) => {
+    if (!button) return;
+    button.disabled = true;
     try {
       await dataClient.postAction('/api/actions/panic-stop');
       renderActionFeedback('Monitoring stopped. Risk state elevated until resumed.', 'warn');
@@ -886,9 +865,14 @@ function setupGovernanceAlertBadge() {
       renderActionFeedback(`Action failed: ${String(error)}`, 'err');
       showError(String(error), () => dataClient.fetchHub());
     } finally {
-      elements.governancePanicStop.disabled = false;
+      button.disabled = false;
     }
+  };
+
+  elements.governancePanicStop?.addEventListener('click', async () => {
+    await handlePanicStop(elements.governancePanicStop);
   });
+
 }
 
 stateStore.subscribe((state) => {
@@ -910,6 +894,7 @@ stateStore.subscribe((state) => {
   }
 
   insights.renderHome(state, lastPhase);
+  insights.renderRun(state, lastPhase);
   insights.renderGovernance(state);
   insights.renderReports(state, lastPhase, lastGrouped);
   activity.render(state);
@@ -926,8 +911,6 @@ setupProjectSubtabs();
 setupIntentSkillSelector();
 setupModelSelector();
 setupProfile();
-renderHubActions();
-setupActions();
 setupSkillIngestActions();
 setupSkillScribe();
 renderResumeSummary();

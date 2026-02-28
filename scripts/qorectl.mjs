@@ -1,5 +1,9 @@
 #!/usr/bin/env node
 
+import fs from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+
 const VERSION = "0.2.0";
 
 function usage() {
@@ -79,12 +83,37 @@ function printWarn(label, detail) {
   console.log(`[WARN] ${label}${detail ? ` - ${detail}` : ""}`);
 }
 
+function readDefaultRuntimeKeyFromStartScript() {
+  try {
+    const __dirname = path.dirname(fileURLToPath(import.meta.url));
+    const startScript = path.resolve(__dirname, "../start-runtime.sh");
+    if (!fs.existsSync(startScript)) return undefined;
+    const content = fs.readFileSync(startScript, "utf8");
+    const match = content.match(/^\s*export\s+QORE_API_KEY=(.+)\s*$/m);
+    if (!match?.[1]) return undefined;
+    return match[1].trim().replace(/^['"]|['"]$/g, "");
+  } catch {
+    return undefined;
+  }
+}
+
+function buildRuntimeKeyCandidates() {
+  const keys = [];
+  if (process.env.QORE_API_KEY) keys.push({ key: process.env.QORE_API_KEY, source: "env" });
+  const fallback = readDefaultRuntimeKeyFromStartScript();
+  if (fallback && !keys.some((item) => item.key === fallback)) {
+    keys.push({ key: fallback, source: "start-runtime.sh" });
+  }
+  return keys;
+}
+
 async function doctor() {
   const runtimeUrl = (process.env.QORECTL_RUNTIME_URL || "http://127.0.0.1:7777").replace(/\/$/, "");
   const uiUrl = (process.env.QORECTL_UI_URL || "http://127.0.0.1:9380").replace(/\/$/, "");
 
+  const runtimeKeyCandidates = buildRuntimeKeyCandidates();
   const runtimeHeaders = {};
-  if (process.env.QORE_API_KEY) runtimeHeaders["x-qore-api-key"] = process.env.QORE_API_KEY;
+  if (runtimeKeyCandidates[0]?.key) runtimeHeaders["x-qore-api-key"] = runtimeKeyCandidates[0].key;
 
   const uiHeaders = {};
   const basic = basicAuthHeader();
@@ -98,11 +127,35 @@ async function doctor() {
   if (!runtimeHealthOk) allPass = false;
   printCheck("runtime /health", runtimeHealthOk, runtimeHealthOk ? "reachable" : `status=${runtimeHealth.status} ${runtimeHealth.text || ""}`.trim());
 
-  const runtimePolicy = await fetchJson(`${runtimeUrl}/policy/version`, { headers: runtimeHeaders });
-  const runtimePolicyOk = runtimePolicy.ok;
+  let runtimePolicy = await fetchJson(`${runtimeUrl}/policy/version`, { headers: runtimeHeaders });
+  let runtimePolicyOk = runtimePolicy.ok;
+  let runtimePolicySource = runtimeKeyCandidates[0]?.source;
+
+  if (!runtimePolicyOk && runtimePolicy.status === 401 && runtimeKeyCandidates.length > 1) {
+    for (const candidate of runtimeKeyCandidates.slice(1)) {
+      const attempt = await fetchJson(`${runtimeUrl}/policy/version`, {
+        headers: { "x-qore-api-key": candidate.key },
+      });
+      if (attempt.ok) {
+        runtimePolicy = attempt;
+        runtimePolicyOk = true;
+        runtimePolicySource = candidate.source;
+        break;
+      }
+    }
+  }
+
   if (!runtimePolicyOk) allPass = false;
-  const policyVersion = runtimePolicyOk ? runtimePolicy.json?.policyVersion || "unknown" : `status=${runtimePolicy.status}`;
+  const policyVersion = runtimePolicyOk
+    ? runtimePolicy.json?.policyVersion || "unknown"
+    : `status=${runtimePolicy.status}`;
   printCheck("runtime /policy/version", runtimePolicyOk, String(policyVersion));
+  if (runtimePolicyOk && runtimePolicySource && runtimePolicySource !== "env") {
+    printWarn(
+      "runtime auth key",
+      `env QORE_API_KEY appears out-of-sync; using key from ${runtimePolicySource}`,
+    );
+  }
 
   const uiHealth = await fetchJson(`${uiUrl}/health`, { headers: uiHeaders });
   const uiHealthOk = uiHealth.ok;

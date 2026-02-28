@@ -11,6 +11,7 @@
 const http = require('http');
 const path = require('path');
 const fs = require('fs');
+const { WebSocketServer } = require('ws');
 
 const PORT = process.env.PORT || 9380;
 const RUNTIME_PORT = 7777;
@@ -24,7 +25,7 @@ const ASSETS_DIR = path.join(ROOT_DIR, 'assets');
 let checkpointStore = [];
 let sessionStore = {
   id: 'local-session',
-  user: 'operator@local',
+  user: 'Admin',
   status: 'active',
   createdAt: new Date().toISOString()
 };
@@ -110,6 +111,27 @@ async function handle(req, res) {
       systemStatus: 'operational'
     });
   }
+
+  if (pathname === '/api/skills') {
+    return serveJson(res, 200, { skills: [] });
+  }
+
+  if (pathname === '/api/skills/relevance') {
+    const phase = url.searchParams.get('phase') || 'plan';
+    return serveJson(res, 200, {
+      phase,
+      recommended: [],
+      allRelevant: [],
+      otherAvailable: []
+    });
+  }
+
+  if (pathname === '/api/projects/dashboard') {
+    return serveJson(res, 200, {
+      projects: [],
+      activeProjectId: 'default-project'
+    });
+  }
   
   if (pathname === '/api/checkpoints') {
     return serveJson(res, 200, { chainValid: true, checkpoints: checkpointStore });
@@ -176,6 +198,20 @@ async function handle(req, res) {
 }
 
 const server = http.createServer(handle);
+const wss = new WebSocketServer({ server });
+
+wss.on('connection', (socket) => {
+  socket.send(JSON.stringify({
+    type: 'init',
+    payload: {
+      qoreRuntime: {
+        connected: true,
+        policyVersion: 'unknown'
+      }
+    }
+  }));
+});
+
 server.listen(PORT, () => {
   console.log(`[Zo-Qore OS] Running on port ${PORT}`);
   console.log(`  Victor:  http://localhost:${PORT}/`);

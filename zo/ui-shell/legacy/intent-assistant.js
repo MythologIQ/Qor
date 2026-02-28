@@ -70,6 +70,7 @@ export class IntentAssistant {
     this.getPhase = options.getPhase;
     this.getSelectedSkill = options.getSelectedSkill;
     this.getFallbackSkill = options.getFallbackSkill;
+    this.getSkillInventory = options.getSkillInventory || (() => []);
     this.latestPromptText = '';
     this.chatTurns = [];
     this.storageKey = 'zoqore.intent.session.v1';
@@ -494,6 +495,93 @@ export class IntentAssistant {
     this.elements.context.textContent = skill
       ? `Intent Buffer: ${phase.title} | ${skill.label} | ${persona}`
       : `Intent Buffer: ${phase.title} | no skill selected | ${persona}`;
+    this.renderMagicMirror({
+      phase,
+      persona,
+      skill: skill || this.getFallbackSkill(),
+      taskNature: this.classifyTask(
+        String(this.elements.input?.value || ''),
+        String(this.elements.contextInput?.value || ''),
+      ),
+      recommendation: this.recommendModel(
+        this.classifyTask(
+          String(this.elements.input?.value || ''),
+          String(this.elements.contextInput?.value || ''),
+        ),
+        this.estimateComplexity(
+          String(this.elements.input?.value || ''),
+          String(this.elements.contextInput?.value || ''),
+        ),
+        String(this.elements.modelMode?.value || 'auto'),
+      ),
+      practices: VENDOR_PRACTICES['zo-fast-1'],
+    });
+  }
+
+  getWorkflowSuggestion(taskNature) {
+    if (taskNature === 'security-audit') return 'security-gate-workflow';
+    if (taskNature === 'migration-refactor') return 'refactor-migration-workflow';
+    if (taskNature === 'performance-optimization') return 'performance-profiling-workflow';
+    if (taskNature === 'quality-engineering') return 'verify-release-workflow';
+    return 'build-verify-workflow';
+  }
+
+  getToolSuggestion(taskNature) {
+    if (taskNature === 'security-audit') return 'mcp.security.scan';
+    if (taskNature === 'migration-refactor') return 'mcp.repo.diff';
+    if (taskNature === 'performance-optimization') return 'mcp.metrics.profile';
+    return 'mcp.workspace.search';
+  }
+
+  renderMagicMirror(payload) {
+    const phase = payload.phase || this.getPhase();
+    const persona = payload.persona || String(this.elements.persona?.value || 'systems');
+    const skill = payload.skill || this.getSelectedSkill() || this.getFallbackSkill();
+    const taskNature = payload.taskNature || 'implementation';
+    const recommendation = payload.recommendation || { recommended: 'zo-fast-1', mode: 'auto' };
+    const practices = Array.isArray(payload.practices) ? payload.practices : [];
+    const workflow = this.getWorkflowSuggestion(taskNature);
+    const tool = this.getToolSuggestion(taskNature);
+    const inventory = this.getSkillInventory().slice(0, 4);
+
+    if (this.elements.mirrorEquipment) {
+      this.elements.mirrorEquipment.innerHTML = [
+        `<div class="mirror-row"><span>Persona</span><strong>${escapeHtml(persona)}</strong></div>`,
+        `<div class="mirror-row"><span>Skill</span><strong>${escapeHtml(skill?.label || 'auto-none')}</strong></div>`,
+        `<div class="mirror-row"><span>Workflow</span><strong>${escapeHtml(workflow)}</strong></div>`,
+        `<div class="mirror-row"><span>Tool</span><strong>${escapeHtml(tool)}</strong></div>`,
+        `<div class="mirror-row"><span>Model</span><strong>${escapeHtml(recommendation.recommended || 'zo-fast-1')}</strong></div>`,
+      ].join('');
+    }
+
+    if (this.elements.mirrorInjections) {
+      const contextLen = String(this.elements.contextInput?.value || '').trim().length;
+      const intentLen = String(this.elements.input?.value || '').trim().length;
+      this.elements.mirrorInjections.innerHTML = [
+        `phase=${escapeHtml(phase?.key || 'plan')}`,
+        `template=${escapeHtml(String(this.elements.template?.value || 'fast'))}`,
+        `intent_chars=${intentLen}`,
+        `context_chars=${contextLen}`,
+        `task_nature=${escapeHtml(taskNature)}`,
+        `vendor_practices=${practices.length}`,
+      ].map((line) => `<div class="mirror-line">${line}</div>`).join('');
+    }
+
+    if (this.elements.mirrorSuggestions) {
+      const topInventory = inventory.length
+        ? inventory.map((item) => item.label || item.displayName || item.key).slice(0, 3)
+        : [];
+      const suggestions = [
+        `Equip ${workflow} for ${taskNature}.`,
+        `Route via ${tool} before model dispatch.`,
+        topInventory.length
+          ? `Candidate skills: ${topInventory.join(', ')}.`
+          : 'No local skills loaded yet; run Auto Workspace ingest.',
+      ];
+      this.elements.mirrorSuggestions.innerHTML = suggestions
+        .map((entry) => `<li>${escapeHtml(entry)}</li>`)
+        .join('');
+    }
   }
 
   generate() {
@@ -526,6 +614,14 @@ export class IntentAssistant {
         .map((item) => `<li>${escapeHtml(item)}</li>`)
         .join('')}</ul>`;
     }
+    this.renderMagicMirror({
+      phase,
+      persona,
+      skill: selected,
+      taskNature,
+      recommendation,
+      practices,
+    });
 
     const promptText = [
       '# generated-prompt',

@@ -430,10 +430,65 @@ The design system and component library is the single highest-leverage investmen
 - Dark mode optimized (with hooks for light mode if needed)
 - Reduced motion and high contrast support built in
 
+**✓ COMPLETED: Task 4A - Error Message Standardization**
+
+**What was built:**
+
+1. **Integrity Error Mapping (`runtime/planning/IntegrityErrors.ts`)** - Comprehensive error mapping system:
+   - `INTEGRITY_ERROR_CONFIGS` - User-facing messages for all 9 integrity check types (PL-INT-01 through PL-TRC-03)
+   - `integrityCheckToUserError()` - Converts CheckResult to UserFacingError (or null if passed)
+   - `integrityChecksToUserErrors()` - Batch conversion for multiple checks
+   - `getIntegrityCheckDescription()` - Human-readable descriptions of what each check does
+   - `getIntegrityCheckCategories()` - Groups checks by type (critical, referential, traceability)
+   - `getIntegrityCheckPriority()` - Priority levels for remediation (immediate, high, medium, low)
+
+2. **API Integration (`runtime/service/planning-routes.ts`)** - Enhanced integrity endpoints:
+   - `GET /api/projects/:projectId/integrity` - Now includes `userErrors` array in response
+   - `POST /api/projects/:projectId/check` - Now includes `userError` field in response (null if passed)
+   - All integrity check failures automatically converted to actionable UserFacingError format
+
+3. **Error Format Standardization** - All integrity errors now provide:
+   - Clear title (3-5 words describing the issue)
+   - Full detail explanation with check-specific context
+   - Actionable resolution steps
+   - Navigation links to relevant views when applicable
+   - Severity levels (critical → immediate, error → high, warning → medium/low)
+   - Structured details for debugging (checkId, checkName, timestamp, failure list)
+
+**Example Error Output:**
+```json
+{
+  "code": "PL-INT-03",
+  "title": "Void→Reveal Reference Broken",
+  "detail": "Some clusters reference thoughts that no longer exist in Void. Cluster cluster_abc123 references missing thought: thought_xyz789",
+  "resolution": "Remove the broken cluster references or restore the missing thoughts from a backup.",
+  "link": "/reveal",
+  "severity": "error",
+  "details": {
+    "checkId": "PL-INT-03",
+    "checkName": "Void→Reveal reference check",
+    "timestamp": "2026-02-28T11:45:00.000Z",
+    "failures": ["Cluster cluster_abc123 references missing thought: thought_xyz789"]
+  }
+}
+```
+
+**Verification:**
+- ✓ TypeScript compilation passes (`npm run typecheck`)
+- ✓ All integrity check IDs have error configurations
+- ✓ Error messages include actionable resolution steps
+- ✓ Navigation links point to correct views for remediation
+- ✓ Severity levels match error priority (critical failures = immediate action)
+
+**Impact:**
+- UI can now display helpful, actionable error messages instead of raw check results
+- Users get clear guidance on how to fix integrity issues
+- Error responses are consistent across all API endpoints
+- Support for automated error recovery flows (links to resolution views)
+
 **Next Steps (Phase 12 remaining tasks):**
-1. **Error message standardization (4A)** - Implement UserFacingError interface across all policy/integrity failures
-2. **API contract consistency audit (5A)** - Ensure all endpoints follow uniform patterns (URL naming, HTTP methods, response envelopes, status codes)
-3. **Pre-commit/CI hooks (2A)** - Automate quality pipeline (husky hooks, GitHub Actions workflow, branch protection)
+1. **API contract consistency audit (5A)** - Ensure all endpoints follow uniform patterns (URL naming, HTTP methods, response envelopes, status codes)
+2. **Pre-commit/CI hooks (2A)** - Automate quality pipeline (husky hooks, GitHub Actions workflow, branch protection)
 
 **Phase 13 Preview:**
-With the design system complete, the next phase will focus on **View Maturity** - implementing view-specific interactions for Void (real-time capture + STT), Reveal (drag-drop clustering), Path (timeline + task management), and Risk (table + matrix visualization), all using the established component library.
+With error standardization complete, the next phase will focus on **View Maturity** - implementing view-specific interactions using the established component library and error system for consistent UX across all six views.
