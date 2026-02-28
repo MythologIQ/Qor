@@ -114,10 +114,11 @@ describe("Planning API Security Audit", () => {
         headers: { "Content-Type": "application/json", "x-qore-api-key": apiKey },
         body: JSON.stringify({ name: "Test Project", createdBy: "actor-1" }),
       });
-      const project = await createRes.json() as { projectId: string };
+      const json = await createRes.json() as { data: { projectId: string } };
+      const projectId = json.data.projectId;
 
       // Try to create thought with missing fields
-      const res = await fetch(`${baseUrl}/api/projects/${project.projectId}/void/thoughts`, {
+      const res = await fetch(`${baseUrl}/api/projects/${projectId}/void/thoughts`, {
         method: "POST",
         headers: { "Content-Type": "application/json", "x-qore-api-key": apiKey },
         body: JSON.stringify({ content: "Test" }), // Missing source and capturedBy
@@ -144,9 +145,9 @@ describe("Planning API Security Audit", () => {
         body: JSON.stringify({ name: "Security Test Project", description: "Testing security", createdBy: "test-actor" }),
       });
       expect(res.status).toBe(201);
-      const json = await res.json() as { projectId: string; name: string };
-      expect(json.projectId).toBeDefined();
-      expect(json.name).toBe("Security Test Project");
+      const json = await res.json() as { data: { projectId: string; name: string }; meta: { timestamp: string } };
+      expect(json.data.projectId).toBeDefined();
+      expect(json.data.name).toBe("Security Test Project");
     });
 
     it("retrieves project metadata", async () => {
@@ -156,15 +157,16 @@ describe("Planning API Security Audit", () => {
         headers: { "Content-Type": "application/json", "x-qore-api-key": apiKey },
         body: JSON.stringify({ name: "Meta Test", createdBy: "actor" }),
       });
-      const { projectId } = await createRes.json() as { projectId: string };
+      const json = await createRes.json() as { data: { projectId: string } };
+      const projectId = json.data.projectId;
 
       // Get project
       const res = await fetch(`${baseUrl}/api/projects/${projectId}`, {
         headers: { "x-qore-api-key": apiKey },
       });
       expect(res.status).toBe(200);
-      const json = await res.json() as { projectId: string };
-      expect(json.projectId).toBe(projectId);
+      const getJson = await res.json() as { data: { projectId: string }; meta: { timestamp: string } };
+      expect(getJson.data.projectId).toBe(projectId);
     });
 
     it("returns 404 for non-existent project", async () => {
@@ -181,14 +183,15 @@ describe("Planning API Security Audit", () => {
         headers: { "Content-Type": "application/json", "x-qore-api-key": apiKey },
         body: JSON.stringify({ name: "Delete Test", createdBy: "actor" }),
       });
-      const { projectId } = await createRes.json() as { projectId: string };
+      const json = await createRes.json() as { data: { projectId: string } };
+      const projectId = json.data.projectId;
 
       // Delete project
       const res = await fetch(`${baseUrl}/api/projects/${projectId}`, {
         method: "DELETE",
         headers: { "x-qore-api-key": apiKey },
       });
-      expect(res.status).toBe(200);
+      expect(res.status).toBe(204);
 
       // Verify deleted
       const getRes = await fetch(`${baseUrl}/api/projects/${projectId}`, {
@@ -207,7 +210,8 @@ describe("Planning API Security Audit", () => {
         headers: { "Content-Type": "application/json", "x-qore-api-key": apiKey },
         body: JSON.stringify({ name: "Void Test", createdBy: "actor" }),
       });
-      projectId = (await res.json() as { projectId: string }).projectId;
+      const json = await res.json() as { data: { projectId: string } };
+      projectId = json.data.projectId;
     });
 
     it("adds a thought", async () => {
@@ -221,8 +225,8 @@ describe("Planning API Security Audit", () => {
         }),
       });
       expect(res.status).toBe(201);
-      const json = await res.json() as { thoughtId: string; content: string };
-      expect(json.content).toBe("My first thought");
+      const json = await res.json() as { data: { thoughtId: string; content: string }; meta: { timestamp: string } };
+      expect(json.data.content).toBe("My first thought");
     });
 
     it("lists thoughts", async () => {
@@ -253,7 +257,8 @@ describe("Planning API Security Audit", () => {
         headers: { "Content-Type": "application/json", "x-qore-api-key": apiKey },
         body: JSON.stringify({ name: "Integrity Test", createdBy: "actor" }),
       });
-      projectId = (await res.json() as { projectId: string }).projectId;
+      const json = await res.json() as { data: { projectId: string } };
+      projectId = json.data.projectId;
     });
 
     it("returns integrity check summary", async () => {
@@ -261,9 +266,9 @@ describe("Planning API Security Audit", () => {
         headers: { "x-qore-api-key": apiKey },
       });
       expect(res.status).toBe(200);
-      const json = await res.json() as { totalChecks: number; overallPassed: boolean };
-      expect(json.totalChecks).toBeGreaterThan(0);
-      expect(typeof json.overallPassed).toBe("boolean");
+      const json = await res.json() as { data: { totalChecks: number; overallPassed: boolean }; meta: { timestamp: string } };
+      expect(json.data.totalChecks).toBeGreaterThan(0);
+      expect(typeof json.data.overallPassed).toBe("boolean");
     });
 
     it("runs specific integrity check", async () => {
@@ -273,8 +278,8 @@ describe("Planning API Security Audit", () => {
         body: JSON.stringify({ checkId: "PL-INT-01" }),
       });
       expect(res.status).toBe(200);
-      const json = await res.json() as { passed: boolean };
-      expect(typeof json.passed).toBe("boolean");
+      const json = await res.json() as { data: { passed: boolean }; meta: { timestamp: string } };
+      expect(typeof json.data.passed).toBe("boolean");
     });
 
     it("rejects invalid checkId", async () => {
