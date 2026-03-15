@@ -10,6 +10,15 @@ import { listAutomationAuditRecords, summarizeAutomationActivity, summarizeBuild
 import { runVictorSafeAutomation } from './automation-runner';
 import { createGovernedBuilderConsoleDraftTask, updateGovernedBuilderConsoleTaskStatus } from './builder-console-write';
 import { runGovernedAutomationBuild } from './governed-build-runner';
+import {
+  getHeartbeatStatus,
+  runHeartbeatPreflight,
+  startHeartbeat,
+  stopHeartbeat,
+  tickHeartbeat,
+  type HeartbeatContract,
+  type HeartbeatRequest,
+} from './heartbeat';
 import { victorKernel } from './victor-kernel';
 import { VictorKernelUnified } from './victor-kernel-unified';
 import { createWorkspaceGroundedQuery } from './workspace-grounded-query';
@@ -347,20 +356,97 @@ app.get('/api/victor/build/progress', async (c) => {
   }
 });
 
+app.get('/api/victor/heartbeat/preflight', async (c) => {
+  try {
+    const result = await runHeartbeatPreflight(parseHeartbeatQueryRequest(c), resolveGroundedQuery);
+    return c.json(result, result.ok ? 200 : 422);
+  } catch (error) {
+    return c.json(
+      {
+        error: error instanceof Error ? error.message : 'Heartbeat preflight failed',
+      },
+      500,
+    );
+  }
+});
+
+app.get('/api/victor/heartbeat/status', async (c) => {
+  try {
+    const state = await getHeartbeatStatus(parseHeartbeatQueryRequest(c));
+    return c.json({
+      status: 'ok',
+      state,
+    });
+  } catch (error) {
+    return c.json(
+      {
+        error: error instanceof Error ? error.message : 'Heartbeat status query failed',
+      },
+      500,
+    );
+  }
+});
+
+app.post('/api/victor/heartbeat/start', async (c) => {
+  try {
+    const request = await c.req.json().catch(() => ({}));
+    const result = await startHeartbeat(request, resolveGroundedQuery);
+    return c.json(result, result.status === 'started' ? 201 : 409);
+  } catch (error) {
+    return c.json(
+      {
+        error: error instanceof Error ? error.message : 'Heartbeat start failed',
+      },
+      500,
+    );
+  }
+});
+
+app.post('/api/victor/heartbeat/tick', async (c) => {
+  try {
+    const request = await c.req.json().catch(() => ({}));
+    const result = await tickHeartbeat(request, resolveGroundedQuery);
+    const status =
+      result.status === 'completed'
+        ? 200
+        : result.status === 'blocked'
+          ? 422
+          : 500;
+    return c.json(result, status);
+  } catch (error) {
+    return c.json(
+      {
+        error: error instanceof Error ? error.message : 'Heartbeat tick failed',
+      },
+      500,
+    );
+  }
+});
+
+app.post('/api/victor/heartbeat/stop', async (c) => {
+  try {
+    const request = await c.req.json().catch(() => ({}));
+    const result = await stopHeartbeat(request, typeof request.reason === 'string' ? request.reason : undefined);
+    return c.json(result, result.status === 'stopped' ? 200 : 404);
+  } catch (error) {
+    return c.json(
+      {
+        error: error instanceof Error ? error.message : 'Heartbeat stop failed',
+      },
+      500,
+    );
+  }
+});
+
 app.post('/api/victor/automation/governed-build', async (c) => {
   try {
     const request = await c.req.json().catch(() => ({}));
-    const groundedQuery = await (async () => {
-      try {
-        const kernel = await getMemoryKernel();
-        return async (projectId: string, query: string) => kernel.groundedQuery(projectId, query);
-      } catch (error) {
-        if (!request.projectsDir) {
-          throw error;
-        }
-        return createWorkspaceGroundedQuery(request.projectsDir, request.projectId || 'builder-console');
-      }
-    })();
+    const groundedQuery = await resolveGroundedQuery({
+      projectId: request.projectId,
+      projectsDir: request.projectsDir,
+      dryRun: request.dryRun,
+      actorId: request.actorId,
+    });
     const result = await runGovernedAutomationBuild(
       {
         projectId: request.projectId,
@@ -388,6 +474,46 @@ app.post('/api/victor/automation/governed-build', async (c) => {
     );
   }
 });
+
+async function resolveGroundedQuery(request: HeartbeatRequest | { projectId?: string; projectsDir?: string; dryRun?: boolean; actorId?: string }) {
+  try {
+    const kernel = await getMemoryKernel();
+    return async (projectId: string, query: string) => kernel.groundedQuery(projectId, query);
+  } catch (error) {
+    if (!request.projectsDir) {
+      throw error;
+    }
+    return createWorkspaceGroundedQuery(request.projectsDir, request.projectId || 'builder-console');
+  }
+}
+
+function parseHeartbeatQueryRequest(c: Context): HeartbeatRequest {
+  const parseIntValue = (value: string | undefined) => {
+    if (!value) return undefined;
+    const parsed = Number.parseInt(value, 10);
+    return Number.isFinite(parsed) ? parsed : undefined;
+  };
+  const parseBoolValue = (value: string | undefined) => {
+    if (!value) return undefined;
+    if (value === 'true') return true;
+    if (value === 'false') return false;
+    return undefined;
+  };
+
+  return {
+    projectId: c.req.query('projectId') ?? undefined,
+    projectsDir: c.req.query('projectsDir') ?? undefined,
+    actorId: c.req.query('actorId') ?? undefined,
+    dryRun: parseBoolValue(c.req.query('dryRun')),
+    cadenceMs: parseIntValue(c.req.query('cadenceMs')),
+    staleAfterMs: parseIntValue(c.req.query('staleAfterMs')),
+    maxActionsPerTick: parseIntValue(c.req.query('maxActionsPerTick')),
+    stopOnBlock: parseBoolValue(c.req.query('stopOnBlock')),
+    maxConsecutiveBlocked: parseIntValue(c.req.query('maxConsecutiveBlocked')),
+    maxConsecutiveFailures: parseIntValue(c.req.query('maxConsecutiveFailures')),
+    stateDir: c.req.query('stateDir') ?? undefined,
+  };
+}
 
 function serializeGroundedContext(result: Awaited<ReturnType<VictorKernelUnified['groundedQuery']>>) {
   return {
