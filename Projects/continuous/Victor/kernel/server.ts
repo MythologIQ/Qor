@@ -19,6 +19,7 @@ import {
   type HeartbeatContract,
   type HeartbeatRequest,
 } from './heartbeat';
+import { summarizePromotionGate, summarizeSoakEvidence } from './promotion-gate';
 import { listSystemReflections } from './system-reflection';
 import { victorKernel } from './victor-kernel';
 import { VictorKernelUnified } from './victor-kernel-unified';
@@ -317,6 +318,53 @@ async function handleAutomationActivitySummary(c: Context) {
 
 app.get('/api/victor/automation/activity', handleAutomationActivitySummary);
 app.get('/api/victor/automation/review', handleAutomationActivitySummary);
+
+app.get('/api/victor/promotion/soak', async (c) => {
+  try {
+    const summary = await summarizeSoakEvidence({
+      projectId: c.req.query('projectId') ?? undefined,
+      projectsDir: c.req.query('projectsDir') ?? undefined,
+      stateDir: c.req.query('stateDir') ?? undefined,
+      runId: c.req.query('runId') ?? undefined,
+    });
+
+    return c.json({
+      status: 'ok',
+      summary,
+    });
+  } catch (error) {
+    return c.json(
+      {
+        error: error instanceof Error ? error.message : 'Soak evidence summary failed',
+      },
+      500,
+    );
+  }
+});
+
+app.get('/api/victor/promotion/gate', async (c) => {
+  try {
+    const summary = await summarizePromotionGate({
+      projectId: c.req.query('projectId') ?? undefined,
+      victorProjectId: c.req.query('victorProjectId') ?? undefined,
+      projectsDir: c.req.query('projectsDir') ?? undefined,
+      stateDir: c.req.query('stateDir') ?? undefined,
+      runId: c.req.query('runId') ?? undefined,
+    });
+
+    return c.json({
+      status: 'ok',
+      summary,
+    });
+  } catch (error) {
+    return c.json(
+      {
+        error: error instanceof Error ? error.message : 'Promotion gate summary failed',
+      },
+      500,
+    );
+  }
+});
 
 app.get('/api/victor/build/progress', async (c) => {
   try {
