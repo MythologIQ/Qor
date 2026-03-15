@@ -49,6 +49,19 @@ export interface GovernedBuildResult {
   automation: Awaited<ReturnType<typeof runVictorSafeAutomation>>;
 }
 
+export interface GovernedBuildSelectionPreview {
+  projectId: string;
+  selectedTask?: {
+    projectId: string;
+    phaseId: string;
+    taskId: string;
+    title: string;
+    status: BuilderConsoleTaskStatus;
+    score: number;
+  };
+  reason: string;
+}
+
 export async function runGovernedAutomationBuild(
   request: GovernedBuildRequest,
   groundedQuery: (projectId: string, query: string) => Promise<GroundedContextBundle>,
@@ -58,8 +71,30 @@ export async function runGovernedAutomationBuild(
   const maxActions = request.maxActions ?? 1;
   const dryRun = request.dryRun !== false;
 
+  const preview = await previewGovernedAutomationSelection({
+    projectId,
+    projectsDir,
+  });
+  const selected = preview.selectedTask
+    ? {
+        phase: {
+          phaseId: preview.selectedTask.phaseId,
+          name: '',
+        },
+        task: {
+          taskId: preview.selectedTask.taskId,
+          phaseId: preview.selectedTask.phaseId,
+          title: preview.selectedTask.title,
+          description: '',
+          acceptance: [],
+          status: preview.selectedTask.status,
+        },
+        score: preview.selectedTask.score,
+        reason: preview.reason,
+      }
+    : null;
   const phases = await readPhases(projectId, projectsDir);
-  const selected = selectGovernedAutomationTask(projectId, phases);
+  const selectedPhaseName = phases.find((phase) => phase.phaseId === selected?.task.phaseId)?.name ?? selected?.phase.name ?? '';
 
   if (!selected) {
     const automation = await runVictorSafeAutomation(
@@ -99,7 +134,7 @@ export async function runGovernedAutomationBuild(
     };
   }
 
-  const query = `What should happen next with the governed automation task "${selected.task.title}" in phase "${selected.phase.name}"?`;
+  const query = `What should happen next with the governed automation task "${selected.task.title}" in phase "${selectedPhaseName}"?`;
   const automation = await runVictorSafeAutomation(
     {
       dryRun,
@@ -126,7 +161,7 @@ export async function runGovernedAutomationBuild(
     mode: automation.mode,
     selectedTask: {
       projectId,
-      phaseId: selected.phase.phaseId,
+      phaseId: selected.task.phaseId,
       taskId: selected.task.taskId,
       title: selected.task.title,
       status: selected.task.status,
@@ -134,6 +169,35 @@ export async function runGovernedAutomationBuild(
     },
     selectionReason: selected.reason,
     automation,
+  };
+}
+
+export async function previewGovernedAutomationSelection(
+  request: Pick<GovernedBuildRequest, 'projectId' | 'projectsDir'>,
+): Promise<GovernedBuildSelectionPreview> {
+  const projectId = request.projectId?.trim() || 'builder-console';
+  const projectsDir = resolveProjectsDir(request.projectsDir);
+  const phases = await readPhases(projectId, projectsDir);
+  const selected = selectGovernedAutomationTask(projectId, phases);
+
+  if (!selected) {
+    return {
+      projectId,
+      reason: 'No eligible governed automation task was found.',
+    };
+  }
+
+  return {
+    projectId,
+    selectedTask: {
+      projectId,
+      phaseId: selected.phase.phaseId,
+      taskId: selected.task.taskId,
+      title: selected.task.title,
+      status: selected.task.status,
+      score: selected.score,
+    },
+    reason: selected.reason,
   };
 }
 
