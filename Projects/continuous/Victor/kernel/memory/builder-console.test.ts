@@ -20,7 +20,7 @@ describe('builder console adapter', () => {
     await writeFile(
       join(projectDir, 'project.json'),
       JSON.stringify({
-        id: 'proj_demo',
+        projectId: 'proj_demo',
         name: 'Demo Planning Project',
         description: 'Fragmented ideas becoming phases',
         createdBy: 'frostwulf',
@@ -109,14 +109,47 @@ describe('builder console adapter', () => {
       }),
     );
 
+    await writeFile(
+      join(projectDir, 'ledger.jsonl'),
+      [
+        JSON.stringify({
+          projectId: 'proj_demo',
+          view: 'path',
+          action: 'update',
+          artifactId: 'phase-1',
+          actorId: 'frostwulf',
+          payload: { status: 'planned' },
+          timestamp: '2026-03-15T00:10:00.000Z',
+        }),
+      ].join('\n'),
+    );
+
+    await mkdir(join(projectDir, 'history'), { recursive: true });
+    await writeFile(
+      join(projectDir, 'history', '2026-03-15T00-05-00-000Z_led_demo.jsonl'),
+      [
+        JSON.stringify({
+          projectId: 'proj_demo',
+          view: 'void',
+          action: 'create',
+          artifactId: 'proj_demo',
+          actorId: 'frostwulf',
+          payload: { name: 'Demo Planning Project' },
+          timestamp: '2026-03-15T00:05:00.000Z',
+        }),
+      ].join('\n'),
+    );
+
     const artifacts = await loadBuilderConsoleArtifacts(projectsDir);
 
-    expect(artifacts).toHaveLength(5);
+    expect(artifacts).toHaveLength(7);
     expect(artifacts.some((artifact) => artifact.sourceKind === 'project')).toBe(true);
     expect(artifacts.some((artifact) => artifact.sourceKind === 'void')).toBe(true);
     expect(artifacts.some((artifact) => artifact.sourceKind === 'reveal')).toBe(true);
     expect(artifacts.some((artifact) => artifact.sourceKind === 'constellation')).toBe(true);
     expect(artifacts.some((artifact) => artifact.sourceKind === 'path')).toBe(true);
+    expect(artifacts.some((artifact) => artifact.sourceKind === 'ledger')).toBe(true);
+    expect(artifacts.some((artifact) => artifact.sourceKind === 'history')).toBe(true);
     expect(artifacts.find((artifact) => artifact.sourceKind === 'project')?.content).toContain(
       'Builder Console governance is binding on Victor',
     );
@@ -131,11 +164,16 @@ describe('builder console adapter', () => {
     const backupProjects = join(root, '.failsafe', 'backups', '20260315-010101Z', 'files', '.qore', 'projects');
 
     await mkdir(backupProjects, { recursive: true });
+    await mkdir(join(backupProjects, 'proj_demo', 'path'), { recursive: true });
+    await writeFile(join(backupProjects, 'proj_demo', 'project.json'), JSON.stringify({ projectId: 'proj_demo', name: 'Backup Project' }));
+    await writeFile(join(backupProjects, 'proj_demo', 'path', 'phases.json'), JSON.stringify({ phases: [{ phaseId: 'phase-1', projectId: 'proj_demo', ordinal: 1, name: 'Backup', objective: 'Richer', sourceClusterIds: [], tasks: [], status: 'planned', createdAt: '2026-03-15T00:00:00.000Z', updatedAt: '2026-03-15T00:00:00.000Z' }] }));
 
     expect(await resolveBuilderConsoleProjectsDir(root)).toBe(backupProjects);
     expect(await resolveBuilderConsoleProjectsDir(join(root, 'missing'))).toBeNull();
 
     await mkdir(direct, { recursive: true });
-    expect(await resolveBuilderConsoleProjectsDir(root)).toBe(direct);
+    await mkdir(join(direct, 'proj_demo'), { recursive: true });
+    await writeFile(join(direct, 'proj_demo', 'project.json'), JSON.stringify({ projectId: 'proj_demo', name: 'Direct Project' }));
+    expect(await resolveBuilderConsoleProjectsDir(root)).toBe(backupProjects);
   });
 });

@@ -72,39 +72,61 @@ interface PathPhase {
   updatedAt: string;
 }
 
+interface PlanningLedgerEntry {
+  projectId: string;
+  view: string;
+  action: string;
+  artifactId: string;
+  actorId?: string;
+  checksumBefore?: string | null;
+  checksumAfter?: string | null;
+  payload?: Record<string, unknown>;
+  entryId?: string;
+  timestamp?: string;
+}
+
 export interface BuilderConsoleArtifact {
   path: string;
   content: string;
   projectId: string;
   sourceProjectId: string;
-  sourceKind: 'project' | 'void' | 'reveal' | 'constellation' | 'path';
+  sourceKind: 'project' | 'void' | 'reveal' | 'constellation' | 'path' | 'ledger' | 'history';
 }
 
 export async function resolveBuilderConsoleProjectsDir(repoRoot: string): Promise<string | null> {
   const direct = join(repoRoot, '.qore', 'projects');
-  if (await pathExists(direct)) {
-    return direct;
-  }
-
   const backupsDir = join(repoRoot, '.failsafe', 'backups');
-  if (!(await pathExists(backupsDir))) {
-    return null;
+  const candidates: string[] = [];
+
+  if (await pathExists(direct)) {
+    candidates.push(direct);
   }
 
-  const entries = await readdir(backupsDir, { withFileTypes: true });
-  const candidates = entries
-    .filter((entry) => entry.isDirectory())
-    .map((entry) => join(backupsDir, entry.name, 'files', '.qore', 'projects'))
-    .sort()
-    .reverse();
+  if (await pathExists(backupsDir)) {
+    const entries = await readdir(backupsDir, { withFileTypes: true });
+    candidates.push(
+      ...entries
+        .filter((entry) => entry.isDirectory())
+        .map((entry) => join(backupsDir, entry.name, 'files', '.qore', 'projects'))
+        .sort()
+        .reverse(),
+    );
+  }
 
+  let bestCandidate: string | null = null;
+  let bestScore = -1;
   for (const candidate of candidates) {
-    if (await pathExists(candidate)) {
-      return candidate;
+    if (!(await pathExists(candidate))) {
+      continue;
+    }
+    const score = await scoreProjectsDir(candidate);
+    if (score > bestScore) {
+      bestCandidate = candidate;
+      bestScore = score;
     }
   }
 
-  return null;
+  return bestCandidate;
 }
 
 export async function loadBuilderConsoleArtifacts(
@@ -125,10 +147,12 @@ export async function loadBuilderConsoleArtifacts(
     const clusters = (await readJson<{ clusters?: RevealCluster[] }>(join(projectDir, 'reveal', 'clusters.json')))?.clusters ?? [];
     const constellation = await readJson<ConstellationMap>(join(projectDir, 'constellation', 'map.json'));
     const phases = (await readJson<{ phases?: PathPhase[] }>(join(projectDir, 'path', 'phases.json')))?.phases ?? [];
+    const ledger = await readJsonLines<PlanningLedgerEntry>(join(projectDir, 'ledger.jsonl'));
+    const historyEntries = await loadHistoryEntries(join(projectDir, 'history'));
 
     artifacts.push({
       path: syntheticPath(project.projectId, 'project'),
-      content: renderProjectSummary(project, thoughts, clusters, phases),
+      content: renderProjectSummary(project, thoughts, clusters, phases, ledger, historyEntries),
       projectId: targetProjectId,
       sourceProjectId: project.projectId,
       sourceKind: 'project',
@@ -173,6 +197,26 @@ export async function loadBuilderConsoleArtifacts(
         sourceKind: 'path',
       });
     }
+
+    if (ledger.length > 0) {
+      artifacts.push({
+        path: syntheticPath(project.projectId, 'ledger'),
+        content: renderLedger(ledger),
+        projectId: targetProjectId,
+        sourceProjectId: project.projectId,
+        sourceKind: 'ledger',
+      });
+    }
+
+    if (historyEntries.length > 0) {
+      artifacts.push({
+        path: syntheticPath(project.projectId, 'history'),
+        content: renderHistory(historyEntries),
+        projectId: targetProjectId,
+        sourceProjectId: project.projectId,
+        sourceKind: 'history',
+      });
+    }
   }
 
   return artifacts;
@@ -197,6 +241,8 @@ function renderProjectSummary(
   thoughts: VoidThought[],
   clusters: RevealCluster[],
   phases: PathPhase[],
+  ledger: PlanningLedgerEntry[],
+  historyEntries: PlanningLedgerEntry[],
 ): string {
   const pipeline = Object.entries(project.pipelineState ?? {})
     .map(([key, value]) => `- ${key}: ${value}`)
@@ -221,6 +267,8 @@ function renderProjectSummary(
     `- Thoughts captured: ${thoughts.length}`,
     `- Clusters formed: ${clusters.length}`,
     `- Phases defined: ${phases.length}`,
+    `- Ledger entries: ${ledger.length}`,
+    `- History entries: ${historyEntries.length}`,
   ].join('\n');
 }
 
@@ -315,6 +363,52 @@ function renderPhases(phases: PathPhase[], clusters: RevealCluster[]): string {
   ].join('\n');
 }
 
+function renderLedger(entries: PlanningLedgerEntry[]): string {
+  const sorted = [...entries].sort(compareEntryTimeDesc);
+  const byView = countBy(sorted, (entry) => entry.view || 'unknown');
+
+  return [
+    '# Builder Console Governance Ledger',
+    '',
+    `- Entry Count: ${sorted.length}`,
+    `- Last Activity: ${sorted[0]?.timestamp || 'unknown'}`,
+    '',
+    '## Activity By View',
+    ...Object.entries(byView).map(([view, count]) => `- ${view}: ${count}`),
+    '',
+    '## Recent Entries',
+    ...sorted.slice(0, 20).map((entry) => [
+      `### ${entry.timestamp || 'unknown time'} ${entry.view}/${entry.action}`,
+      `- Artifact ID: ${entry.artifactId || 'unknown'}`,
+      `- Actor: ${entry.actorId || 'unknown'}`,
+      entry.payload && Object.keys(entry.payload).length > 0
+        ? `- Payload: ${JSON.stringify(entry.payload)}`
+        : '- Payload: none',
+      '',
+    ].join('\n')),
+  ].join('\n');
+}
+
+function renderHistory(entries: PlanningLedgerEntry[]): string {
+  const sorted = [...entries].sort(compareEntryTimeDesc);
+  return [
+    '# Builder Console Historical Activity',
+    '',
+    `- Historical Entry Count: ${sorted.length}`,
+    '',
+    '## Recent Historical Entries',
+    ...sorted.slice(0, 20).map((entry) => [
+      `### ${entry.timestamp || 'unknown time'} ${entry.view}/${entry.action}`,
+      `- Artifact ID: ${entry.artifactId || 'unknown'}`,
+      `- Actor: ${entry.actorId || 'unknown'}`,
+      entry.payload && Object.keys(entry.payload).length > 0
+        ? `- Payload: ${JSON.stringify(entry.payload)}`
+        : '- Payload: none',
+      '',
+    ].join('\n')),
+  ].join('\n');
+}
+
 function syntheticPath(projectId: string, kind: BuilderConsoleArtifact['sourceKind']): string {
   return join('builder-console', projectId, `${kind}.md`);
 }
@@ -346,11 +440,81 @@ async function readJsonLines<T>(path: string): Promise<T[]> {
   }
 }
 
+async function loadHistoryEntries(historyDir: string): Promise<PlanningLedgerEntry[]> {
+  try {
+    const entries = await readdir(historyDir, { withFileTypes: true });
+    const files = entries
+      .filter((entry) => entry.isFile() && entry.name.endsWith('.jsonl'))
+      .map((entry) => join(historyDir, entry.name))
+      .sort()
+      .reverse();
+
+    const loaded = await Promise.all(files.slice(0, 5).map((path) => readJsonLines<PlanningLedgerEntry>(path)));
+    return loaded.flat();
+  } catch {
+    return [];
+  }
+}
+
+async function scoreProjectsDir(projectsDir: string): Promise<number> {
+  try {
+    const entries = await readdir(projectsDir, { withFileTypes: true });
+    let score = 0;
+    for (const entry of entries) {
+      if (!entry.isDirectory()) {
+        continue;
+      }
+      const projectDir = join(projectsDir, entry.name);
+      score += await fileScore(join(projectDir, 'project.json'), 1);
+      score += await fileScore(join(projectDir, 'ledger.jsonl'), 2);
+      score += await fileScore(join(projectDir, 'void', 'thoughts.jsonl'), 5);
+      score += await fileScore(join(projectDir, 'reveal', 'clusters.json'), 5);
+      score += await fileScore(join(projectDir, 'constellation', 'map.json'), 5);
+      score += await fileScore(join(projectDir, 'path', 'phases.json'), 6);
+      score += await dirScore(join(projectDir, 'history'), 2);
+    }
+    return score;
+  } catch {
+    return -1;
+  }
+}
+
+async function fileScore(path: string, score: number): Promise<number> {
+  return (await pathExists(path)) ? score : 0;
+}
+
+async function dirScore(path: string, score: number): Promise<number> {
+  try {
+    const entries = await readdir(path);
+    return entries.length > 0 ? score : 0;
+  } catch {
+    return 0;
+  }
+}
+
+function countBy<T>(items: T[], keyFn: (item: T) => string): Record<string, number> {
+  const counts: Record<string, number> = {};
+  for (const item of items) {
+    const key = keyFn(item);
+    counts[key] = (counts[key] ?? 0) + 1;
+  }
+  return counts;
+}
+
+function compareEntryTimeDesc(a: PlanningLedgerEntry, b: PlanningLedgerEntry): number {
+  return (Date.parse(b.timestamp || '') || 0) - (Date.parse(a.timestamp || '') || 0);
+}
+
 async function pathExists(path: string): Promise<boolean> {
   try {
-    await readdir(path);
+    await readFile(path);
     return true;
   } catch {
-    return false;
+    try {
+      await readdir(path);
+      return true;
+    } catch {
+      return false;
+    }
   }
 }
