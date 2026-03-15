@@ -3,6 +3,8 @@ import { mkdtemp, rm } from "fs/promises";
 import { join } from "path";
 import { tmpdir } from "os";
 import { createViewStore, ViewType } from "../../runtime/planning/ViewStore";
+import { createStoreIntegrity } from "../../runtime/planning/StoreIntegrity";
+import { createPlanningLedger } from "../../runtime/planning/PlanningLedger";
 import type { RevealCluster, PathPhase } from "@mythologiq/qore-contracts";
 
 describe("ViewStore", () => {
@@ -220,6 +222,58 @@ describe("ViewStore", () => {
       const result = await store.read<{ clusters: RevealCluster[] }>();
       expect(result?.clusters).toHaveLength(1);
       expect(result?.clusters[0].label).toBe("New Cluster");
+    });
+  });
+
+  describe("integrity metadata", () => {
+    it("updates checksums and ledger metadata for view writes", async () => {
+      const integrity = createStoreIntegrity(basePath);
+      const ledger = createPlanningLedger(basePath, projectId);
+      const store = createViewStore(basePath, projectId, "path", {
+        integrity,
+        ledger,
+        artifactId: "phase-1",
+      });
+
+      await store.write({
+        phases: [
+          {
+            phaseId: "phase-1",
+            projectId,
+            ordinal: 1,
+            name: "Phase 1",
+            objective: "Initial objective",
+            sourceClusterIds: [],
+            tasks: [],
+            status: "planned",
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          },
+        ],
+      });
+
+      await store.write({
+        phases: [
+          {
+            phaseId: "phase-1",
+            projectId,
+            ordinal: 1,
+            name: "Phase 1",
+            objective: "Updated objective",
+            sourceClusterIds: [],
+            tasks: [],
+            status: "active",
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          },
+        ],
+      });
+
+      const entries = await ledger.getEntries({ view: "path" });
+      expect(entries).toHaveLength(2);
+      expect(entries[0].checksumAfter).toBeTruthy();
+      expect(entries[1].checksumBefore).toBe(entries[0].checksumAfter);
+      expect(entries[1].checksumAfter).toBeTruthy();
     });
   });
 });

@@ -130,7 +130,7 @@
      */
     getPhases: function() {
       return fetchApi(buildUrl('/path/phases')).then(function(data) {
-        return data.phases || [];
+        return data.data || [];
       });
     },
 
@@ -146,6 +146,19 @@
           sourceClusterIds: sourceClusterIds,
           tasks: tasks,
           actorId: actorId
+        })
+      });
+    },
+
+    /**
+     * Update a task status within a phase
+     */
+    updateTaskStatus: function(phaseId, taskId, status, actorId) {
+      return fetchApi(buildUrl('/path/phases/' + phaseId + '/tasks/' + taskId), {
+        method: 'PATCH',
+        body: JSON.stringify({
+          status: status,
+          actorId: actorId || 'victor-ui'
         })
       });
     },

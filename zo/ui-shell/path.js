@@ -94,6 +94,14 @@
     }
   }
 
+  function isTaskDone(task) {
+    return task && (task.status === 'done' || task.status === 'completed');
+  }
+
+  function isPhaseComplete(phase) {
+    return phase && (phase.status === 'complete' || phase.status === 'completed');
+  }
+
   function render() {
     if (!container) return;
 
@@ -167,7 +175,7 @@
 
   function renderHeader() {
     var completedCount = state.phases.filter(function(p) {
-      return p.status === 'completed';
+      return isPhaseComplete(p);
     }).length;
 
     return '<div class="path-header">' +
@@ -187,7 +195,7 @@
       if (phase.tasks) {
         totalTasks += phase.tasks.length;
         completedTasks += phase.tasks.filter(function(t) {
-          return t.status === 'completed';
+          return isTaskDone(t);
         }).length;
       }
     });
@@ -210,7 +218,7 @@
   function renderPhaseCard(phase, index) {
     var tasks = phase.tasks || [];
     var completedTasks = tasks.filter(function(t) {
-      return t.status === 'completed';
+      return isTaskDone(t);
     }).length;
     var progress = tasks.length > 0 ? Math.round((completedTasks / tasks.length) * 100) : 0;
 
@@ -277,7 +285,7 @@
   }
 
   function renderTask(task, phaseId) {
-    var isCompleted = task.status === 'completed';
+    var isCompleted = isTaskDone(task);
 
     var html = '<div class="task-item' + (isCompleted ? ' completed' : '') + '" role="listitem">';
     html += '<label class="task-label">';
@@ -310,6 +318,8 @@
     var statusMap = {
       'planned': 'Planned',
       'in-progress': 'In Progress',
+      'done': 'Completed',
+      'complete': 'Completed',
       'completed': 'Completed',
       'blocked': 'Blocked'
     };
@@ -420,13 +430,35 @@
       });
 
       if (task) {
-        task.status = isChecked ? 'completed' : 'pending';
+        var nextStatus = isChecked ? 'done' : 'pending';
+        var previousStatus = task.status;
+        task.status = nextStatus;
         announceToScreenReader('Task "' + task.title + '" marked as ' + (isChecked ? 'completed' : 'incomplete'));
         render();
+
+        var request = null;
+        if (typeof PlanningClient !== 'undefined' && PlanningClient.updateTaskStatus) {
+          request = PlanningClient.updateTaskStatus(phaseId, taskId, nextStatus, 'victor-ui');
+        } else {
+          request = fetch('/api/projects/' + encodeURIComponent(state.projectId) + '/path/phases/' +
+            encodeURIComponent(phaseId) + '/tasks/' + encodeURIComponent(taskId), {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ status: nextStatus, actorId: 'victor-ui' })
+          }).then(function(resp) {
+            if (!resp.ok) throw new Error('Failed to update task');
+            return resp.json();
+          });
+        }
+
+        request.catch(function(err) {
+          task.status = previousStatus;
+          render();
+          state.error = err.message || 'Failed to update task';
+          announceToScreenReader('Error updating task status');
+        });
       }
     }
-
-    // TODO: Send update to API
   }
 
   function handleDragStart(e) {

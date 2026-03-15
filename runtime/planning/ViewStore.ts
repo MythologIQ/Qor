@@ -90,7 +90,7 @@ export class ViewStore {
     await this.ensureDirectory();
 
     const fileName = this.dataFile.split("/").pop() ?? "";
-    const checksumBefore = await this.integrity?.getChecksum(this.viewType, fileName) ?? null;
+    const checksumBefore = await this.integrity?.getChecksum(this.projectId, `${this.viewType}/${fileName}`) ?? null;
 
     const tmpFile = `${this.dataFile}.tmp.${Date.now()}`;
     const jsonContent = JSON.stringify(data, null, 2);
@@ -119,7 +119,11 @@ export class ViewStore {
       );
     }
 
-    const checksumAfter = await this.integrity?.getChecksum(this.viewType, fileName) ?? null;
+    if (this.integrity) {
+      await this.integrity.updateChecksums(this.projectId);
+    }
+
+    const checksumAfter = await this.integrity?.getChecksum(this.projectId, `${this.viewType}/${fileName}`) ?? null;
 
     if (this.ledger) {
       const artifactId = this.artifactId ?? `${this.viewType}-data`;
@@ -151,7 +155,7 @@ export class ViewStore {
     logger.info("Deleting view data", { projectId: this.projectId, viewType: this.viewType });
 
     const fileName = this.dataFile.split("/").pop() ?? "";
-    const checksumBefore = await this.integrity?.getChecksum(this.viewType, fileName) ?? null;
+    const checksumBefore = await this.integrity?.getChecksum(this.projectId, `${this.viewType}/${fileName}`) ?? null;
 
     try {
       await rename(this.dataFile, `${this.dataFile}.deleted.${Date.now()}`);
@@ -163,6 +167,10 @@ export class ViewStore {
           { projectId: this.projectId, viewType: this.viewType },
         );
       }
+    }
+
+    if (this.integrity) {
+      await this.integrity.updateChecksums(this.projectId);
     }
 
     if (this.ledger) {

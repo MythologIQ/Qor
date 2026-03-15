@@ -57,7 +57,13 @@ export interface PlanningRoutesConfig {
  * Maps local PlanningAction to contract PlanningAction
  */
 function toContractAction(_action: PlanningAction): ContractPlanningAction {
-  return "planning:create" as ContractPlanningAction;
+  const actionMap: Record<PlanningAction, ContractPlanningAction> = {
+    create: "planning:path:create-phase" as ContractPlanningAction,
+    update: "planning:path:update-phase" as ContractPlanningAction,
+    delete: "planning:path:delete-phase" as ContractPlanningAction,
+    claim: "planning:reveal:claim-thoughts" as ContractPlanningAction,
+  };
+  return actionMap[_action];
 }
 
 export class PlanningRoutes {
@@ -71,6 +77,27 @@ export class PlanningRoutes {
     private readonly config: PlanningRoutesConfig = {},
   ) {
     this.responder = createOptimizedResponder();
+  }
+
+  private readPhasePayload(data: unknown): { phases: Array<Record<string, unknown>> } {
+    if (!data || typeof data !== "object") {
+      return { phases: [] };
+    }
+    const payload = data as { phases?: Array<Record<string, unknown>> };
+    return { phases: payload.phases ?? [] };
+  }
+
+  private derivePhaseStatus(tasks: Array<{ status?: string }>): "planned" | "active" | "complete" | "blocked" {
+    if (tasks.some((task) => task.status === "blocked")) {
+      return "blocked";
+    }
+    if (tasks.length > 0 && tasks.every((task) => task.status === "done")) {
+      return "complete";
+    }
+    if (tasks.some((task) => task.status === "in-progress")) {
+      return "active";
+    }
+    return "planned";
   }
 
   /**
@@ -440,10 +467,13 @@ export class PlanningRoutes {
           return this.sendError(res, 400, "BAD_REQUEST" as ApiErrorCode, "name, objective, sourceClusterIds, actorId required", traceId);
         }
 
-        const pathStore = new ViewStore(projectsDir, projectId, "path", { ledger: planningLedger, integrity: storeIntegrity });
+        const pathStore = new ViewStore(projectsDir, projectId, "path", {
+          ledger: planningLedger,
+          integrity: storeIntegrity,
+        });
 
-        const existing = (await pathStore.read<{ phases?: unknown[] }>()) ?? { phases: [] };
-        const phases = existing.phases ?? [];
+        const existing = this.readPhasePayload(await pathStore.read<{ phases?: unknown[] }>());
+        const phases = existing.phases;
         const ordinal = phases.length + 1;
         const phaseId = this.generateId("phase");
         const newPhase = {
@@ -453,7 +483,7 @@ export class PlanningRoutes {
           name,
           objective,
           sourceClusterIds,
-          tasks: (tasks ?? []).map((t, i) => ({
+          tasks: (tasks ?? []).map((t) => ({
             taskId: this.generateId(`task`),
             phaseId,
             title: t.title,
@@ -473,6 +503,7 @@ export class PlanningRoutes {
           async () => {
             phases.push(newPhase);
             await pathStore.write({ phases });
+            await projectStore.updatePipelineState("path", "active", actorId);
           }
         );
 
@@ -480,6 +511,125 @@ export class PlanningRoutes {
           return this.sendError(res, 403, "POLICY_DENIED" as ApiErrorCode, response.reason ?? "Policy denied", traceId);
         }
         return this.sendCreated(res, newPhase);
+      }
+
+      // PUT /api/projects/:projectId/path/phases/:phaseId - Update phase
+      const updatePhaseMatch = url.match(new RegExp(`^/api/projects/${projectId}/path/phases/([^/]+)$`));
+      if (method === "PUT" && updatePhaseMatch) {
+        const phaseId = updatePhaseMatch[1];
+        const body = await this.readJsonBody(req);
+        const { name, objective, sourceClusterIds, ordinal, status, actorId } = body as {
+          name?: string;
+          objective?: string;
+          sourceClusterIds?: string[];
+          ordinal?: number;
+          status?: "planned" | "active" | "complete" | "blocked";
+          actorId: string;
+        };
+        if (!actorId) {
+          return this.sendError(res, 400, "BAD_REQUEST" as ApiErrorCode, "actorId required", traceId);
+        }
+
+        const pathStore = new ViewStore(projectsDir, projectId, "path", {
+          ledger: planningLedger,
+          integrity: storeIntegrity,
+          artifactId: phaseId,
+        });
+        const existing = this.readPhasePayload(await pathStore.read<{ phases?: Array<Record<string, unknown>> }>());
+        const phases = existing.phases;
+        const phaseIndex = phases.findIndex((phase) => phase.phaseId === phaseId);
+        if (phaseIndex === -1) {
+          return this.sendError(res, 404, "NOT_FOUND" as ApiErrorCode, "Phase not found", traceId);
+        }
+
+        const updatedPhase = {
+          ...phases[phaseIndex],
+          ...(name !== undefined ? { name } : {}),
+          ...(objective !== undefined ? { objective } : {}),
+          ...(sourceClusterIds !== undefined ? { sourceClusterIds } : {}),
+          ...(ordinal !== undefined ? { ordinal } : {}),
+          ...(status !== undefined ? { status } : {}),
+          updatedAt: new Date().toISOString(),
+        };
+
+        const { response } = await planningGovernance.evaluateAndExecute(
+          actorId,
+          toContractAction("update"),
+          projectId,
+          async () => {
+            phases[phaseIndex] = updatedPhase;
+            phases.sort((a, b) => Number(a.ordinal ?? 0) - Number(b.ordinal ?? 0));
+            await pathStore.write({ phases });
+            await projectStore.updatePipelineState("path", "active", actorId);
+          },
+        );
+
+        if (!response.allowed) {
+          return this.sendError(res, 403, "POLICY_DENIED" as ApiErrorCode, response.reason ?? "Policy denied", traceId);
+        }
+        return this.sendUpdated(res, updatedPhase);
+      }
+
+      // PATCH /api/projects/:projectId/path/phases/:phaseId/tasks/:taskId - Update task status
+      const updateTaskMatch = url.match(new RegExp(`^/api/projects/${projectId}/path/phases/([^/]+)/tasks/([^/]+)$`));
+      if (method === "PATCH" && updateTaskMatch) {
+        const phaseId = updateTaskMatch[1];
+        const taskId = updateTaskMatch[2];
+        const body = await this.readJsonBody(req);
+        const { status, actorId } = body as {
+          status?: "pending" | "in-progress" | "done" | "blocked";
+          actorId: string;
+        };
+        if (!status || !actorId) {
+          return this.sendError(res, 400, "BAD_REQUEST" as ApiErrorCode, "status and actorId required", traceId);
+        }
+
+        const pathStore = new ViewStore(projectsDir, projectId, "path", {
+          ledger: planningLedger,
+          integrity: storeIntegrity,
+          artifactId: taskId,
+        });
+        const existing = this.readPhasePayload(await pathStore.read<{ phases?: Array<Record<string, unknown>> }>());
+        const phases = existing.phases;
+        const phaseIndex = phases.findIndex((phase) => phase.phaseId === phaseId);
+        if (phaseIndex === -1) {
+          return this.sendError(res, 404, "NOT_FOUND" as ApiErrorCode, "Phase not found", traceId);
+        }
+
+        const phase = phases[phaseIndex] as Record<string, unknown> & { tasks?: Array<Record<string, unknown>> };
+        const tasks = [...(phase.tasks ?? [])];
+        const taskIndex = tasks.findIndex((task) => task.taskId === taskId);
+        if (taskIndex === -1) {
+          return this.sendError(res, 404, "NOT_FOUND" as ApiErrorCode, "Task not found", traceId);
+        }
+
+        const updatedTask = {
+          ...tasks[taskIndex],
+          status,
+        };
+
+        const updatedPhase = {
+          ...phase,
+          tasks: tasks.map((task, index) => index === taskIndex ? updatedTask : task),
+          status: this.derivePhaseStatus(tasks.map((task, index) => index === taskIndex ? updatedTask : task)),
+          updatedAt: new Date().toISOString(),
+        };
+
+        const { response } = await planningGovernance.evaluateAndExecute(
+          actorId,
+          "planning:path:update-task-status" as ContractPlanningAction,
+          projectId,
+          async () => {
+            phases[phaseIndex] = updatedPhase;
+            await pathStore.write({ phases });
+            await projectStore.updatePipelineState("path", "active", actorId);
+          },
+        );
+
+        if (!response.allowed) {
+          return this.sendError(res, 403, "POLICY_DENIED" as ApiErrorCode, response.reason ?? "Policy denied", traceId);
+        }
+        return this.sendUpdated(res, updatedTask);
       }
 
       // GET /api/projects/:projectId/risk/register - Get risks

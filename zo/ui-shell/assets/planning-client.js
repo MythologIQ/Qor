@@ -157,7 +157,7 @@
     getPhases: function(projectId) {
       projectId = projectId || this.getCurrentProjectId();
       return this._fetch(API_BASE + '/' + projectId + '/path/phases')
-        .then(function(data) { return data.phases || []; });
+        .then(function(payload) { return payload.data || []; });
     },
 
     createPhase: function(phaseData) {
@@ -165,6 +165,17 @@
       return this._fetch(API_BASE + '/' + projectId + '/path/phases', {
         method: 'POST',
         body: phaseData
+      });
+    },
+
+    updateTaskStatus: function(phaseId, taskId, status, actorId) {
+      var projectId = this.getCurrentProjectId();
+      return this._fetch(API_BASE + '/' + projectId + '/path/phases/' + phaseId + '/tasks/' + taskId, {
+        method: 'PATCH',
+        body: {
+          status: status,
+          actorId: actorId || 'victor-ui'
+        }
       });
     },
 
