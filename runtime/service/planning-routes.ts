@@ -163,7 +163,7 @@ export class PlanningRoutes {
       const projectsDir = this.config.projectsDir ?? process.env.QORE_PROJECTS_DIR ?? DEFAULT_PROJECTS_DIR;
       const projectStore = createProjectStore(projectId, projectsDir);
       const storeIntegrity = createStoreIntegrity(projectsDir);
-      const planningLedger = createPlanningLedger(projectsDir, projectId);
+      const planningLedger = createPlanningLedger(projectId, projectsDir);
       const planningGovernance = createPlanningGovernance(projectStore, storeIntegrity);
       const voidStore = new VoidStore(projectsDir, projectId, { ledger: planningLedger, integrity: storeIntegrity });
 
