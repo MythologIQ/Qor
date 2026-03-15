@@ -96,6 +96,9 @@ bun run dev
 # Ingest the real Victor project scope
 bun run ingest:victor-scope
 
+# Ingest governed Builder Console planning artifacts read-only
+bun run ingest:builder-console
+
 # Or build and run
 bun run build
 bun run start
