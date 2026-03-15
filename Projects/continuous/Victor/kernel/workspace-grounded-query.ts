@@ -1,3 +1,6 @@
+import { readdir, readFile } from 'node:fs/promises';
+import { dirname, extname, join, relative } from 'node:path';
+
 import { loadBuilderConsoleArtifacts } from './memory/builder-console';
 import { planArtifactIngestion } from './memory/ingest';
 import { retrieveGroundedContext } from './memory/retrieve';
@@ -17,7 +20,10 @@ import { hashContent } from './memory/provenance';
 
 export async function createWorkspaceGroundedQuery(projectsDir: string, targetProjectId: string) {
   const store = new WorkspaceExerciseStore();
-  const artifacts = await loadBuilderConsoleArtifacts(projectsDir, targetProjectId);
+  const builderArtifacts = (await loadBuilderConsoleArtifacts(projectsDir, targetProjectId))
+    .filter((artifact) => WORKSPACE_GROUNDED_SOURCE_KINDS.has(artifact.sourceKind));
+  const workspaceArtifacts = await loadWorkspaceArtifacts(projectsDir, targetProjectId);
+  const artifacts = [...builderArtifacts, ...workspaceArtifacts];
 
   for (const artifact of artifacts) {
     const snapshot = await store.loadDocumentSnapshot(hashContent(artifact.projectId, artifact.path));
@@ -42,6 +48,53 @@ export async function createWorkspaceGroundedQuery(projectsDir: string, targetPr
   }
 
   return async (projectId: string, query: string) => retrieveGroundedContext(store, projectId, query);
+}
+
+async function loadWorkspaceArtifacts(projectsDir: string, targetProjectId: string) {
+  const repoRoot = dirname(dirname(projectsDir));
+  const files = await collectWorkspaceFiles(repoRoot, repoRoot);
+
+  return Promise.all(
+    files.map(async (path) => ({
+      path,
+      content: await readFile(path, 'utf8'),
+      projectId: targetProjectId,
+    })),
+  );
+}
+
+async function collectWorkspaceFiles(root: string, currentDir: string): Promise<string[]> {
+  const entries = await readdir(currentDir, { withFileTypes: true });
+  const files: string[] = [];
+
+  for (const entry of entries) {
+    if (entry.name.startsWith('.')) {
+      continue;
+    }
+
+    const absolutePath = join(currentDir, entry.name);
+    const relativePath = relative(root, absolutePath);
+
+    if (entry.isDirectory()) {
+      if (SKIPPED_DIR_NAMES.has(entry.name) || relativePath.startsWith('.qore/')) {
+        continue;
+      }
+      files.push(...await collectWorkspaceFiles(root, absolutePath));
+      continue;
+    }
+
+    if (!TEXT_FILE_EXTENSIONS.has(extname(entry.name))) {
+      continue;
+    }
+
+    if (!WORKSPACE_PATH_PREFIXES.some((prefix) => relativePath === prefix || relativePath.startsWith(`${prefix}/`))) {
+      continue;
+    }
+
+    files.push(absolutePath);
+  }
+
+  return files;
 }
 
 class WorkspaceExerciseStore implements LearningStore {
@@ -165,10 +218,12 @@ class WorkspaceExerciseStore implements LearningStore {
 
     return [...this.documents.values()]
       .filter((document) => document.projectId === projectId)
-      .flatMap((document) => (this.chunksByDocumentId.get(document.id) ?? []).map((chunk) => ({ chunk })))
-      .map(({ chunk }) => ({
+      .flatMap((document) => (
+        (this.chunksByDocumentId.get(document.id) ?? []).map((chunk) => ({ chunk, document }))
+      ))
+      .map(({ chunk, document }) => ({
         chunk,
-        score: scoreText(chunk.text, terms),
+        score: scoreText(`${document.path} ${document.title} ${chunk.text}`, terms),
       }))
       .filter((hit) => hit.score > 0)
       .sort((a, b) => b.score - a.score || a.chunk.index - b.chunk.index)
@@ -184,11 +239,16 @@ class WorkspaceExerciseStore implements LearningStore {
 
     return [...this.documents.values()]
       .filter((document) => document.projectId === projectId)
-      .flatMap((document) => this.nodesByDocumentId.get(document.id) ?? [])
-      .filter((node) => node.state === 'active')
-      .map((node) => ({
+      .flatMap((document) => (
+        (this.nodesByDocumentId.get(document.id) ?? []).map((node) => ({ node, document }))
+      ))
+      .filter(({ node }) => node.state === 'active')
+      .map(({ node, document }) => ({
         node,
-        score: scoreText(`${node.label} ${node.summary} ${Object.values(node.attributes).join(' ')}`, terms),
+        score: scoreText(
+          `${document.path} ${document.title} ${node.label} ${node.summary} ${Object.values(node.attributes).join(' ')}`,
+          terms,
+        ),
       }))
       .filter((hit) => hit.score > 0)
       .sort((a, b) => b.score - a.score || a.node.label.localeCompare(b.node.label))
@@ -266,6 +326,14 @@ function scoreText(text: string, terms: string[]): number {
       score += 1;
     }
   }
+  if (score === 0) {
+    return 0;
+  }
+
+  if (NOISY_AUTOMATION_MARKERS.some((marker) => haystack.includes(marker))) {
+    score = Math.max(0, score - 4);
+  }
+
   return score;
 }
 
@@ -279,3 +347,16 @@ function groupBy<T>(items: T[], keyFn: (item: T) => string): Map<string, T[]> {
   }
   return grouped;
 }
+
+const WORKSPACE_PATH_PREFIXES = ['zo', 'runtime', 'docs'];
+const TEXT_FILE_EXTENSIONS = new Set(['.ts', '.tsx', '.js', '.jsx', '.html', '.css', '.md', '.json']);
+const SKIPPED_DIR_NAMES = new Set(['node_modules', 'dist', 'build', 'coverage', 'tmp', 'temp']);
+const WORKSPACE_GROUNDED_SOURCE_KINDS = new Set(['project', 'path', 'constellation']);
+const NOISY_AUTOMATION_MARKERS = [
+  'victor-heartbeat',
+  'victor-automation-action',
+  'cooldown reflection',
+  'autonomy/claim',
+  '"actionkind"',
+  '"runid"',
+];
