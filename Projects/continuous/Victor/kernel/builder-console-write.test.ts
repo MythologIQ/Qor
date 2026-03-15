@@ -5,7 +5,11 @@ import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'bun:test';
 
 import { createProjectStore } from '../../Zo-Qore/runtime/planning';
-import { createGovernedBuilderConsoleDraftTask, updateGovernedBuilderConsoleTaskStatus } from './builder-console-write';
+import {
+  appendGovernedBuilderConsolePlanningNote,
+  createGovernedBuilderConsoleDraftTask,
+  updateGovernedBuilderConsoleTaskStatus,
+} from './builder-console-write';
 import type { GroundedContextBundle } from './memory/types';
 
 describe('createGovernedBuilderConsoleDraftTask', () => {
@@ -19,6 +23,17 @@ describe('createGovernedBuilderConsoleDraftTask', () => {
       description: 'Governed task creation fixture',
       createdBy: 'tester',
     });
+    const voidStore = await projectStore.getVoidStore();
+    await voidStore.addThought({
+      thoughtId: 'thought-1',
+      projectId: 'builder-console',
+      content: 'Governed automation reflection anchor.',
+      source: 'text',
+      capturedAt: new Date().toISOString(),
+      capturedBy: 'tester',
+      tags: ['governance'],
+      status: 'raw',
+    }, 'tester');
 
     const revealStore = await projectStore.getViewStore('reveal');
     await revealStore.write({
@@ -224,6 +239,17 @@ describe('updateGovernedBuilderConsoleTaskStatus', () => {
       description: 'Governed task status fixture',
       createdBy: 'tester',
     });
+    const voidStore = await projectStore.getVoidStore();
+    await voidStore.addThought({
+      thoughtId: 'thought-1',
+      projectId: 'builder-console',
+      content: 'Governed execution anchor.',
+      source: 'text',
+      capturedAt: new Date().toISOString(),
+      capturedBy: 'tester',
+      tags: ['governance'],
+      status: 'raw',
+    }, 'tester');
 
     const revealStore = await projectStore.getViewStore('reveal');
     await revealStore.write({
@@ -432,6 +458,133 @@ describe('updateGovernedBuilderConsoleTaskStatus', () => {
     expect(result.status).toBe('blocked');
     expect(result.governance?.allowed).toBe(false);
     expect(result.reason).toContain('PL-POL-07');
+  });
+});
+
+describe('appendGovernedBuilderConsolePlanningNote', () => {
+  let projectsDir: string;
+
+  beforeEach(async () => {
+    projectsDir = await mkdtemp(join(tmpdir(), 'victor-builder-note-'));
+    const projectStore = createProjectStore('builder-console', projectsDir, { enableLedger: true });
+    await projectStore.create({
+      name: 'Builder Console',
+      description: 'Governed planning note fixture',
+      createdBy: 'tester',
+    });
+    const voidStore = await projectStore.getVoidStore();
+    await voidStore.addThought({
+      thoughtId: 'thought-1',
+      projectId: 'builder-console',
+      content: 'Reflection anchor.',
+      source: 'text',
+      capturedAt: new Date().toISOString(),
+      capturedBy: 'tester',
+      tags: ['reflection'],
+      status: 'raw',
+    }, 'tester');
+
+    const revealStore = await projectStore.getViewStore('reveal');
+    await revealStore.write({
+      clusters: [
+        {
+          clusterId: 'cluster-1',
+          projectId: 'builder-console',
+          label: 'Operational Memory',
+          thoughtIds: [],
+          notes: 'Existing notes',
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+          status: 'formed',
+        },
+      ],
+    });
+
+    const constellationStore = await projectStore.getViewStore('constellation');
+    await constellationStore.write({
+      constellationId: 'const-1',
+      projectId: 'builder-console',
+      nodes: [{ nodeId: 'node-1', clusterId: 'cluster-1', position: { x: 0, y: 0 } }],
+      edges: [],
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      status: 'mapped',
+    });
+
+    const pathStore = await projectStore.getViewStore('path');
+    await pathStore.write({
+      phases: [
+        {
+          phaseId: 'phase-1',
+          projectId: 'builder-console',
+          ordinal: 1,
+          name: 'Execution',
+          objective: 'Execute grounded work',
+          sourceClusterIds: ['cluster-1'],
+          tasks: [],
+          status: 'planned',
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        },
+      ],
+    });
+  });
+
+  afterEach(async () => {
+    await rm(projectsDir, { recursive: true, force: true });
+  });
+
+  it('appends a governed reflective planning note to the phase source cluster', async () => {
+    const result = await appendGovernedBuilderConsolePlanningNote(
+      {
+        projectsDir,
+        projectId: 'builder-console',
+        phaseId: 'phase-1',
+        taskId: 'task-1',
+        content: '## Victor Cooldown Reflection\n- Result: grounded review remained read-only.',
+        query: 'What should Victor reflect on during cooldown?',
+      },
+      groundedContext(),
+    );
+
+    expect(result.status).toBe('updated');
+    expect(result.clusterId).toBe('cluster-1');
+    expect(result.ledgerEntryId).toBeString();
+  });
+
+  it('blocks reflective planning note writes when no source cluster is attached to the phase', async () => {
+    const projectStore = createProjectStore('builder-console', projectsDir, { enableLedger: true });
+    const pathStore = await projectStore.getViewStore('path');
+    await pathStore.write({
+      phases: [
+        {
+          phaseId: 'phase-1',
+          projectId: 'builder-console',
+          ordinal: 1,
+          name: 'Execution',
+          objective: 'Execute grounded work',
+          sourceClusterIds: [],
+          tasks: [],
+          status: 'planned',
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        },
+      ],
+    });
+
+    const result = await appendGovernedBuilderConsolePlanningNote(
+      {
+        projectsDir,
+        projectId: 'builder-console',
+        phaseId: 'phase-1',
+        content: 'Reflection content',
+        query: 'What should Victor reflect on during cooldown?',
+      },
+      groundedContext(),
+    );
+
+    expect(result.status).toBe('blocked');
+    expect(result.reason).toContain('no source Reveal cluster');
   });
 });
 

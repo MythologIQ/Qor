@@ -85,6 +85,28 @@ export interface UpdateTaskStatusResult {
   ledgerEntryId?: string;
 }
 
+export interface ReflectivePlanningNoteRequest {
+  projectId: string;
+  phaseId: string;
+  taskId?: string;
+  content: string;
+  actorId?: string;
+  query: string;
+  projectsDir?: string;
+}
+
+export interface ReflectivePlanningNoteResult {
+  status: 'updated' | 'blocked';
+  classification: 'low-risk' | 'blocked';
+  reason: string;
+  governance?: {
+    allowed: boolean;
+    reason?: string;
+  };
+  clusterId?: string;
+  ledgerEntryId?: string;
+}
+
 export async function createGovernedBuilderConsoleDraftTask(
   request: DraftTaskRequest,
   groundedContext: GroundedContextBundle,
@@ -343,6 +365,133 @@ export async function updateGovernedBuilderConsoleTaskStatus(
   };
 }
 
+export async function appendGovernedBuilderConsolePlanningNote(
+  request: ReflectivePlanningNoteRequest,
+  groundedContext: GroundedContextBundle,
+): Promise<ReflectivePlanningNoteResult> {
+  const actorId = request.actorId?.trim() || 'victor';
+  const validationFailure = validateReflectivePlanningNoteRequest(request, groundedContext);
+  if (validationFailure) {
+    return validationFailure;
+  }
+
+  const projectsDir = resolveProjectsDir(request.projectsDir);
+  const projectStore = createProjectStore(request.projectId, projectsDir, { enableLedger: true });
+  const storeIntegrity = createStoreIntegrity(projectsDir);
+  const planningGovernance = createPlanningGovernance(projectStore, storeIntegrity);
+  const planningLedger = createPlanningLedger(request.projectId, projectsDir);
+  const pathStore = new ViewStore(projectsDir, request.projectId, 'path', {
+    ledger: planningLedger,
+    integrity: storeIntegrity,
+  });
+  const revealStore = new ViewStore(projectsDir, request.projectId, 'reveal', {
+    ledger: planningLedger,
+    integrity: storeIntegrity,
+  });
+
+  const pathPayload = await pathStore.read<{ phases?: Array<Record<string, unknown>> }>();
+  const phases = pathPayload?.phases ?? [];
+  const phase = phases.find((entry) => entry.phaseId === request.phaseId);
+  if (!phase) {
+    return blockedPlanningNote('Explicit target phase was not found in Builder Console path state.');
+  }
+
+  const sourceClusterIds = Array.isArray(phase.sourceClusterIds)
+    ? phase.sourceClusterIds.map((value) => String(value))
+    : [];
+  const clusterId = sourceClusterIds[0];
+  if (!clusterId) {
+    return blockedPlanningNote('Target phase has no source Reveal cluster for reflective planning notes.');
+  }
+
+  const revealPayload = await revealStore.read<{ clusters?: Array<Record<string, unknown>> }>();
+  const clusters = [...(revealPayload?.clusters ?? [])];
+  const clusterIndex = clusters.findIndex((entry) => entry.clusterId === clusterId);
+  if (clusterIndex === -1) {
+    return blockedPlanningNote(`Reveal cluster ${clusterId} was not found for reflective planning notes.`);
+  }
+
+  const existingCluster = clusters[clusterIndex]!;
+  const previousNotes = typeof existingCluster.notes === 'string' ? existingCluster.notes : '';
+  const nextNotes = [previousNotes.trimEnd(), request.content.trim()]
+    .filter((value) => value.length > 0)
+    .join('\n\n');
+  const updatedCluster = {
+    ...existingCluster,
+    notes: nextNotes,
+    updatedAt: new Date().toISOString(),
+  };
+
+  const { response } = await planningGovernance.evaluateAndExecute(
+    actorId,
+    'planning:reveal:update-cluster',
+    request.projectId,
+    async () => {
+      const writeStore = new ViewStore(projectsDir, request.projectId, 'reveal', {
+        ledger: planningLedger,
+        integrity: storeIntegrity,
+        artifactId: clusterId,
+      });
+      clusters[clusterIndex] = updatedCluster;
+      await writeStore.write({ clusters }, actorId);
+      await projectStore.updatePipelineState('reveal', 'active', actorId);
+    },
+    {
+      clusterId,
+      phaseId: request.phaseId,
+      taskId: request.taskId ?? null,
+      query: request.query,
+      groundedNodeIds: groundedContext.semanticNodes.slice(0, 8).map((node) => node.id),
+    },
+  );
+
+  if (!response.allowed) {
+    return {
+      status: 'blocked',
+      classification: 'blocked',
+      reason: response.reason || 'Builder Console governance denied reflective planning note update.',
+      governance: {
+        allowed: false,
+        reason: response.reason,
+      },
+    };
+  }
+
+  const rationaleEntry = await planningLedger.appendEntry({
+    projectId: request.projectId,
+    view: 'reveal',
+    action: 'update',
+    artifactId: clusterId,
+    actorId,
+    checksumBefore: null,
+    checksumAfter: null,
+    payload: {
+      source: 'victor-planning-note',
+      phaseId: request.phaseId,
+      taskId: request.taskId ?? null,
+      query: request.query,
+      groundedNodeLabels: groundedContext.semanticNodes.slice(0, 8).map((node) => node.label),
+      groundedNodeTypes: groundedContext.semanticNodes.slice(0, 8).map((node) => node.nodeType),
+      chunkIds: groundedContext.chunkHits.slice(0, 8).map((hit) => hit.chunk.id),
+      contradictions: groundedContext.contradictions,
+      missingInformation: groundedContext.missingInformation,
+      recommendedNextActions: groundedContext.recommendedNextActions,
+    },
+  });
+
+  return {
+    status: 'updated',
+    classification: 'low-risk',
+    reason: 'Victor appended a governed reflective planning note to the phase source cluster.',
+    governance: {
+      allowed: true,
+      reason: response.reason,
+    },
+    clusterId,
+    ledgerEntryId: rationaleEntry.entryId,
+  };
+}
+
 function validateRequest(
   request: DraftTaskRequest,
   groundedContext: GroundedContextBundle,
@@ -410,6 +559,34 @@ function validateTaskStatusRequest(
 }
 
 function blockedStatusUpdate(reason: string): UpdateTaskStatusResult {
+  return {
+    status: 'blocked',
+    classification: 'blocked',
+    reason,
+  };
+}
+
+function validateReflectivePlanningNoteRequest(
+  request: ReflectivePlanningNoteRequest,
+  groundedContext: GroundedContextBundle,
+): ReflectivePlanningNoteResult | null {
+  if (!request.projectId || !request.phaseId || !request.content?.trim() || !request.query?.trim()) {
+    return blockedPlanningNote('projectId, phaseId, content, and query are required.');
+  }
+
+  const hasGrounding =
+    groundedContext.semanticNodes.length > 0
+    || groundedContext.chunkHits.length > 0
+    || groundedContext.contradictions.length > 0
+    || groundedContext.missingInformation.length > 0;
+  if (!hasGrounding) {
+    return blockedPlanningNote('Victor refused reflective planning note creation because no grounded evidence was retrieved.');
+  }
+
+  return null;
+}
+
+function blockedPlanningNote(reason: string): ReflectivePlanningNoteResult {
   return {
     status: 'blocked',
     classification: 'blocked',
