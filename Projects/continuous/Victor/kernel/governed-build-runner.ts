@@ -51,6 +51,7 @@ export interface GovernedBuildResult {
 
 export interface GovernedBuildSelectionPreview {
   projectId: string;
+  mode?: 'advance' | 'reflect';
   selectedTask?: {
     projectId: string;
     phaseId: string;
@@ -134,10 +135,13 @@ export async function runGovernedAutomationBuild(
     };
   }
 
-  const query = `What should happen next with the governed automation task "${selected.task.title}" in phase "${selectedPhaseName}"?`;
+  const reflectionMode = selected.task.status === 'in-progress';
+  const query = reflectionMode
+    ? `What is the next grounded reflection for the active governed automation task "${selected.task.title}" in phase "${selectedPhaseName}"?`
+    : `What should happen next with the governed automation task "${selected.task.title}" in phase "${selectedPhaseName}"?`;
   const automation = await runVictorSafeAutomation(
     {
-      dryRun,
+      dryRun: reflectionMode ? true : dryRun,
       maxActions,
       actorId: request.actorId,
       projectsDir,
@@ -189,6 +193,7 @@ export async function previewGovernedAutomationSelection(
 
   return {
     projectId,
+    mode: selected.task.status === 'in-progress' ? 'reflect' : 'advance',
     selectedTask: {
       projectId,
       phaseId: selected.phase.phaseId,
@@ -202,7 +207,7 @@ export async function previewGovernedAutomationSelection(
 }
 
 function selectGovernedAutomationTask(projectId: string, phases: BuilderConsolePhase[]) {
-  const candidates = phases.flatMap((phase) => {
+  const pendingCandidates = phases.flatMap((phase) => {
     const phaseText = `${phase.name} ${phase.objective ?? ''}`;
     const phaseScore = keywordScore(phaseText);
     return (phase.tasks ?? [])
@@ -220,8 +225,31 @@ function selectGovernedAutomationTask(projectId: string, phases: BuilderConsoleP
       .filter((candidate) => candidate.score > 0);
   });
 
-  candidates.sort((left, right) => right.score - left.score || left.task.title.localeCompare(right.task.title));
-  return candidates[0] ?? null;
+  pendingCandidates.sort((left, right) => right.score - left.score || left.task.title.localeCompare(right.task.title));
+  if (pendingCandidates[0]) {
+    return pendingCandidates[0];
+  }
+
+  const activeCandidates = phases.flatMap((phase) => {
+    const phaseText = `${phase.name} ${phase.objective ?? ''}`;
+    const phaseScore = keywordScore(phaseText);
+    return (phase.tasks ?? [])
+      .filter((task) => task.status === 'in-progress')
+      .map((task) => {
+        const taskText = `${task.title} ${task.description} ${task.acceptance.join(' ')}`;
+        const score = phaseScore + keywordScore(taskText);
+        return {
+          phase,
+          task,
+          score,
+          reason: `Selected active task "${task.title}" for grounded reflection because the governed automation queue for ${projectId} is already in progress.`,
+        };
+      })
+      .filter((candidate) => candidate.score > 0);
+  });
+
+  activeCandidates.sort((left, right) => right.score - left.score || left.task.title.localeCompare(right.task.title));
+  return activeCandidates[0] ?? null;
 }
 
 async function readPhases(projectId: string, projectsDir: string): Promise<BuilderConsolePhase[]> {
