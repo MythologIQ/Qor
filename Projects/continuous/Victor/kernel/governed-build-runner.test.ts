@@ -577,6 +577,59 @@ describe('runGovernedAutomationBuild', () => {
     expect(result.selectedTask?.taskId).toBe('task-phase-1');
     expect(result.selectedTask?.phaseId).toBe('phase-1');
   });
+
+  it('respects authored task order inside the current governed phase over later keyword-heavier tasks', async () => {
+    const projectStore = createProjectStore('builder-console', projectsDir, { enableLedger: true });
+    const pathStore = await projectStore.getViewStore('path');
+    await pathStore.write({
+      phases: [
+        {
+          phaseId: 'phase-1',
+          projectId: 'builder-console',
+          ordinal: 1,
+          name: '30m Heartbeat Dry-Run Soak Test',
+          objective: 'Run a bounded unattended 30m dry-run heartbeat against real governed work and verify safety signals before unattended execution is allowed.',
+          sourceClusterIds: ['cluster-1'],
+          tasks: [
+            {
+              taskId: 'task-soak',
+              phaseId: 'phase-1',
+              title: 'Run unattended 30m dry-run heartbeat soak',
+              description: 'Run the real unattended heartbeat loop at 30m baseline in dry-run mode with explicit tick and runtime limits.',
+              acceptance: ['Heartbeat starts cleanly, remains bounded, and emits audit-backed tick evidence without writes.'],
+              status: 'pending',
+            },
+            {
+              taskId: 'task-promotion',
+              phaseId: 'phase-1',
+              title: 'Define unattended execute-mode promotion gate',
+              description: 'Governed automation heartbeat victor builder console path promotion gate.',
+              acceptance: ['Promotion criteria are explicit, auditable, and stricter than the dry-run soak baseline.'],
+              status: 'pending',
+            },
+          ],
+          status: 'planned',
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        },
+      ],
+    });
+
+    const result = await runGovernedAutomationBuild(
+      {
+        projectsDir,
+      },
+      async () => activeTaskGroundedContext(
+        'Run unattended 30m dry-run heartbeat soak',
+        'task-soak',
+        'Heartbeat starts cleanly, remains bounded, and emits audit-backed tick evidence without writes.',
+      ),
+    );
+
+    expect(result.status).toBe('completed');
+    expect(result.selectedTask?.taskId).toBe('task-soak');
+    expect(result.selectionReason).toContain('next authored governed step');
+  });
 });
 
 function groundedContext(

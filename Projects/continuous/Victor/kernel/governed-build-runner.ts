@@ -241,20 +241,21 @@ function selectPendingGovernedAutomationTask(projectId: string, phases: BuilderC
     const phaseScore = keywordScore(phaseText);
     return (phase.tasks ?? [])
       .filter((task) => task.status === 'pending')
-      .map((task) => {
+      .map((task, taskIndex) => {
         const taskText = `${task.title} ${task.description} ${task.acceptance.join(' ')}`;
         const score = phaseScore + keywordScore(taskText);
         return {
           phase,
           task,
+          taskIndex,
           score,
-          reason: `Selected pending task "${task.title}" because it most strongly matches the governed automation objective for ${projectId}.`,
+          reason: `Selected pending task "${task.title}" as the next authored governed step for ${projectId}.`,
         };
       })
       .filter((candidate) => candidate.score > 0);
   });
 
-  pendingCandidates.sort((left, right) => right.score - left.score || left.task.title.localeCompare(right.task.title));
+  pendingCandidates.sort((left, right) => left.taskIndex - right.taskIndex || right.score - left.score || left.task.title.localeCompare(right.task.title));
   return pendingCandidates[0] ?? null;
 }
 
