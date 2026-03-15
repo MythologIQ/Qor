@@ -6,6 +6,7 @@
  */
 
 import { Hono } from 'hono';
+import { listAutomationAuditRecords } from './automation-audit';
 import { runVictorSafeAutomation } from './automation-runner';
 import { createGovernedBuilderConsoleDraftTask, updateGovernedBuilderConsoleTaskStatus } from './builder-console-write';
 import { runGovernedAutomationBuild } from './governed-build-runner';
@@ -225,6 +226,40 @@ app.post('/api/victor/automation/run', async (c) => {
     return c.json(
       {
         error: error instanceof Error ? error.message : 'Victor safe automation run failed',
+      },
+      500,
+    );
+  }
+});
+
+app.get('/api/victor/automation/audit', async (c) => {
+  try {
+    const projectId = c.req.query('projectId');
+    if (!projectId) {
+      return c.json({ error: 'Invalid request - projectId is required' }, 400);
+    }
+
+    const limitValue = c.req.query('limit');
+    const limit = limitValue ? Number.parseInt(limitValue, 10) : 50;
+    const audit = await listAutomationAuditRecords(
+      projectId,
+      c.req.query('projectsDir') ?? undefined,
+      {
+        runId: c.req.query('runId') ?? undefined,
+        limit: Number.isFinite(limit) && limit > 0 ? limit : 50,
+      },
+    );
+
+    return c.json({
+      status: 'ok',
+      projectId,
+      count: audit.length,
+      audit,
+    });
+  } catch (error) {
+    return c.json(
+      {
+        error: error instanceof Error ? error.message : 'Automation audit query failed',
       },
       500,
     );

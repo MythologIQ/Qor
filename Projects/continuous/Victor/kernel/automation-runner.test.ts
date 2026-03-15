@@ -5,6 +5,7 @@ import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'bun:test';
 
 import { createProjectStore } from '../../Zo-Qore/runtime/planning';
+import { listAutomationAuditRecords } from './automation-audit';
 import { runVictorSafeAutomation } from './automation-runner';
 import type { GroundedContextBundle } from './memory/types';
 
@@ -103,6 +104,10 @@ describe('runVictorSafeAutomation', () => {
     expect(result.mode).toBe('dry-run');
     expect(result.results[0]?.status).toBe('eligible');
     expect(result.executedCount).toBe(0);
+    const audit = await listAutomationAuditRecords('builder-console', projectsDir, { runId: result.runId });
+    expect(audit.map((entry) => entry.event)).toEqual(['run-completed', 'action', 'run-started']);
+    expect(audit[1]?.payload.resultStatus).toBe('eligible');
+    expect(audit[1]?.payload.mode).toBe('dry-run');
   });
 
   it('blocks execution when the action budget is exceeded', async () => {
@@ -135,6 +140,9 @@ describe('runVictorSafeAutomation', () => {
 
     expect(result.status).toBe('blocked');
     expect(result.results[0]?.reason).toContain('exceeds the safe automation budget');
+    const audit = await listAutomationAuditRecords('builder-console', projectsDir, { runId: result.runId });
+    expect(audit.some((entry) => entry.event === 'action')).toBe(true);
+    expect(audit.find((entry) => entry.event === 'action')?.payload.resultStatus).toBe('blocked');
   });
 
   it('blocks dry-run preview when evidence is weak', async () => {
@@ -162,6 +170,8 @@ describe('runVictorSafeAutomation', () => {
     expect(result.status).toBe('blocked');
     expect(result.results[0]?.status).toBe('blocked');
     expect(result.results[0]?.reason).toContain('evidence is incomplete');
+    const audit = await listAutomationAuditRecords('builder-console', projectsDir, { runId: result.runId });
+    expect(audit.find((entry) => entry.event === 'action')?.payload.reason).toContain('evidence is incomplete');
   });
 
   it('executes a safe status update when dryRun is false', async () => {
@@ -188,6 +198,10 @@ describe('runVictorSafeAutomation', () => {
     expect(result.mode).toBe('execute');
     expect(result.executedCount).toBe(1);
     expect(result.results[0]?.status).toBe('updated');
+    const audit = await listAutomationAuditRecords('builder-console', projectsDir, { runId: result.runId });
+    const actionEntry = audit.find((entry) => entry.event === 'action');
+    expect(actionEntry?.payload.executed).toBe(true);
+    expect(actionEntry?.payload.target).toBeObject();
   });
 });
 
