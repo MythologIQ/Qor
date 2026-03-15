@@ -45,6 +45,19 @@
         </select>
         <button class="btn btn-primary" onclick="addTask()">Add Task</button>
       </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <h1 class="card-title">Build Progress</h1>
+            <div id="build-progress-project" class="text-muted"></div>
+          </div>
+          <button class="btn btn-secondary" type="button" onclick="loadBuildProgress()">Refresh</button>
+        </div>
+        <div id="build-progress-panel" class="loading">
+          <div class="spinner" aria-hidden="true"></div>
+        </div>
+      </div>
       
       <div class="card">
         <div class="card-header">
@@ -56,20 +69,17 @@
     </div>
   </div>
 
+  <script src="planning-client.js"></script>
   <script src="victor-app.js"></script>
   <script>
-    const auth = sessionStorage.getItem('victor-auth');
-    if (auth === 'authenticated') {
-      document.getElementById('login-screen').style.display = 'none';
-      document.getElementById('app-container').style.display = 'block';
-      loadTasks();
-    } else {
-      document.getElementById('login-screen').style.display = 'flex';
-      document.getElementById('app-container').style.display = 'none';
-    }
-    
-    document.getElementById('password-input').addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') authenticate();
+    document.getElementById('password-input').addEventListener('keydown', async (e) => {
+      if (e.key === 'Enter') {
+        const ok = await authenticate();
+        if (ok) {
+          loadTasks();
+          loadBuildProgress();
+        }
+      }
     });
     
     document.getElementById('new-task-text').addEventListener('keydown', (e) => {
@@ -107,6 +117,103 @@
       `).join('');
       
       document.getElementById('task-list').innerHTML = html;
+    }
+
+    function getProjectId() {
+      const params = new URLSearchParams(window.location.search);
+      return params.get('project') || 'builder-console';
+    }
+
+    async function loadBuildProgress() {
+      const panel = document.getElementById('build-progress-panel');
+      const projectLabel = document.getElementById('build-progress-project');
+      const projectId = getProjectId();
+      projectLabel.textContent = `Project: ${projectId}`;
+      panel.innerHTML = '<div class="loading"><div class="spinner" aria-hidden="true"></div></div>';
+
+      try {
+        const summary = await PlanningClient.getBuildProgress(projectId, { hours: 72, limit: 8 });
+        panel.innerHTML = renderBuildProgress(summary);
+      } catch (error) {
+        panel.innerHTML = `<div class="empty-state error">Failed to load build progress: ${escapeHtml(error.message || 'Unknown error')}</div>`;
+      }
+    }
+
+    function renderBuildProgress(summary) {
+      const taskCounts = summary.taskCounts || {};
+      const recent = Array.isArray(summary.recentTaskActivity) ? summary.recentTaskActivity : [];
+      const blockers = Array.isArray(summary.deliveryBlockers) ? summary.deliveryBlockers : [];
+
+      const statCards = `
+        <div class="grid grid-4">
+          <div class="card stat-card">
+            <div class="stat-value">${taskCounts.total || 0}</div>
+            <div class="stat-label">Total tasks</div>
+          </div>
+          <div class="card stat-card">
+            <div class="stat-value">${taskCounts.inProgress || 0}</div>
+            <div class="stat-label">In progress</div>
+          </div>
+          <div class="card stat-card">
+            <div class="stat-value">${taskCounts.done || 0}</div>
+            <div class="stat-label">Completed</div>
+          </div>
+          <div class="card stat-card">
+            <div class="stat-value">${blockers.length}</div>
+            <div class="stat-label">Delivery blockers</div>
+          </div>
+        </div>
+      `;
+
+      const activityHtml = recent.length
+        ? recent.map((entry) => {
+            const statusClass =
+              entry.kind === 'blocked-attempt' ? 'badge-error' :
+              entry.kind === 'created' ? 'badge-info' :
+              'badge-success';
+            const phaseLabel = entry.phaseId ? ` · ${escapeHtml(entry.phaseId)}` : '';
+            const transition = entry.previousStatus || entry.nextStatus
+              ? `<div class="task-meta">${escapeHtml(entry.previousStatus || 'none')} → ${escapeHtml(entry.nextStatus || 'n/a')}</div>`
+              : '';
+            return `
+              <div class="task-item">
+                <div class="task-content">
+                  <div class="task-text">${escapeHtml(entry.title)}</div>
+                  <div class="task-meta">${escapeHtml(formatTimestamp(entry.timestamp))}${phaseLabel}</div>
+                  ${transition}
+                  <div class="task-description">${escapeHtml(entry.reason || '')}</div>
+                </div>
+                <span class="badge ${statusClass}">${escapeHtml(entry.kind)}</span>
+              </div>
+            `;
+          }).join('')
+        : '<div class="empty-state">No recent build activity in the selected window.</div>';
+
+      const blockerHtml = blockers.length
+        ? `<div style="margin-top:16px;">
+            <div class="text-muted" style="margin-bottom:8px;">Current delivery blockers</div>
+            ${blockers.map((reason) => `<div class="task-item"><div class="task-content"><div class="task-description">${escapeHtml(reason)}</div></div></div>`).join('')}
+          </div>`
+        : '';
+
+      return `
+        ${statCards}
+        <div style="margin-top: 16px;">
+          <div class="card-header" style="padding-top: 4px;">
+            <h2 class="card-title" style="font-size: 15px;">Recent build activity</h2>
+            <span class="text-muted">${summary.activePhaseCount || 0} active phases</span>
+          </div>
+          ${activityHtml}
+        </div>
+        ${blockerHtml}
+      `;
+    }
+
+    function formatTimestamp(value) {
+      if (!value) return 'Unknown time';
+      const parsed = new Date(value);
+      if (Number.isNaN(parsed.getTime())) return value;
+      return parsed.toLocaleString();
     }
     
     function addTask() {
@@ -151,6 +258,14 @@
       div.textContent = text || '';
       return div.innerHTML;
     }
+
+    (async () => {
+      const ok = await VictorApp.checkAuth();
+      if (ok) {
+        loadTasks();
+        loadBuildProgress();
+      }
+    })();
   </script>
 </body>
 </html>

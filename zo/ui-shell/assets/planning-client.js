@@ -76,6 +76,16 @@
       });
     },
 
+    getBuildProgress: function(projectId, options) {
+      projectId = projectId || this.getCurrentProjectId();
+      var params = new URLSearchParams();
+      params.set('projectId', projectId);
+      if (options && options.hours) params.set('hours', String(options.hours));
+      if (options && options.limit) params.set('limit', String(options.limit));
+      return this._fetch('/api/victor/build/progress?' + params.toString())
+        .then(function(data) { return data.summary; });
+    },
+
     // ========== VOID - Thoughts ==========
     getThoughts: function(projectId) {
       projectId = projectId || this.getCurrentProjectId();
