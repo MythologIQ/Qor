@@ -1,0 +1,23 @@
+{
+  "name": "victor-kernel",
+  "version": "1.0.0",
+  "description": "Victor - Deterministic Virtual Collaborator with Agent OS Foundation",
+  "author": "MythologIQ <frostwulf.zo.computer>",
+  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "dev": "bun run server.ts",
+    "build": "bun build ./server.ts --outdir ./dist --target bun",
+    "test": "bun test",
+    "typecheck": "tsc --noEmit",
+    "start": "bun run server.ts"
+  },
+  "dependencies": {
+    "hono": "^4.0.0",
+    "neo4j-driver": "^6.0.1"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "typescript": "^5.9.2"
+  }
+}
