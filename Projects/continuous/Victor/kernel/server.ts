@@ -6,6 +6,7 @@
  */
 
 import { Hono } from 'hono';
+import { runVictorSafeAutomation } from './automation-runner';
 import { createGovernedBuilderConsoleDraftTask, updateGovernedBuilderConsoleTaskStatus } from './builder-console-write';
 import { victorKernel } from './victor-kernel';
 import { VictorKernelUnified } from './victor-kernel-unified';
@@ -184,6 +185,43 @@ app.post('/api/victor/builder-console/tasks/status', async (c) => {
     return c.json(
       {
         error: error instanceof Error ? error.message : 'Builder Console task status update failed',
+      },
+      500,
+    );
+  }
+});
+
+app.post('/api/victor/automation/run', async (c) => {
+  try {
+    const request = await c.req.json();
+    if (!Array.isArray(request.actions) || request.actions.length === 0) {
+      return c.json({ error: 'Invalid request - actions array is required' }, 400);
+    }
+
+    const kernel = await getMemoryKernel();
+    const result = await runVictorSafeAutomation(
+      {
+        actions: request.actions,
+        actorId: request.actorId,
+        projectsDir: request.projectsDir,
+        dryRun: request.dryRun,
+        maxActions: request.maxActions,
+        stopOnBlock: request.stopOnBlock,
+      },
+      async (projectId, query) => kernel.groundedQuery(projectId, query),
+    );
+
+    const status =
+      result.status === 'completed'
+        ? result.mode === 'dry-run'
+          ? 200
+          : 201
+        : 422;
+    return c.json(result, status);
+  } catch (error) {
+    return c.json(
+      {
+        error: error instanceof Error ? error.message : 'Victor safe automation run failed',
       },
       500,
     );
