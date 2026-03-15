@@ -55,13 +55,19 @@ The memory kernel is still read-oriented. It ingests workspace artifacts, derive
 cd kernel
 docker compose -f docker-compose.neo4j.yml up -d
 
-export NEO4J_URI=neo4j://127.0.0.1:7687
+export NEO4J_URI=bolt://127.0.0.1:7687
 export NEO4J_USERNAME=neo4j
 export NEO4J_PASSWORD=victor-memory-dev
 export NEO4J_DATABASE=neo4j
 
-# Optional: enable vector retrieval
+# Default: local vector retrieval
+export EMBEDDING_PROVIDER=local-transformers
+export LOCAL_EMBEDDING_MODEL=Xenova/all-MiniLM-L6-v2
+export LOCAL_EMBEDDING_DIMENSIONS=384
+
+# Optional: switch to an OpenAI-compatible embedding endpoint instead
 export OPENAI_API_KEY=...
+export EMBEDDING_PROVIDER=openai-compatible
 export OPENAI_BASE_URL=https://api.openai.com/v1
 export OPENAI_EMBEDDING_MODEL=text-embedding-3-small
 export OPENAI_EMBEDDING_DIMENSIONS=1536
@@ -86,6 +92,9 @@ bun install
 
 # Run locally once Neo4j env vars are exported
 bun run dev
+
+# Ingest the real Victor project scope
+bun run ingest:victor-scope
 
 # Or build and run
 bun run build

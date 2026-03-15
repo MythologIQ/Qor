@@ -9,7 +9,7 @@ describe('loadNeo4jConfig', () => {
     });
 
     expect(config).toEqual({
-      uri: 'neo4j://127.0.0.1:7687',
+      uri: 'bolt://127.0.0.1:7687',
       username: 'neo4j',
       password: 'secret',
       database: 'neo4j',
@@ -40,8 +40,13 @@ describe('loadNeo4jConfig', () => {
 });
 
 describe('loadEmbeddingConfig', () => {
-  it('returns null when no embedding provider is configured', () => {
-    expect(loadEmbeddingConfig({})).toBeNull();
+  it('defaults to a local transformers embedding config when no provider is configured', () => {
+    expect(loadEmbeddingConfig({})).toEqual({
+      provider: 'local-transformers',
+      model: 'Xenova/all-MiniLM-L6-v2',
+      dimensions: 384,
+      cacheDir: undefined,
+    });
   });
 
   it('loads OpenAI-compatible embedding config', () => {
@@ -51,6 +56,7 @@ describe('loadEmbeddingConfig', () => {
         OPENAI_BASE_URL: 'https://example.com/v1',
         OPENAI_EMBEDDING_MODEL: 'embed-small',
         OPENAI_EMBEDDING_DIMENSIONS: '768',
+        EMBEDDING_PROVIDER: 'openai-compatible',
       }),
     ).toEqual({
       provider: 'openai-compatible',
@@ -58,6 +64,22 @@ describe('loadEmbeddingConfig', () => {
       apiKey: 'secret',
       model: 'embed-small',
       dimensions: 768,
+    });
+  });
+
+  it('loads a local transformers embedding config explicitly', () => {
+    expect(
+      loadEmbeddingConfig({
+        EMBEDDING_PROVIDER: 'local-transformers',
+        LOCAL_EMBEDDING_MODEL: 'Xenova/bge-small-en-v1.5',
+        LOCAL_EMBEDDING_DIMENSIONS: '384',
+        LOCAL_EMBEDDING_CACHE_DIR: '/tmp/victor-embeddings',
+      }),
+    ).toEqual({
+      provider: 'local-transformers',
+      model: 'Xenova/bge-small-en-v1.5',
+      dimensions: 384,
+      cacheDir: '/tmp/victor-embeddings',
     });
   });
 });

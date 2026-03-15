@@ -33,13 +33,13 @@ export class VictorKernelUnified {
   private substantiateFlow: SubstantiateLearningFlow;
   private auditGateFlow: AuditGateFlow;
   private svgOverlay: SVGLearningOverlay;
-  private embeddingProvider: EmbeddingProvider | null;
+  private embeddingProvider: EmbeddingProvider;
   
   constructor() {
     const embeddingConfig = loadEmbeddingConfig();
-    this.embeddingProvider = embeddingConfig ? createEmbeddingProvider(embeddingConfig) : null;
+    this.embeddingProvider = createEmbeddingProvider(embeddingConfig);
     const neo4jConfig = loadNeo4jConfig();
-    neo4jConfig.vectorDimensions = this.embeddingProvider?.dimensions ?? neo4jConfig.vectorDimensions;
+    neo4jConfig.vectorDimensions = this.embeddingProvider.dimensions;
     this.knowledgeGraph = new Neo4jLearningStore(neo4jConfig);
     
     // Initialize flows
@@ -71,13 +71,11 @@ export class VictorKernelUnified {
       },
       snapshot,
     );
-    if (this.embeddingProvider) {
-      const embeddings = await this.embeddingProvider.embedMany(plan.chunks.map((chunk) => chunk.text));
-      plan.chunks = plan.chunks.map((chunk, index) => ({
-        ...chunk,
-        embedding: embeddings[index],
-      }));
-    }
+    const embeddings = await this.embeddingProvider.embedMany(plan.chunks.map((chunk) => chunk.text));
+    plan.chunks = plan.chunks.map((chunk, index) => ({
+      ...chunk,
+      embedding: embeddings[index],
+    }));
 
     return applyIngestionPlan(plan, this.knowledgeGraph);
   }
@@ -87,9 +85,7 @@ export class VictorKernelUnified {
       this.knowledgeGraph,
       projectId,
       query,
-      this.embeddingProvider
-        ? { embedQuery: (value) => this.embeddingProvider!.embed(value) }
-        : undefined,
+      { embedQuery: (value) => this.embeddingProvider.embed(value) },
     );
   }
   

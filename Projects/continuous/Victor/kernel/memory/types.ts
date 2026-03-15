@@ -6,13 +6,24 @@ export interface Neo4jConfig {
   vectorDimensions?: number;
 }
 
-export interface EmbeddingConfig {
+export interface OpenAICompatibleEmbeddingConfig {
   provider: 'openai-compatible';
   baseUrl: string;
   apiKey: string;
   model: string;
   dimensions: number;
 }
+
+export interface LocalTransformersEmbeddingConfig {
+  provider: 'local-transformers';
+  model: string;
+  dimensions: number;
+  cacheDir?: string;
+}
+
+export type EmbeddingConfig =
+  | OpenAICompatibleEmbeddingConfig
+  | LocalTransformersEmbeddingConfig;
 
 export interface LearningQuery {
   origin_phase?: string;

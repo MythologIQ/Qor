@@ -100,7 +100,7 @@ app.post('/api/victor/memory/query', async (c) => {
 
     return c.json({
       status: 'ok',
-      ...result,
+      ...serializeGroundedContext(result),
     });
   } catch (error) {
     return c.json(
@@ -111,6 +111,19 @@ app.post('/api/victor/memory/query', async (c) => {
     );
   }
 });
+
+function serializeGroundedContext(result: Awaited<ReturnType<VictorKernelUnified['groundedQuery']>>) {
+  return {
+    ...result,
+    chunkHits: result.chunkHits.map((hit) => ({
+      ...hit,
+      chunk: {
+        ...hit.chunk,
+        embedding: undefined,
+      },
+    })),
+  };
+}
 
 // Victor API endpoints
 app.post('/api/victor/process', async (c) => {

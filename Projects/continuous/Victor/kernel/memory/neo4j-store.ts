@@ -32,11 +32,8 @@ export const SCHEMA_STATEMENTS = [
   'CREATE INDEX semantic_node_type IF NOT EXISTS FOR (node:SemanticNode) ON (node.nodeType)',
 ];
 
-function buildSchemaStatements(vectorDimensions: number): string[] {
-  return [
-    ...SCHEMA_STATEMENTS,
-    `CREATE VECTOR INDEX source_chunk_embedding IF NOT EXISTS FOR (chunk:SourceChunk) ON chunk.embedding OPTIONS { indexConfig: { \`vector.dimensions\`: ${vectorDimensions}, \`vector.similarity_function\`: 'cosine' } }`,
-  ];
+function buildSchemaStatements(): string[] {
+  return [...SCHEMA_STATEMENTS];
 }
 
 export class Neo4jLearningStore implements LearningStore {
@@ -52,9 +49,11 @@ export class Neo4jLearningStore implements LearningStore {
 
     await this.driver.verifyConnectivity();
 
-    for (const statement of buildSchemaStatements(this.config.vectorDimensions || 1536)) {
+    for (const statement of buildSchemaStatements()) {
       await this.executeWrite(statement);
     }
+
+    await this.ensureVectorIndex(this.config.vectorDimensions || 1536);
   }
 
   async close(): Promise<void> {
@@ -746,6 +745,62 @@ export class Neo4jLearningStore implements LearningStore {
     } finally {
       await session.close();
     }
+  }
+
+  private async ensureVectorIndex(expectedDimensions: number): Promise<void> {
+    const session = this.getSession();
+
+    try {
+      const result = await session.executeRead((tx) =>
+        tx.run(
+          `
+            SHOW INDEXES
+            YIELD name, type, options
+            WHERE name = 'source_chunk_embedding'
+            RETURN name, type, options
+          `,
+        ),
+      );
+
+      const existing = result.records[0];
+      const existingDimensions = existing
+        ? this.readVectorDimensions(existing.get('options'))
+        : null;
+
+      if (existing && existingDimensions !== expectedDimensions) {
+        await session.executeWrite((tx) => tx.run('DROP INDEX source_chunk_embedding IF EXISTS'));
+      }
+
+      if (!existing || existingDimensions !== expectedDimensions) {
+        await session.executeWrite((tx) =>
+          tx.run(
+            `
+              CREATE VECTOR INDEX source_chunk_embedding IF NOT EXISTS
+              FOR (chunk:SourceChunk)
+              ON chunk.embedding
+              OPTIONS { indexConfig: { \`vector.dimensions\`: ${expectedDimensions}, \`vector.similarity_function\`: 'cosine' } }
+            `,
+          ),
+        );
+      }
+    } finally {
+      await session.close();
+    }
+  }
+
+  private readVectorDimensions(options: unknown): number | null {
+    if (!options || typeof options !== 'object') {
+      return null;
+    }
+
+    const map = options as Record<string, unknown>;
+    const indexConfig = map.indexConfig;
+    if (!indexConfig || typeof indexConfig !== 'object') {
+      return null;
+    }
+
+    const dims = (indexConfig as Record<string, unknown>)['vector.dimensions'];
+    return dims === undefined ? null : toNumber(dims);
   }
 
   private getSession(): Session {
