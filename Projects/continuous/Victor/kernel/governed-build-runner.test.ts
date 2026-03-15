@@ -201,9 +201,62 @@ describe('runGovernedAutomationBuild', () => {
     expect(result.selectionReason).toContain('grounded reflection');
     expect(result.automation.results[0]?.reason).toContain('reflective review');
   });
+
+  it('creates a governed draft task from active-task reflection when the next action is concrete', async () => {
+    const projectStore = createProjectStore('builder-console', projectsDir, { enableLedger: true });
+    const pathStore = await projectStore.getViewStore('path');
+    await pathStore.write({
+      phases: [
+        {
+          phaseId: 'phase-1',
+          projectId: 'builder-console',
+          ordinal: 1,
+          name: 'Comms Tab Prompt Automation',
+          objective: 'Advance governed automation in the comms tab.',
+          sourceClusterIds: ['cluster-1'],
+          tasks: [
+            {
+              taskId: 'task-1',
+              phaseId: 'phase-1',
+              title: 'Automate comms-tab prompt construction',
+              description: 'Make the prompt pipeline governed and observable.',
+              acceptance: ['Result is ready for Victor-mediated automation under governance.'],
+              status: 'in-progress',
+            },
+          ],
+          status: 'active',
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        },
+      ],
+    });
+
+    const result = await runGovernedAutomationBuild(
+      {
+        projectsDir,
+        dryRun: false,
+        maxActions: 1,
+      },
+      async () => groundedContext('in-progress', ['Start implementation with prompt-construction operations telemetry wiring.']),
+    );
+
+    expect(result.status).toBe('completed');
+    expect(result.mode).toBe('execute');
+    expect(result.selectionReason).toContain('follow-on draft task');
+    expect(result.automation.executedCount).toBe(1);
+    expect(result.automation.results[0]?.kind).toBe('create-draft-task');
+    expect(result.automation.results[0]?.status).toBe('created');
+
+    const updated = await pathStore.read<{ phases?: Array<{ tasks?: Array<{ title?: string }> }> }>();
+    expect(updated?.phases?.[0]?.tasks).toHaveLength(2);
+    expect(updated?.phases?.[0]?.tasks?.some((task) => task.title === 'Prompt-construction operations telemetry wiring')).toBe(true);
+  });
 });
 
-function groundedContext(status: 'pending' | 'in-progress' = 'pending'): GroundedContextBundle {
+function groundedContext(
+  status: 'pending' | 'in-progress' = 'pending',
+  recommendedNextActions: string[] = ['Advance the governed automation task into active execution.'],
+): GroundedContextBundle {
   return {
     query: 'What should happen next with the governed automation task?',
     chunkHits: [
@@ -249,7 +302,7 @@ function groundedContext(status: 'pending' | 'in-progress' = 'pending'): Grounde
     semanticEdges: [],
     cacheEntries: [],
     contradictions: [],
-    recommendedNextActions: ['Advance the governed automation task into active execution.'],
+    recommendedNextActions,
     missingInformation: [],
   };
 }
