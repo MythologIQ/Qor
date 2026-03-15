@@ -15,6 +15,7 @@ import {
   type HeartbeatRequest,
 } from './heartbeat';
 import type { GroundedContextBundle } from './memory/types';
+import { listSystemReflections } from './system-reflection';
 
 describe('heartbeat foundation', () => {
   let projectsDir: string;
@@ -255,12 +256,11 @@ describe('heartbeat foundation', () => {
     expect(tick.state.focusWindow.status).toBe('cooldown');
     expect(tick.state.focusWindow.cooldownCyclesRemaining).toBe(1);
     expect(tick.reflectiveNote?.status).toBe('updated');
-    expect(tick.reflectiveNote?.clusterId).toBe('cluster-1');
+    expect(tick.reflectiveNote?.entryId).toBeString();
 
-    const revealPath = join(projectsDir, 'builder-console', 'reveal', 'clusters.json');
-    const reveal = JSON.parse(await readFile(revealPath, 'utf8'));
-    expect(reveal.clusters[0].notes).toContain('Victor Cooldown Reflection');
-    expect(reveal.clusters[0].notes).toContain('Automate comms-tab prompt construction');
+    const reflections = await listSystemReflections(stateDir);
+    expect(reflections[0]?.content).toContain('Victor Cooldown Reflection');
+    expect(reflections[0]?.content).toContain('Automate comms-tab prompt construction');
   });
 
   it('stops the heartbeat cleanly', async () => {
@@ -297,6 +297,7 @@ function baseRequest(projectsDir: string, stateDir: string) {
     maxActionsPerTick: 1,
     maxConsecutiveBlocked: 2,
     maxConsecutiveFailures: 2,
+    reflectionDir: stateDir,
   };
 }
 

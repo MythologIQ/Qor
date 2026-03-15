@@ -19,6 +19,7 @@ import {
   type HeartbeatContract,
   type HeartbeatRequest,
 } from './heartbeat';
+import { listSystemReflections } from './system-reflection';
 import { victorKernel } from './victor-kernel';
 import { VictorKernelUnified } from './victor-kernel-unified';
 import { createWorkspaceGroundedQuery } from './workspace-grounded-query';
@@ -350,6 +351,32 @@ app.get('/api/victor/build/progress', async (c) => {
     return c.json(
       {
         error: error instanceof Error ? error.message : 'Build progress summary failed',
+      },
+      500,
+    );
+  }
+});
+
+app.get('/api/victor/reflections', async (c) => {
+  try {
+    const limitValue = c.req.query('limit');
+    const limit = limitValue ? Number.parseInt(limitValue, 10) : 20;
+    const reflections = await listSystemReflections(
+      c.req.query('reflectionDir') ?? undefined,
+      {
+        limit: Number.isFinite(limit) && limit > 0 ? limit : 20,
+      },
+    );
+
+    return c.json({
+      status: 'ok',
+      count: reflections.length,
+      reflections,
+    });
+  } catch (error) {
+    return c.json(
+      {
+        error: error instanceof Error ? error.message : 'System reflection query failed',
       },
       500,
     );

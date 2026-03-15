@@ -9,13 +9,13 @@ import {
   createProjectStore,
   createStoreIntegrity,
 } from '../../Zo-Qore/runtime/planning';
-import { appendGovernedBuilderConsolePlanningNote } from './builder-console-write';
 import {
   previewGovernedAutomationSelection,
   runGovernedAutomationBuild,
   type GovernedBuildResult,
 } from './governed-build-runner';
 import type { GroundedContextBundle } from './memory/types';
+import { appendSystemReflection, resolveReflectionDir } from './system-reflection';
 
 const DEFAULT_BUILDER_REPO_ROOT = '/home/workspace/Projects/continuous/Zo-Qore';
 const DEFAULT_PROJECTS_DIR = `${DEFAULT_BUILDER_REPO_ROOT}/.qore/projects`;
@@ -72,6 +72,7 @@ export interface HeartbeatRequest {
   maxConsecutiveBlocked?: number;
   maxConsecutiveFailures?: number;
   stateDir?: string;
+  reflectionDir?: string;
   workClass?: HeartbeatWorkClass;
   focusWindowMode?: 'manual' | 'auto' | 'none';
   focusWindowReason?: string;
@@ -92,6 +93,7 @@ export interface HeartbeatContract {
   maxConsecutiveBlocked: number;
   maxConsecutiveFailures: number;
   stateDir: string;
+  reflectionDir: string;
   workClass: HeartbeatWorkClass;
   requestedCadenceMs: number | null;
   supervisedCadenceOverrideMs: number | null;
@@ -167,7 +169,7 @@ export interface HeartbeatTickResult {
   automation?: GovernedBuildResult;
   reflectiveNote?: {
     status: 'updated' | 'blocked';
-    clusterId?: string;
+    entryId?: string;
     reason: string;
   };
   reason: string;
@@ -643,6 +645,7 @@ function resolveHeartbeatContract(request: HeartbeatRequest): HeartbeatContract 
     maxConsecutiveBlocked: normalizePositiveInt(request.maxConsecutiveBlocked, 3),
     maxConsecutiveFailures: normalizePositiveInt(request.maxConsecutiveFailures, 2),
     stateDir: request.stateDir?.trim() || process.env.VICTOR_HEARTBEAT_STATE_DIR?.trim() || DEFAULT_STATE_DIR,
+    reflectionDir: resolveReflectionDir(request.reflectionDir || request.stateDir),
     workClass: request.workClass === 'narrow-execution' ? 'narrow-execution' : 'coordination-review',
     requestedCadenceMs,
     supervisedCadenceOverrideMs,
@@ -891,23 +894,25 @@ async function maybeAppendCooldownReflectionNote(
     return null;
   }
 
-  const result = await appendGovernedBuilderConsolePlanningNote(
+  const result = await appendSystemReflection(
     {
-      projectId: contract.projectId,
-      phaseId: automation.selectedTask.phaseId,
-      taskId: automation.selectedTask.taskId,
-      query: actionResult.groundedContext.query,
-      content: buildCooldownReflectionNote(contract, automation),
+      reflectionDir: contract.reflectionDir,
       actorId: contract.actorId,
-      projectsDir: contract.projectsDir,
+      projectId: contract.projectId,
+      runId: state.runId,
+      taskId: automation.selectedTask.taskId,
+      taskTitle: automation.selectedTask.title,
+      mode: contract.mode,
+      cadenceMode: state.cadenceMode,
+      reason: actionResult.reason ?? automation.selectionReason,
+      content: buildCooldownReflectionNote(contract, automation),
     },
-    actionResult.groundedContext,
   );
 
   return {
-    status: result.status,
-    clusterId: result.clusterId,
-    reason: result.reason,
+    status: 'updated' as const,
+    entryId: result.entryId,
+    reason: `Victor appended a system reflection entry in ${contract.reflectionDir}.`,
   };
 }
 
