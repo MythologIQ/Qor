@@ -5,7 +5,7 @@ import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'bun:test';
 
 import { createProjectStore } from '../../Zo-Qore/runtime/planning';
-import { createGovernedBuilderConsoleDraftTask } from './builder-console-write';
+import { createGovernedBuilderConsoleDraftTask, updateGovernedBuilderConsoleTaskStatus } from './builder-console-write';
 import type { GroundedContextBundle } from './memory/types';
 
 describe('createGovernedBuilderConsoleDraftTask', () => {
@@ -213,7 +213,233 @@ describe('createGovernedBuilderConsoleDraftTask', () => {
   });
 });
 
+describe('updateGovernedBuilderConsoleTaskStatus', () => {
+  let projectsDir: string;
+
+  beforeEach(async () => {
+    projectsDir = await mkdtemp(join(tmpdir(), 'victor-builder-status-'));
+    const projectStore = createProjectStore('builder-console', projectsDir, { enableLedger: true });
+    await projectStore.create({
+      name: 'Builder Console',
+      description: 'Governed task status fixture',
+      createdBy: 'tester',
+    });
+
+    const revealStore = await projectStore.getViewStore('reveal');
+    await revealStore.write({
+      clusters: [
+        {
+          clusterId: 'cluster-1',
+          projectId: 'builder-console',
+          label: 'Operational Memory',
+          thoughtIds: [],
+          notes: 'Grounded planning cluster',
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+          status: 'formed',
+        },
+      ],
+    });
+
+    const constellationStore = await projectStore.getViewStore('constellation');
+    await constellationStore.write({
+      constellationId: 'const-1',
+      projectId: 'builder-console',
+      nodes: [{ nodeId: 'node-1', clusterId: 'cluster-1', position: { x: 0, y: 0 } }],
+      edges: [],
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      status: 'mapped',
+    });
+
+    const pathStore = await projectStore.getViewStore('path');
+    await pathStore.write({
+      phases: [
+        {
+          phaseId: 'phase-1',
+          projectId: 'builder-console',
+          ordinal: 1,
+          name: 'Execution',
+          objective: 'Execute grounded work',
+          sourceClusterIds: ['cluster-1'],
+          tasks: [
+            {
+              taskId: 'task-1',
+              phaseId: 'phase-1',
+              title: 'Automate comms-tab prompt construction',
+              description: 'Reduce the comms tab to standard chat IO plus prompt-build visibility.',
+              acceptance: ['Prompt construction is visible in operations display'],
+              status: 'pending',
+            },
+          ],
+          status: 'planned',
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        },
+      ],
+    });
+  });
+
+  afterEach(async () => {
+    await rm(projectsDir, { recursive: true, force: true });
+  });
+
+  it('updates a governed task status when grounded evidence is complete', async () => {
+    const result = await updateGovernedBuilderConsoleTaskStatus(
+      {
+        projectsDir,
+        projectId: 'builder-console',
+        phaseId: 'phase-1',
+        taskId: 'task-1',
+        status: 'in-progress',
+        query: 'What should happen next with the comms-tab prompt automation task?',
+      },
+      groundedContext(),
+    );
+
+    expect(result.status).toBe('updated');
+    expect(result.classification).toBe('low-risk');
+    expect(result.previousStatus).toBe('pending');
+    expect(result.task?.status).toBe('in-progress');
+    expect(result.ledgerEntryId).toBeString();
+  });
+
+  it('blocks task status updates when the grounded context is incomplete', async () => {
+    const result = await updateGovernedBuilderConsoleTaskStatus(
+      {
+        projectsDir,
+        projectId: 'builder-console',
+        phaseId: 'phase-1',
+        taskId: 'task-1',
+        status: 'done',
+        query: 'Can Victor mark the comms task as complete?',
+      },
+      {
+        ...groundedContext(),
+        missingInformation: ['No completion evidence was found in the retrieved context.'],
+      },
+    );
+
+    expect(result.status).toBe('blocked');
+    expect(result.reason).toContain('evidence is incomplete');
+  });
+
+  it('blocks task status updates when the target phase does not exist', async () => {
+    const result = await updateGovernedBuilderConsoleTaskStatus(
+      {
+        projectsDir,
+        projectId: 'builder-console',
+        phaseId: 'phase-missing',
+        taskId: 'task-1',
+        status: 'in-progress',
+        query: 'What should happen next with the comms-tab prompt automation task?',
+      },
+      groundedContext(),
+    );
+
+    expect(result.status).toBe('blocked');
+    expect(result.reason).toContain('target phase was not found');
+  });
+
+  it('blocks task status updates when the target task does not exist', async () => {
+    const result = await updateGovernedBuilderConsoleTaskStatus(
+      {
+        projectsDir,
+        projectId: 'builder-console',
+        phaseId: 'phase-1',
+        taskId: 'task-missing',
+        status: 'in-progress',
+        query: 'What should happen next with the comms-tab prompt automation task?',
+      },
+      groundedContextForTask('task-missing'),
+    );
+
+    expect(result.status).toBe('blocked');
+    expect(result.reason).toContain('target task was not found');
+  });
+
+  it('blocks task status updates when grounded evidence contains contradictions', async () => {
+    const result = await updateGovernedBuilderConsoleTaskStatus(
+      {
+        projectsDir,
+        projectId: 'builder-console',
+        phaseId: 'phase-1',
+        taskId: 'task-1',
+        status: 'blocked',
+        query: 'Is the comms task blocked?',
+      },
+      {
+        ...groundedContext(),
+        contradictions: [
+          {
+            key: 'Task:task-1:status',
+            nodeIds: ['task-1', 'task-1b'],
+            summaries: ['Task is ready for execution', 'Task is blocked on missing UI state'],
+          },
+        ],
+      },
+    );
+
+    expect(result.status).toBe('blocked');
+    expect(result.reason).toContain('contains contradictions');
+  });
+
+  it('blocks task status updates when no grounded task matches the target task', async () => {
+    const result = await updateGovernedBuilderConsoleTaskStatus(
+      {
+        projectsDir,
+        projectId: 'builder-console',
+        phaseId: 'phase-1',
+        taskId: 'task-1',
+        status: 'done',
+        query: 'Can Victor mark the comms task as complete?',
+      },
+      {
+        ...groundedContext(),
+        semanticNodes: groundedContext().semanticNodes.filter((node) => node.nodeType !== 'Task'),
+      },
+    );
+
+    expect(result.status).toBe('blocked');
+    expect(result.reason).toContain('no grounded task evidence matched');
+  });
+
+  it('blocks task status updates when Builder Console governance denies the write', async () => {
+    const projectStore = createProjectStore('builder-console', projectsDir, { enableLedger: true });
+    const constellationStore = await projectStore.getViewStore('constellation');
+    await constellationStore.write({
+      constellationId: 'const-1',
+      projectId: 'builder-console',
+      nodes: [{ nodeId: 'node-1', clusterId: 'missing-cluster', position: { x: 0, y: 0 } }],
+      edges: [],
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      status: 'mapped',
+    });
+
+    const result = await updateGovernedBuilderConsoleTaskStatus(
+      {
+        projectsDir,
+        projectId: 'builder-console',
+        phaseId: 'phase-1',
+        taskId: 'task-1',
+        status: 'in-progress',
+        query: 'What should happen next with the comms-tab prompt automation task?',
+      },
+      groundedContext(),
+    );
+
+    expect(result.status).toBe('blocked');
+    expect(result.governance?.allowed).toBe(false);
+    expect(result.reason).toContain('PL-POL-07');
+  });
+});
+
 function groundedContext(): GroundedContextBundle {
+  return groundedContextForTask('task-1');
+}
+
+function groundedContextForTask(taskId: string): GroundedContextBundle {
   return {
     query: 'What comms tab prompt automation task exists in Builder Console?',
     chunkHits: [
@@ -244,15 +470,15 @@ function groundedContext(): GroundedContextBundle {
         state: 'active',
       },
       {
-        id: 'task-1',
+        id: taskId,
         documentId: 'doc-1',
         sourceChunkId: 'chunk-1',
         nodeType: 'Task',
         label: 'Automate comms-tab prompt construction',
         summary: 'Automate comms-tab prompt construction',
-        fingerprint: 'task-1',
+        fingerprint: taskId,
         span: { startLine: 2, endLine: 2, startOffset: 41, endOffset: 80 },
-        attributes: { status: 'pending' },
+        attributes: { status: 'pending', taskId },
         state: 'active',
       },
     ],

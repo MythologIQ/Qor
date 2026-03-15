@@ -6,7 +6,7 @@
  */
 
 import { Hono } from 'hono';
-import { createGovernedBuilderConsoleDraftTask } from './builder-console-write';
+import { createGovernedBuilderConsoleDraftTask, updateGovernedBuilderConsoleTaskStatus } from './builder-console-write';
 import { victorKernel } from './victor-kernel';
 import { VictorKernelUnified } from './victor-kernel-unified';
 
@@ -146,6 +146,44 @@ app.post('/api/victor/builder-console/tasks/draft', async (c) => {
     return c.json(
       {
         error: error instanceof Error ? error.message : 'Builder Console draft task creation failed',
+      },
+      500,
+    );
+  }
+});
+
+app.post('/api/victor/builder-console/tasks/status', async (c) => {
+  try {
+    const request = await c.req.json();
+    if (!request.projectId || !request.phaseId || !request.taskId || !request.status || !request.query) {
+      return c.json({ error: 'Invalid request - missing projectId, phaseId, taskId, status, or query' }, 400);
+    }
+
+    const kernel = await getMemoryKernel();
+    const groundedContext = await kernel.groundedQuery(request.projectId, request.query);
+    const result = await updateGovernedBuilderConsoleTaskStatus(
+      {
+        projectId: request.projectId,
+        phaseId: request.phaseId,
+        taskId: request.taskId,
+        status: request.status,
+        actorId: request.actorId,
+        query: request.query,
+        projectsDir: request.projectsDir,
+      },
+      groundedContext,
+    );
+
+    const status = result.status === 'updated' ? 200 : 422;
+    return c.json({
+      status: result.status,
+      groundedContext: serializeGroundedContext(groundedContext),
+      result,
+    }, status);
+  } catch (error) {
+    return c.json(
+      {
+        error: error instanceof Error ? error.message : 'Builder Console task status update failed',
       },
       500,
     );
