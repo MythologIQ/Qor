@@ -1,7 +1,7 @@
 import { existsSync } from 'node:fs';
 
 import { ViewStore, createPlanningLedger, createStoreIntegrity } from '../../Zo-Qore/runtime/planning';
-import { runVictorSafeAutomation } from './automation-runner';
+import { runVictorSafeAutomation, type AutomationAction } from './automation-runner';
 import type { GroundedContextBundle } from './memory/types';
 
 const DEFAULT_BUILDER_REPO_ROOT = '/home/workspace/Projects/continuous/Zo-Qore';
@@ -139,25 +139,35 @@ export async function runGovernedAutomationBuild(
   const query = reflectionMode
     ? `What is the next grounded reflection for the active governed automation task "${selected.task.title}" in phase "${selectedPhaseName}"?`
     : `What should happen next with the governed automation task "${selected.task.title}" in phase "${selectedPhaseName}"?`;
+  const groundedContext = reflectionMode
+    ? await groundedQuery(projectId, query)
+    : null;
+  const reflectiveAction = groundedContext
+    ? buildReflectiveDraftTaskAction(projectId, selected.task, selectedPhaseName, query, groundedContext)
+    : null;
+  const action: AutomationAction = reflectiveAction ?? {
+    kind: 'update-task-status',
+    projectId,
+    phaseId: selected.phase.phaseId,
+    taskId: selected.task.taskId,
+    taskTitle: selected.task.title,
+    status: 'in-progress',
+    query,
+  };
   const automation = await runVictorSafeAutomation(
     {
-      dryRun: reflectionMode ? true : dryRun,
+      dryRun: reflectionMode ? !reflectiveAction || dryRun : dryRun,
       maxActions,
       actorId: request.actorId,
       projectsDir,
-      actions: [
-          {
-            kind: 'update-task-status',
-            projectId,
-            phaseId: selected.phase.phaseId,
-            taskId: selected.task.taskId,
-            taskTitle: selected.task.title,
-            status: 'in-progress',
-            query,
-          },
-      ],
+      actions: [action],
     },
-    groundedQuery,
+    async (queryProjectId, queryText) => {
+      if (groundedContext && queryProjectId === projectId && queryText === query) {
+        return groundedContext;
+      }
+      return groundedQuery(queryProjectId, queryText);
+    },
   );
 
   return {
@@ -171,7 +181,9 @@ export async function runGovernedAutomationBuild(
       status: selected.task.status,
       score: selected.score,
     },
-    selectionReason: selected.reason,
+    selectionReason: reflectiveAction
+      ? `${selected.reason} Grounded reflection proposed a governed follow-on draft task.`
+      : selected.reason,
     automation,
   };
 }
@@ -272,6 +284,70 @@ function keywordScore(text: string): number {
 
 function normalize(value: string): string {
   return value.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+}
+
+function buildReflectiveDraftTaskAction(
+  projectId: string,
+  task: BuilderConsoleTask,
+  phaseName: string,
+  query: string,
+  groundedContext: GroundedContextBundle,
+): AutomationAction | null {
+  const recommendation = selectConcreteRecommendation(task, groundedContext.recommendedNextActions);
+  if (!recommendation) {
+    return null;
+  }
+
+  const title = toDraftTaskTitle(recommendation);
+  if (!title || normalize(title) === normalize(task.title)) {
+    return null;
+  }
+
+  return {
+    kind: 'create-draft-task',
+    projectId,
+    phaseId: task.phaseId,
+    title,
+    description: [
+      `Derived from grounded reflection on active task "${task.title}" in phase "${phaseName}".`,
+      `Recommended next action: ${recommendation}`,
+    ].join(' '),
+    acceptance: [
+      `Follow-on work remains grounded in "${task.title}" and governed through Builder Console.`,
+    ],
+    query,
+  };
+}
+
+function selectConcreteRecommendation(task: BuilderConsoleTask, recommendations: string[]): string | null {
+  for (const recommendation of recommendations) {
+    const candidate = recommendation.trim();
+    if (!candidate) {
+      continue;
+    }
+    const normalized = normalize(candidate);
+    if (!normalized || normalized === normalize(task.title)) {
+      continue;
+    }
+    if (normalized.includes('advance the governed automation task')) {
+      continue;
+    }
+    if (normalized.includes('grounded reflection')) {
+      continue;
+    }
+    if (normalized.split(' ').length < 4) {
+      continue;
+    }
+    return candidate;
+  }
+  return null;
+}
+
+function toDraftTaskTitle(recommendation: string): string {
+  const trimmed = recommendation.trim().replace(/[.?!]+$/g, '');
+  const withoutPrefix = trimmed.replace(/^(start implementation with|start with|begin with|begin|continue with|proceed with|next step:?|next:?)/i, '').trim();
+  const title = withoutPrefix || trimmed;
+  return title.charAt(0).toUpperCase() + title.slice(1);
 }
 
 function resolveProjectsDir(projectsDir?: string): string {
