@@ -19,7 +19,12 @@ import {
   type HeartbeatContract,
   type HeartbeatRequest,
 } from './heartbeat';
-import { summarizePromotionGate, summarizeSoakEvidence } from './promotion-gate';
+import {
+  summarizeExecuteBudgetPolicy,
+  summarizeFallbackRevocation,
+  summarizePromotionGate,
+  summarizeSoakEvidence,
+} from './promotion-gate';
 import { listSystemReflections } from './system-reflection';
 import { victorKernel } from './victor-kernel';
 import { VictorKernelUnified } from './victor-kernel-unified';
@@ -360,6 +365,50 @@ app.get('/api/victor/promotion/gate', async (c) => {
     return c.json(
       {
         error: error instanceof Error ? error.message : 'Promotion gate summary failed',
+      },
+      500,
+    );
+  }
+});
+
+app.get('/api/victor/promotion/budget', async (c) => {
+  try {
+    const summary = await summarizeExecuteBudgetPolicy({
+      projectId: c.req.query('projectId') ?? undefined,
+      stateDir: c.req.query('stateDir') ?? undefined,
+    });
+
+    return c.json({
+      status: 'ok',
+      summary,
+    });
+  } catch (error) {
+    return c.json(
+      {
+        error: error instanceof Error ? error.message : 'Execute budget summary failed',
+      },
+      500,
+    );
+  }
+});
+
+app.get('/api/victor/promotion/fallback', async (c) => {
+  try {
+    const summary = await summarizeFallbackRevocation({
+      projectId: c.req.query('projectId') ?? undefined,
+      victorProjectId: c.req.query('victorProjectId') ?? undefined,
+      projectsDir: c.req.query('projectsDir') ?? undefined,
+      stateDir: c.req.query('stateDir') ?? undefined,
+    });
+
+    return c.json({
+      status: 'ok',
+      summary,
+    });
+  } catch (error) {
+    return c.json(
+      {
+        error: error instanceof Error ? error.message : 'Fallback and revocation summary failed',
       },
       500,
     );

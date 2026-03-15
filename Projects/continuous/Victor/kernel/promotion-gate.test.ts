@@ -7,7 +7,12 @@ import { afterEach, beforeEach, describe, expect, it } from 'bun:test';
 import { createProjectStore } from '../../Zo-Qore/runtime/planning';
 import { startHeartbeat, tickHeartbeat, type HeartbeatContract, type HeartbeatRequest } from './heartbeat';
 import type { GroundedContextBundle } from './memory/types';
-import { summarizePromotionGate, summarizeSoakEvidence } from './promotion-gate';
+import {
+  summarizeExecuteBudgetPolicy,
+  summarizeFallbackRevocation,
+  summarizePromotionGate,
+  summarizeSoakEvidence,
+} from './promotion-gate';
 
 describe('promotion gate artifacts', () => {
   let projectsDir: string;
@@ -217,6 +222,63 @@ describe('promotion gate artifacts', () => {
     expect(summary.criteria.find((criterion) => criterion.id === 'promotion-criteria')?.status).toBe('partial');
     expect(summary.criteria.find((criterion) => criterion.id === 'fallback-revocation')?.status).toBe('unmet');
     expect(summary.criteria.find((criterion) => criterion.id === 'builder-dependencies')?.status).toBe('met');
+  });
+
+  it('renders the execute budget as Green when the heartbeat remains tightly bounded', async () => {
+    const request = baseRequest(projectsDir, stateDir);
+    const started = await startHeartbeat(request, groundedQueryResolver);
+    expect(started.status).toBe('started');
+
+    const summary = await summarizeExecuteBudgetPolicy({
+      projectId: 'builder-console',
+      stateDir,
+    });
+
+    expect(summary.internalState).toBe('ready');
+    expect(summary.uiLabel).toBe('Green');
+    expect(summary.heartbeat.reasoningModel).toBe('Kimi K2.5');
+    expect(summary.heartbeat.maxActionsPerTick).toBe(1);
+    expect(summary.checks.find((check) => check.id === 'action-budget')?.status).toBe('met');
+  });
+
+  it('renders the execute budget as Red when the heartbeat budget drifts beyond safe unattended bounds', async () => {
+    const request = {
+      ...baseRequest(projectsDir, stateDir),
+      maxActionsPerTick: 3,
+      maxConsecutiveBlocked: 5,
+      maxConsecutiveFailures: 4,
+    };
+    const started = await startHeartbeat(request, groundedQueryResolver);
+    expect(started.status).toBe('started');
+
+    const summary = await summarizeExecuteBudgetPolicy({
+      projectId: 'builder-console',
+      stateDir,
+    });
+
+    expect(summary.internalState).toBe('not-ready');
+    expect(summary.uiLabel).toBe('Red');
+    expect(summary.checks.find((check) => check.id === 'action-budget')?.status).toBe('unmet');
+    expect(summary.checks.find((check) => check.id === 'blocked-threshold')?.status).toBe('unmet');
+    expect(summary.checks.find((check) => check.id === 'failure-threshold')?.status).toBe('unmet');
+  });
+
+  it('renders fallback and revocation as Red until the governing task is complete', async () => {
+    const request = baseRequest(projectsDir, stateDir);
+    const started = await startHeartbeat(request, groundedQueryResolver);
+    expect(started.status).toBe('started');
+
+    const summary = await summarizeFallbackRevocation({
+      projectId: 'builder-console',
+      victorProjectId: 'victor-resident',
+      projectsDir,
+      stateDir,
+    });
+
+    expect(summary.internalState).toBe('not-ready');
+    expect(summary.uiLabel).toBe('Red');
+    expect(summary.fallbackTask.status).toBe('unmet');
+    expect(summary.checks.find((check) => check.id === 'blocked-counter-headroom')?.status).toBe('met');
   });
 });
 

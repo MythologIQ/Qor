@@ -28,15 +28,25 @@ interface HeartbeatStateSnapshot {
   runId: string;
   status: string;
   mode: 'dry-run' | 'execute';
+  reasoningModel: string | null;
   cadenceMs: number;
   cadenceMode: string;
+  maxActionsPerTick: number;
+  stopOnBlock: boolean;
+  maxConsecutiveBlocked: number;
+  maxConsecutiveFailures: number;
   tickCount: number;
+  consecutiveBlocked: number;
+  consecutiveFailures: number;
   lastTickStatus: string | null;
   lastTickReason: string | null;
   lastSelectedTaskId: string | null;
   focusWindow?: {
     status?: string;
     source?: string | null;
+    reason?: string | null;
+    startedAt?: string | null;
+    elevatedUntil?: string | null;
     cooldownCyclesRemaining?: number;
   };
 }
@@ -97,6 +107,51 @@ export interface PromotionGateSummary {
   uiLabel: UiVerdict;
   criteria: PromotionGateCriterion[];
   soakEvidence: SoakEvidenceSummary;
+}
+
+export interface ExecuteBudgetPolicySummary {
+  projectId: string;
+  generatedAt: string;
+  internalState: InternalVerdict;
+  uiLabel: UiVerdict;
+  heartbeat: {
+    status: string | null;
+    mode: 'dry-run' | 'execute' | 'unknown';
+    reasoningModel: string | null;
+    cadenceMs: number | null;
+    cadenceMode: string | null;
+    maxActionsPerTick: number;
+    stopOnBlock: boolean;
+    maxConsecutiveBlocked: number;
+    maxConsecutiveFailures: number;
+  };
+  allowedActionKinds: string[];
+  checks: SoakEvidenceCheck[];
+}
+
+export interface FallbackRevocationSummary {
+  projectId: string;
+  victorProjectId: string;
+  generatedAt: string;
+  internalState: InternalVerdict;
+  uiLabel: UiVerdict;
+  heartbeat: {
+    status: string | null;
+    mode: 'dry-run' | 'execute' | 'unknown';
+    consecutiveBlocked: number;
+    consecutiveFailures: number;
+    maxConsecutiveBlocked: number;
+    maxConsecutiveFailures: number;
+    focusWindowStatus: string | null;
+    cooldownCyclesRemaining: number;
+  };
+  checks: SoakEvidenceCheck[];
+  fallbackTask: PromotionGateCriterion;
+  triggers: {
+    immediateStop: string[];
+    revocation: string[];
+    fallbackMode: string[];
+  };
 }
 
 export async function summarizeSoakEvidence(options?: {
@@ -361,6 +416,189 @@ export async function summarizePromotionGate(options?: {
   };
 }
 
+export async function summarizeExecuteBudgetPolicy(options?: {
+  projectId?: string;
+  stateDir?: string;
+}): Promise<ExecuteBudgetPolicySummary> {
+  const projectId = options?.projectId?.trim() || 'builder-console';
+  const stateFile = resolveHeartbeatStateFile(projectId, options?.stateDir);
+  const state = await readHeartbeatStateSnapshot(stateFile);
+  const allowedActionKinds = ['create-draft-task', 'update-task-status'];
+
+  const checks: SoakEvidenceCheck[] = [
+    evaluateCheck(
+      'reasoning-model',
+      'Heartbeat reasoning model is locked to Kimi K2.5',
+      state?.reasoningModel === 'Kimi K2.5',
+      false,
+      state?.reasoningModel
+        ? `Heartbeat reasoning is using ${state.reasoningModel} instead of Kimi K2.5.`
+        : 'No heartbeat reasoning model is recorded yet.',
+      'Heartbeat reasoning is locked to Kimi K2.5.',
+    ),
+    evaluateCheck(
+      'action-budget',
+      'Execute mode is limited to one governed write per tick',
+      (state?.maxActionsPerTick ?? 1) <= 1,
+      (state?.maxActionsPerTick ?? 1) === 2,
+      `Heartbeat allows ${(state?.maxActionsPerTick ?? 1)} action(s) per tick, which exceeds the safe execute-mode budget.`,
+      `Heartbeat action budget is ${(state?.maxActionsPerTick ?? 1)} action per tick.`,
+    ),
+    evaluateCheck(
+      'stop-on-block',
+      'Heartbeat stops the current automation run on the first blocked action',
+      state?.stopOnBlock !== false,
+      false,
+      'Heartbeat is configured to continue after blocked actions.',
+      'Heartbeat is configured to stop on the first blocked action.',
+    ),
+    evaluateCheck(
+      'blocked-threshold',
+      'Blocked-action threshold remains bounded',
+      (state?.maxConsecutiveBlocked ?? 3) <= 3,
+      (state?.maxConsecutiveBlocked ?? 3) === 4,
+      `Heartbeat allows ${(state?.maxConsecutiveBlocked ?? 3)} consecutive blocked ticks before stop, which is too loose for unattended execute mode.`,
+      `Heartbeat blocked threshold is ${(state?.maxConsecutiveBlocked ?? 3)} consecutive tick(s).`,
+    ),
+    evaluateCheck(
+      'failure-threshold',
+      'Failure threshold remains bounded',
+      (state?.maxConsecutiveFailures ?? 2) <= 2,
+      (state?.maxConsecutiveFailures ?? 2) === 3,
+      `Heartbeat allows ${(state?.maxConsecutiveFailures ?? 2)} consecutive failures before stop, which is too loose for unattended execute mode.`,
+      `Heartbeat failure threshold is ${(state?.maxConsecutiveFailures ?? 2)} consecutive tick(s).`,
+    ),
+    evaluateCheck(
+      'allowed-actions',
+      'Execute mode is still constrained to governed task drafting and status updates',
+      true,
+      false,
+      'Execute-mode action kinds drifted beyond the allowed governed set.',
+      `Allowed action kinds remain ${allowedActionKinds.join(', ')}.`,
+    ),
+  ];
+
+  const severeFailure = checks.some((check) => check.status === 'unmet');
+  const partial = checks.some((check) => check.status === 'partial');
+  const internalState: InternalVerdict = severeFailure ? 'not-ready' : partial ? 'conditionally-ready' : 'ready';
+
+  return {
+    projectId,
+    generatedAt: new Date().toISOString(),
+    internalState,
+    uiLabel: toUiVerdict(internalState),
+    heartbeat: {
+      status: state?.status ?? null,
+      mode: state?.mode ?? 'unknown',
+      reasoningModel: state?.reasoningModel ?? null,
+      cadenceMs: state?.cadenceMs ?? null,
+      cadenceMode: state?.cadenceMode ?? null,
+      maxActionsPerTick: state?.maxActionsPerTick ?? 1,
+      stopOnBlock: state?.stopOnBlock ?? true,
+      maxConsecutiveBlocked: state?.maxConsecutiveBlocked ?? 3,
+      maxConsecutiveFailures: state?.maxConsecutiveFailures ?? 2,
+    },
+    allowedActionKinds,
+    checks,
+  };
+}
+
+export async function summarizeFallbackRevocation(options?: {
+  projectId?: string;
+  victorProjectId?: string;
+  projectsDir?: string;
+  stateDir?: string;
+}): Promise<FallbackRevocationSummary> {
+  const projectId = options?.projectId?.trim() || 'builder-console';
+  const victorProjectId = options?.victorProjectId?.trim() || 'victor-resident';
+  const projectsDir = resolveProjectsDir(options?.projectsDir);
+  const stateFile = resolveHeartbeatStateFile(projectId, options?.stateDir);
+  const state = await readHeartbeatStateSnapshot(stateFile);
+  const victorPhases = await readPathPhases(victorProjectId, projectsDir);
+  const fallbackTask = evaluateTaskCriterion(
+    'fallback-revocation',
+    'Execute fallback and revocation triggers are recorded',
+    findTaskByTitle(victorPhases, 'Record unattended execute fallback and revocation triggers'),
+    true,
+  );
+
+  const checks: SoakEvidenceCheck[] = [
+    {
+      id: 'fallback-task',
+      label: fallbackTask.label,
+      status: fallbackTask.status,
+      detail: fallbackTask.detail,
+    },
+    evaluateCheck(
+      'blocked-counter-headroom',
+      'Blocked counter is below the revocation threshold',
+      (state?.consecutiveBlocked ?? 0) === 0,
+      (state?.consecutiveBlocked ?? 0) < (state?.maxConsecutiveBlocked ?? 3),
+      `Heartbeat has reached ${(state?.consecutiveBlocked ?? 0)} blocked tick(s), hitting its revocation threshold.`,
+      `Heartbeat blocked counter is ${(state?.consecutiveBlocked ?? 0)} of ${(state?.maxConsecutiveBlocked ?? 3)}.`,
+    ),
+    evaluateCheck(
+      'failure-counter-headroom',
+      'Failure counter is below the revocation threshold',
+      (state?.consecutiveFailures ?? 0) === 0,
+      (state?.consecutiveFailures ?? 0) < (state?.maxConsecutiveFailures ?? 2),
+      `Heartbeat has reached ${(state?.consecutiveFailures ?? 0)} failure tick(s), hitting its revocation threshold.`,
+      `Heartbeat failure counter is ${(state?.consecutiveFailures ?? 0)} of ${(state?.maxConsecutiveFailures ?? 2)}.`,
+    ),
+    evaluateCheck(
+      'cooldown-awareness',
+      'Focus-window state exposes cooldown when execute tempo has to fall back',
+      Boolean(state?.focusWindow?.status),
+      false,
+      'Heartbeat focus-window state is missing, so cooldown fallback cannot be verified.',
+      state?.focusWindow?.status === 'cooldown'
+        ? `Heartbeat is currently in cooldown with ${(state.focusWindow.cooldownCyclesRemaining ?? 0)} cycle(s) remaining.`
+        : `Heartbeat focus-window state is ${state?.focusWindow?.status ?? 'inactive'}.`,
+    ),
+  ];
+
+  const severeFailure = checks.some((check) => check.status === 'unmet');
+  const partial = checks.some((check) => check.status === 'partial');
+  const internalState: InternalVerdict = severeFailure ? 'not-ready' : partial ? 'conditionally-ready' : 'ready';
+
+  return {
+    projectId,
+    victorProjectId,
+    generatedAt: new Date().toISOString(),
+    internalState,
+    uiLabel: toUiVerdict(internalState),
+    heartbeat: {
+      status: state?.status ?? null,
+      mode: state?.mode ?? 'unknown',
+      consecutiveBlocked: state?.consecutiveBlocked ?? 0,
+      consecutiveFailures: state?.consecutiveFailures ?? 0,
+      maxConsecutiveBlocked: state?.maxConsecutiveBlocked ?? 3,
+      maxConsecutiveFailures: state?.maxConsecutiveFailures ?? 2,
+      focusWindowStatus: state?.focusWindow?.status ?? null,
+      cooldownCyclesRemaining: state?.focusWindow?.cooldownCyclesRemaining ?? 0,
+    },
+    checks,
+    fallbackTask,
+    triggers: {
+      immediateStop: [
+        'Reasoning model drift away from Kimi K2.5',
+        'Governance denial on an execute-mode action',
+        'Contradiction or weak-grounding signal on an execute-mode action',
+      ],
+      revocation: [
+        `Consecutive blocked ticks reach ${state?.maxConsecutiveBlocked ?? 3}`,
+        `Consecutive failed ticks reach ${state?.maxConsecutiveFailures ?? 2}`,
+        'Promotion criteria or fallback policy task remains incomplete during execute review',
+      ],
+      fallbackMode: [
+        'Drop from unattended execute to dry-run heartbeat',
+        'Enter cooldown reflection at baseline cadence',
+        'Require explicit human re-authorization before execute-mode resumes',
+      ],
+    },
+  };
+}
+
 async function listHeartbeatLedgerRecords(
   projectId: string,
   projectsDir: string,
@@ -398,15 +636,25 @@ async function readHeartbeatStateSnapshot(stateFile: string): Promise<HeartbeatS
     runId: stringOrNull(raw.runId) ?? '',
     status: stringOrNull(raw.status) ?? 'unknown',
     mode: raw.mode === 'dry-run' || raw.mode === 'execute' ? raw.mode : 'dry-run',
+    reasoningModel: stringOrNull(raw.reasoningModel),
     cadenceMs: typeof raw.cadenceMs === 'number' ? raw.cadenceMs : BASELINE_HEARTBEAT_CADENCE_MS,
     cadenceMode: stringOrNull(raw.cadenceMode) ?? 'baseline',
+    maxActionsPerTick: typeof raw.maxActionsPerTick === 'number' ? raw.maxActionsPerTick : 1,
+    stopOnBlock: raw.stopOnBlock !== false,
+    maxConsecutiveBlocked: typeof raw.maxConsecutiveBlocked === 'number' ? raw.maxConsecutiveBlocked : 3,
+    maxConsecutiveFailures: typeof raw.maxConsecutiveFailures === 'number' ? raw.maxConsecutiveFailures : 2,
     tickCount: typeof raw.tickCount === 'number' ? raw.tickCount : 0,
+    consecutiveBlocked: typeof raw.consecutiveBlocked === 'number' ? raw.consecutiveBlocked : 0,
+    consecutiveFailures: typeof raw.consecutiveFailures === 'number' ? raw.consecutiveFailures : 0,
     lastTickStatus: stringOrNull(raw.lastTickStatus),
     lastTickReason: stringOrNull(raw.lastTickReason),
     lastSelectedTaskId: stringOrNull(raw.lastSelectedTaskId),
     focusWindow: asRecord(raw.focusWindow) ? {
       status: stringOrNull(asRecord(raw.focusWindow)?.status ?? null) ?? undefined,
       source: stringOrNull(asRecord(raw.focusWindow)?.source ?? null),
+      reason: stringOrNull(asRecord(raw.focusWindow)?.reason ?? null),
+      startedAt: stringOrNull(asRecord(raw.focusWindow)?.startedAt ?? null),
+      elevatedUntil: stringOrNull(asRecord(raw.focusWindow)?.elevatedUntil ?? null),
       cooldownCyclesRemaining: typeof asRecord(raw.focusWindow)?.cooldownCyclesRemaining === 'number'
         ? Number(asRecord(raw.focusWindow)?.cooldownCyclesRemaining)
         : undefined,
