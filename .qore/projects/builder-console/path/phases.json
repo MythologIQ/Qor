@@ -181,7 +181,7 @@
       "phaseId": "phase_builder_forecast_ops",
       "projectId": "builder-console",
       "ordinal": 4,
-      "name": "Forecast and Dependency Operations",
+      "name": "Forecast and Planning Operations",
       "objective": "Turn the new Victor and Builder planning artifacts into Builder-managed operational work so unattended execution has a governed next queue.",
       "sourceClusterIds": [
         "cluster_e642e9a1"
