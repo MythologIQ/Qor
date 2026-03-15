@@ -31,7 +31,7 @@ export interface AutomationAuditRecord {
   payload: Record<string, unknown>;
 }
 
-export interface AutomationReviewSummary {
+export interface AutomationActivitySummary {
   projectId: string;
   generatedAt: string;
   windowStart: string | null;
@@ -190,14 +190,14 @@ export async function listAutomationAuditRecords(
     }));
 }
 
-export async function summarizeAutomationReview(
+export async function summarizeAutomationActivity(
   projectId: string,
   projectsDir?: string,
   options?: {
     limit?: number;
     since?: string;
   },
-): Promise<AutomationReviewSummary> {
+): Promise<AutomationActivitySummary> {
   const records = await listAutomationAuditRecords(projectId, projectsDir, options);
   const runCompletions = records.filter((record) => record.event === 'run-completed');
   const actionRecords = records.filter((record) => record.event === 'action');

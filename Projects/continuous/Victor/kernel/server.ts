@@ -5,8 +5,8 @@
  * Deterministic processing - no LLM for core functions.
  */
 
-import { Hono } from 'hono';
-import { listAutomationAuditRecords, summarizeAutomationReview } from './automation-audit';
+import { Hono, type Context } from 'hono';
+import { listAutomationAuditRecords, summarizeAutomationActivity } from './automation-audit';
 import { runVictorSafeAutomation } from './automation-runner';
 import { createGovernedBuilderConsoleDraftTask, updateGovernedBuilderConsoleTaskStatus } from './builder-console-write';
 import { runGovernedAutomationBuild } from './governed-build-runner';
@@ -266,7 +266,7 @@ app.get('/api/victor/automation/audit', async (c) => {
   }
 });
 
-app.get('/api/victor/automation/review', async (c) => {
+async function handleAutomationActivitySummary(c: Context) {
   try {
     const projectId = c.req.query('projectId');
     if (!projectId) {
@@ -282,7 +282,7 @@ app.get('/api/victor/automation/review', async (c) => {
         ? new Date(Date.now() - hours * 60 * 60 * 1000).toISOString()
         : undefined;
 
-    const review = await summarizeAutomationReview(
+    const summary = await summarizeAutomationActivity(
       projectId,
       c.req.query('projectsDir') ?? undefined,
       {
@@ -293,17 +293,20 @@ app.get('/api/victor/automation/review', async (c) => {
 
     return c.json({
       status: 'ok',
-      review,
+      summary,
     });
   } catch (error) {
     return c.json(
       {
-        error: error instanceof Error ? error.message : 'Automation overnight review failed',
+        error: error instanceof Error ? error.message : 'Automation activity summary failed',
       },
       500,
     );
   }
-});
+}
+
+app.get('/api/victor/automation/activity', handleAutomationActivitySummary);
+app.get('/api/victor/automation/review', handleAutomationActivitySummary);
 
 app.post('/api/victor/automation/governed-build', async (c) => {
   try {
