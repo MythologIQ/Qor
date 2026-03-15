@@ -6,6 +6,8 @@ document.addEventListener('DOMContentLoaded', () => {
     apiBuildProgress: '/api/victor/build/progress',
     apiPromotionGate: '/api/victor/promotion/gate',
     apiPromotionSoak: '/api/victor/promotion/soak',
+    apiPromotionBudget: '/api/victor/promotion/budget',
+    apiPromotionFallback: '/api/victor/promotion/fallback',
     apiHeartbeatStatus: '/api/victor/heartbeat/status',
     apiAutomationActivity: '/api/victor/automation/activity',
     apiSkills: '/api/skills',
@@ -26,6 +28,8 @@ document.addEventListener('DOMContentLoaded', () => {
     buildProgress: null,
     victorGate: null,
     victorSoak: null,
+    victorBudget: null,
+    victorFallback: null,
     victorHeartbeat: null,
     victorActivity: null,
     skills: [],
@@ -93,6 +97,10 @@ document.addEventListener('DOMContentLoaded', () => {
   const victorGateCriteria = document.getElementById('victor-gate-criteria');
   const victorSoakSummaryChip = document.getElementById('victor-soak-summary-chip');
   const victorSoakChecks = document.getElementById('victor-soak-checks');
+  const victorBudgetSummaryChip = document.getElementById('victor-budget-summary-chip');
+  const victorBudgetChecks = document.getElementById('victor-budget-checks');
+  const victorFallbackSummaryChip = document.getElementById('victor-fallback-summary-chip');
+  const victorFallbackChecks = document.getElementById('victor-fallback-checks');
   const victorActivitySummaryChip = document.getElementById('victor-activity-summary-chip');
   const victorActivityList = document.getElementById('victor-activity-list');
 
@@ -221,9 +229,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
   async function fetchVictorView() {
     try {
-      const [gateRes, soakRes, heartbeatRes, activityRes] = await Promise.all([
+      const [gateRes, soakRes, budgetRes, fallbackRes, heartbeatRes, activityRes] = await Promise.all([
         fetch(`${CONFIG.apiPromotionGate}?projectId=builder-console&victorProjectId=victor-resident`),
         fetch(`${CONFIG.apiPromotionSoak}?projectId=builder-console`),
+        fetch(`${CONFIG.apiPromotionBudget}?projectId=builder-console`),
+        fetch(`${CONFIG.apiPromotionFallback}?projectId=builder-console&victorProjectId=victor-resident`),
         fetch(`${CONFIG.apiHeartbeatStatus}?projectId=builder-console`),
         fetch(`${CONFIG.apiAutomationActivity}?projectId=builder-console&hours=24&limit=20`),
       ]);
@@ -235,6 +245,14 @@ document.addEventListener('DOMContentLoaded', () => {
       if (soakRes.ok) {
         const soakData = await soakRes.json();
         state.victorSoak = soakData?.summary || null;
+      }
+      if (budgetRes.ok) {
+        const budgetData = await budgetRes.json();
+        state.victorBudget = budgetData?.summary || null;
+      }
+      if (fallbackRes.ok) {
+        const fallbackData = await fallbackRes.json();
+        state.victorFallback = fallbackData?.summary || null;
       }
       if (heartbeatRes.ok) {
         const heartbeatData = await heartbeatRes.json();
@@ -586,6 +604,8 @@ document.addEventListener('DOMContentLoaded', () => {
   function renderVictorView() {
     const gate = state.victorGate;
     const soak = state.victorSoak;
+    const budget = state.victorBudget;
+    const fallback = state.victorFallback;
     const heartbeat = state.victorHeartbeat;
     const activity = state.victorActivity;
 
@@ -641,6 +661,36 @@ document.addEventListener('DOMContentLoaded', () => {
       victorSoakChecks.innerHTML = checks.length > 0
         ? checks.map((check) => renderStackItem(check.label, check.detail, check.status)).join('')
         : '<div class="stack-item muted">Loading soak evidence...</div>';
+    }
+
+    if (victorBudgetSummaryChip) {
+      const writes = budget?.heartbeat?.maxActionsPerTick || 0;
+      victorBudgetSummaryChip.textContent = `${writes} write/tick`;
+    }
+    if (victorBudgetChecks) {
+      const checks = budget?.checks || [];
+      victorBudgetChecks.innerHTML = checks.length > 0
+        ? checks.map((check) => renderStackItem(check.label, check.detail, check.status)).join('')
+        : '<div class="stack-item muted">Loading execute budget policy...</div>';
+    }
+
+    if (victorFallbackSummaryChip) {
+      const blocked = fallback?.heartbeat?.consecutiveBlocked || 0;
+      const failed = fallback?.heartbeat?.consecutiveFailures || 0;
+      victorFallbackSummaryChip.textContent = `${blocked} blocked / ${failed} failed`;
+    }
+    if (victorFallbackChecks) {
+      const checks = fallback?.checks || [];
+      const triggerDetail = fallback
+        ? renderStackItem(
+            'Fallback modes',
+            (fallback.triggers?.fallbackMode || []).join(' • '),
+            fallback.internalState === 'ready' ? 'met' : 'partial',
+          )
+        : '';
+      victorFallbackChecks.innerHTML = checks.length > 0
+        ? `${checks.map((check) => renderStackItem(check.label, check.detail, check.status)).join('')}${triggerDetail}`
+        : '<div class="stack-item muted">Loading fallback and revocation rules...</div>';
     }
 
     if (victorActivitySummaryChip) {
