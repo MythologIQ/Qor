@@ -158,6 +158,27 @@ describe('heartbeat foundation', () => {
     expect(started.state?.focusWindow.source).toBe('self-started');
   });
 
+  it('passes preflight for reflective heartbeat work when governed tasks are already in progress', async () => {
+    const statePath = join(projectsDir, 'builder-console', 'path', 'phases.json');
+    const raw = JSON.parse(await readFile(statePath, 'utf8'));
+    raw.phases[0].tasks = raw.phases[0].tasks.map((task: Record<string, unknown>) => ({
+      ...task,
+      status: task.taskId === 'task-1' ? 'in-progress' : 'done',
+    }));
+    await writeFile(statePath, `${JSON.stringify(raw, null, 2)}\n`, 'utf8');
+
+    const result = await runHeartbeatPreflight(
+      request(projectsDir, stateDir, {
+        workClass: 'narrow-execution',
+        focusWindowMode: 'auto',
+      }),
+      groundedQueryResolver,
+    );
+
+    expect(result.ok).toBe(true);
+    expect(result.checks.find((check) => check.name === 'governance')?.detail).toContain('reflective heartbeat review');
+  });
+
   it('forces cooldown after four hours of elevated execution and switches to reflective dry-run ticks', async () => {
     const started = await startHeartbeat(
       request(projectsDir, stateDir, {

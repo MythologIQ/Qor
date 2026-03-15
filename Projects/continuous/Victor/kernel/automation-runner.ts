@@ -264,7 +264,18 @@ async function previewAutomationAction(
     return blockedActionResult(action, groundedContext, actionIndex, evidenceFailure);
   }
 
-  if (normalizeTaskStatus(tasks[taskIndex].status) === action.status) {
+  const currentStatus = normalizeTaskStatus(tasks[taskIndex].status);
+  if (currentStatus === action.status) {
+    if (action.status === 'in-progress') {
+      return eligibleActionResult(
+        action,
+        groundedContext,
+        actionIndex,
+        `Task ${action.taskId} is already in-progress; reflective review is eligible without mutating execution state.`,
+        { allowed: true, reason: 'No-op reflective review.' },
+        action.taskId,
+      );
+    }
     return blockedActionResult(action, groundedContext, actionIndex, `Task ${action.taskId} is already marked ${action.status}.`);
   }
 

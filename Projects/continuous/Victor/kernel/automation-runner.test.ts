@@ -174,6 +174,68 @@ describe('runVictorSafeAutomation', () => {
     expect(audit.find((entry) => entry.event === 'action')?.payload.reason).toContain('evidence is incomplete');
   });
 
+  it('allows reflective dry-run review when a task is already in progress', async () => {
+    const projectStore = createProjectStore('builder-console', projectsDir, { enableLedger: true });
+    const pathStore = await projectStore.getViewStore('path');
+    await pathStore.write({
+      phases: [
+        {
+          phaseId: 'phase-1',
+          projectId: 'builder-console',
+          ordinal: 1,
+          name: 'Execution',
+          objective: 'Execute grounded work',
+          sourceClusterIds: ['cluster-1'],
+          tasks: [
+            {
+              taskId: 'task-1',
+              phaseId: 'phase-1',
+              title: 'Automate comms-tab prompt construction',
+              description: 'Reduce the comms tab to standard chat IO plus prompt-build visibility.',
+              acceptance: ['Prompt construction is visible in operations display'],
+              status: 'in-progress',
+            },
+          ],
+          status: 'active',
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        },
+      ],
+    });
+
+    const result = await runVictorSafeAutomation(
+      {
+        dryRun: true,
+        maxActions: 1,
+        projectsDir,
+        actions: [
+          {
+            kind: 'update-task-status',
+            projectId: 'builder-console',
+            phaseId: 'phase-1',
+            taskId: 'task-1',
+            status: 'in-progress',
+            query: 'What is the next grounded reflection for the active comms-tab prompt automation task?',
+          },
+        ],
+      },
+      async () => ({
+        ...groundedContext(),
+        semanticNodes: groundedContext().semanticNodes.map((node) => (
+          node.nodeType === 'Task'
+            ? { ...node, attributes: { ...node.attributes, status: 'in-progress' } }
+            : node
+        )),
+      }),
+    );
+
+    expect(result.status).toBe('completed');
+    expect(result.mode).toBe('dry-run');
+    expect(result.results[0]?.status).toBe('eligible');
+    expect(result.results[0]?.reason).toContain('reflective review');
+    expect(result.executedCount).toBe(0);
+  });
+
   it('executes a safe status update when dryRun is false', async () => {
     const result = await runVictorSafeAutomation(
       {

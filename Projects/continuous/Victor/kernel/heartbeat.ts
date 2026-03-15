@@ -237,6 +237,13 @@ export async function runHeartbeatPreflight(
     if (!selectedTask) {
       throw new Error('No target task is available for governance preflight.');
     }
+    if (selectedTask.status === 'in-progress') {
+      checks.push({
+        name: 'governance',
+        passed: true,
+        detail: 'Active governed task selected for reflective heartbeat review; no execution-state write is required for preflight.',
+      });
+    } else {
     const governance = await loadPlanningGovernance(contract.projectId, contract.projectsDir);
     const evaluation = await governance.evaluateAction(
       contract.actorId,
@@ -258,6 +265,7 @@ export async function runHeartbeatPreflight(
         ? 'Governance approved a representative heartbeat task action.'
         : evaluation.reason || 'Governance denied the representative heartbeat task action.',
     });
+    }
   } catch (error) {
     checks.push({
       name: 'governance',
