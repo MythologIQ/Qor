@@ -21,8 +21,10 @@ interface BuilderConsoleTask {
 
 interface BuilderConsolePhase {
   phaseId: string;
+  ordinal?: number;
   name: string;
   objective?: string;
+  status?: string;
   tasks?: BuilderConsoleTask[];
 }
 
@@ -229,7 +231,12 @@ function normalize(value: string): string {
 }
 
 function selectPendingGovernedAutomationTask(projectId: string, phases: BuilderConsolePhase[]) {
-  const pendingCandidates = phases.flatMap((phase) => {
+  const currentPhase = resolveCurrentGovernedPhase(phases);
+  if (!currentPhase) {
+    return null;
+  }
+
+  const pendingCandidates = [currentPhase].flatMap((phase) => {
     const phaseText = `${phase.name} ${phase.objective ?? ''}`;
     const phaseScore = keywordScore(phaseText);
     return (phase.tasks ?? [])
@@ -252,7 +259,12 @@ function selectPendingGovernedAutomationTask(projectId: string, phases: BuilderC
 }
 
 function collectActiveCandidates(projectId: string, phases: BuilderConsolePhase[]) {
-  const activeCandidates = phases.flatMap((phase) => {
+  const currentPhase = resolveCurrentGovernedPhase(phases);
+  if (!currentPhase) {
+    return [];
+  }
+
+  const activeCandidates = [currentPhase].flatMap((phase) => {
     const phaseText = `${phase.name} ${phase.objective ?? ''}`;
     const phaseScore = keywordScore(phaseText);
     return (phase.tasks ?? [])
@@ -475,6 +487,52 @@ function toDraftTaskTitle(recommendation: string): string {
   const withoutPrefix = trimmed.replace(/^(start implementation with|start with|begin with|begin|continue with|proceed with|next step:?|next:?)/i, '').trim();
   const title = withoutPrefix || trimmed;
   return title.charAt(0).toUpperCase() + title.slice(1);
+}
+
+function resolveCurrentGovernedPhase(phases: BuilderConsolePhase[]): BuilderConsolePhase | null {
+  for (const phase of sortPhasesByOrdinal(phases)) {
+    const status = normalizePhaseStatus(phase);
+    if (status === 'complete') {
+      continue;
+    }
+    if (status === 'blocked') {
+      return null;
+    }
+    return phase;
+  }
+  return null;
+}
+
+function sortPhasesByOrdinal(phases: BuilderConsolePhase[]): BuilderConsolePhase[] {
+  return [...phases].sort((left, right) => (left.ordinal ?? Number.MAX_SAFE_INTEGER) - (right.ordinal ?? Number.MAX_SAFE_INTEGER));
+}
+
+function normalizePhaseStatus(phase: BuilderConsolePhase): 'planned' | 'active' | 'complete' | 'blocked' {
+  const normalized = normalize(String(phase.status ?? ''));
+  if (normalized === 'blocked') {
+    return 'blocked';
+  }
+  if (normalized === 'active') {
+    return 'active';
+  }
+  if (normalized === 'complete' || normalized === 'completed') {
+    return 'complete';
+  }
+  if (normalized === 'planned' || normalized === 'pending') {
+    return 'planned';
+  }
+
+  const tasks = phase.tasks ?? [];
+  if (tasks.some((task) => task.status === 'blocked')) {
+    return 'blocked';
+  }
+  if (tasks.length > 0 && tasks.every((task) => task.status === 'done')) {
+    return 'complete';
+  }
+  if (tasks.some((task) => task.status === 'in-progress')) {
+    return 'active';
+  }
+  return 'planned';
 }
 
 function resolveProjectsDir(projectsDir?: string): string {

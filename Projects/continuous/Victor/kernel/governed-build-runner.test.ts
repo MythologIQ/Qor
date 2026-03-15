@@ -445,6 +445,138 @@ describe('runGovernedAutomationBuild', () => {
     const updated = await pathStore.read<{ phases?: Array<{ tasks?: Array<{ taskId?: string }> }> }>();
     expect(updated?.phases?.[0]?.tasks).toHaveLength(2);
   });
+
+  it('selects the next incomplete phase after the previous governed slice is complete', async () => {
+    const projectStore = createProjectStore('builder-console', projectsDir, { enableLedger: true });
+    const pathStore = await projectStore.getViewStore('path');
+    await pathStore.write({
+      phases: [
+        {
+          phaseId: 'phase-1',
+          projectId: 'builder-console',
+          ordinal: 1,
+          name: 'Comms Tab Prompt Automation',
+          objective: 'Completed governed automation slice.',
+          sourceClusterIds: ['cluster-1'],
+          tasks: [
+            {
+              taskId: 'task-complete',
+              phaseId: 'phase-1',
+              title: 'Automate comms-tab prompt construction',
+              description: 'Already done.',
+              acceptance: ['Done.'],
+              status: 'done',
+            },
+          ],
+          status: 'complete',
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        },
+        {
+          phaseId: 'phase-2',
+          projectId: 'builder-console',
+          ordinal: 2,
+          name: 'Heartbeat Autonomy Foundation',
+          objective: 'Advance heartbeat governance and autonomy safely.',
+          sourceClusterIds: ['cluster-1'],
+          tasks: [
+            {
+              taskId: 'task-heartbeat',
+              phaseId: 'phase-2',
+              title: 'Teach heartbeat to select the next governed slice after phase closure',
+              description: 'Make phase handoff explicit in the governed runner.',
+              acceptance: ['Heartbeat chooses the next incomplete governed phase after closure.'],
+              status: 'pending',
+            },
+          ],
+          status: 'planned',
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        },
+      ],
+    });
+
+    const result = await runGovernedAutomationBuild(
+      {
+        projectsDir,
+      },
+      async () => activeTaskGroundedContext(
+        'Teach heartbeat to select the next governed slice after phase closure',
+        'task-phase-1',
+        'Heartbeat chooses the next incomplete governed phase after closure.',
+      ),
+    );
+
+    expect(result.status).toBe('completed');
+    expect(result.selectedTask?.taskId).toBe('task-heartbeat');
+    expect(result.selectedTask?.phaseId).toBe('phase-2');
+  });
+
+  it('keeps selection on the next governed slice instead of jumping ahead to later higher-scoring phases', async () => {
+    const projectStore = createProjectStore('builder-console', projectsDir, { enableLedger: true });
+    const pathStore = await projectStore.getViewStore('path');
+    await pathStore.write({
+      phases: [
+        {
+          phaseId: 'phase-1',
+          projectId: 'builder-console',
+          ordinal: 1,
+          name: 'Heartbeat Autonomy Foundation',
+          objective: 'Advance heartbeat governance and autonomy safely.',
+          sourceClusterIds: ['cluster-1'],
+          tasks: [
+            {
+              taskId: 'task-phase-1',
+              phaseId: 'phase-1',
+              title: 'Teach heartbeat to select the next governed slice after phase closure',
+              description: 'Make phase handoff explicit in the governed runner.',
+              acceptance: ['Heartbeat chooses the next incomplete governed phase after closure.'],
+              status: 'pending',
+            },
+          ],
+          status: 'planned',
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        },
+        {
+          phaseId: 'phase-2',
+          projectId: 'builder-console',
+          ordinal: 2,
+          name: 'Advanced Governed Automation Expansion',
+          objective: 'Automation governance Victor prompt builder console path heartbeat.',
+          sourceClusterIds: ['cluster-1'],
+          tasks: [
+            {
+              taskId: 'task-phase-2',
+              phaseId: 'phase-2',
+              title: 'Expand governed automation heartbeat prompt governance builder console orchestration',
+              description: 'Higher keyword density, but not the next slice.',
+              acceptance: ['Future phase work remains queued.'],
+              status: 'pending',
+            },
+          ],
+          status: 'planned',
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        },
+      ],
+    });
+
+    const result = await runGovernedAutomationBuild(
+      {
+        projectsDir,
+      },
+      async () => activeTaskGroundedContext(
+        'Teach heartbeat to select the next governed slice after phase closure',
+        'task-phase-1',
+        'Heartbeat chooses the next incomplete governed phase after closure.',
+      ),
+    );
+
+    expect(result.status).toBe('completed');
+    expect(result.selectedTask?.taskId).toBe('task-phase-1');
+    expect(result.selectedTask?.phaseId).toBe('phase-1');
+  });
 });
 
 function groundedContext(

@@ -6,6 +6,7 @@ import {
   tickHeartbeat,
   type HeartbeatContract,
 } from './heartbeat';
+import { runHeartbeatLoop } from './heartbeat-loop';
 import { VictorKernelUnified } from './victor-kernel-unified';
 import { createWorkspaceGroundedQuery } from './workspace-grounded-query';
 
@@ -43,6 +44,9 @@ async function runCommand(name: string, payload: Record<string, unknown>) {
   }
   if (name === 'status') {
     return getHeartbeatStatus(payload);
+  }
+  if (name === 'loop') {
+    return runHeartbeatLoop(payload, resolveGroundedQuery);
   }
 
   throw new Error(`Unknown heartbeat command: ${name}`);
