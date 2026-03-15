@@ -1,4 +1,4 @@
-import { mkdtemp, rm } from 'node:fs/promises';
+import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
@@ -12,6 +12,7 @@ import {
   stopHeartbeat,
   tickHeartbeat,
   type HeartbeatContract,
+  type HeartbeatRequest,
 } from './heartbeat';
 import type { GroundedContextBundle } from './memory/types';
 
@@ -77,6 +78,14 @@ describe('heartbeat foundation', () => {
               status: 'pending',
             },
             {
+              taskId: 'task-active',
+              phaseId: 'phase-1',
+              title: 'Build backend prompt-construction pipeline',
+              description: 'Active governed execution thread.',
+              acceptance: ['Pipeline remains governed.'],
+              status: 'in-progress',
+            },
+            {
               taskId: 'task-2',
               phaseId: 'phase-1',
               title: 'Update decorative spacing',
@@ -104,6 +113,8 @@ describe('heartbeat foundation', () => {
     expect(result.ok).toBe(true);
     expect(result.checks.every((check) => check.passed)).toBe(true);
     expect(result.checks.find((check) => check.name === 'grounded-query')?.detail).toContain('semantic nodes');
+    expect(result.contract.reasoningModel).toBe('Kimi K2.5');
+    expect(result.contract.baselineCadenceMs).toBe(30 * 60 * 1000);
   });
 
   it('acquires a single heartbeat lease and blocks a second start', async () => {
@@ -131,6 +142,57 @@ describe('heartbeat foundation', () => {
     expect(status?.lastTickStatus).toBe('completed');
   });
 
+  it('self-starts a narrow-execution focus window at elevated cadence', async () => {
+    const started = await startHeartbeat(
+      request(projectsDir, stateDir, {
+        workClass: 'narrow-execution',
+        focusWindowMode: 'auto',
+      }),
+      groundedQueryResolver,
+    );
+
+    expect(started.status).toBe('started');
+    expect(started.state?.cadenceMode).toBe('elevated');
+    expect(started.state?.cadenceMs).toBe(15 * 60 * 1000);
+    expect(started.state?.focusWindow.status).toBe('active');
+    expect(started.state?.focusWindow.source).toBe('self-started');
+  });
+
+  it('forces cooldown after four hours of elevated execution and switches to reflective dry-run ticks', async () => {
+    const started = await startHeartbeat(
+      request(projectsDir, stateDir, {
+        dryRun: false,
+        workClass: 'narrow-execution',
+        focusWindowMode: 'manual',
+      }),
+      groundedQueryResolver,
+    );
+    expect(started.status).toBe('started');
+
+    const statePath = join(stateDir, 'builder-console.json');
+    const raw = JSON.parse(await readFile(statePath, 'utf8'));
+    raw.focusWindow.status = 'active';
+    raw.focusWindow.elevatedUntil = new Date(Date.now() - 60_000).toISOString();
+    raw.cadenceMode = 'elevated';
+    await writeFile(statePath, `${JSON.stringify(raw, null, 2)}\n`, 'utf8');
+
+    const tick = await tickHeartbeat(
+      request(projectsDir, stateDir, {
+        dryRun: false,
+        workClass: 'narrow-execution',
+        focusWindowMode: 'manual',
+      }),
+      groundedQueryResolver,
+    );
+
+    expect(tick.status).toBe('completed');
+    expect(tick.automation?.mode).toBe('dry-run');
+    expect(tick.state.cadenceMode).toBe('cooldown');
+    expect(tick.state.cadenceMs).toBe(30 * 60 * 1000);
+    expect(tick.state.focusWindow.status).toBe('cooldown');
+    expect(tick.state.focusWindow.cooldownCyclesRemaining).toBe(1);
+  });
+
   it('stops the heartbeat cleanly', async () => {
     const started = await startHeartbeat(request(projectsDir, stateDir), groundedQueryResolver);
     expect(started.status).toBe('started');
@@ -143,12 +205,25 @@ describe('heartbeat foundation', () => {
   });
 });
 
-function request(projectsDir: string, stateDir: string) {
+function request(
+  projectsDir: string,
+  stateDir: string,
+  overrides: Partial<HeartbeatRequest> = {},
+) {
+  return {
+    ...baseRequest(projectsDir, stateDir),
+    ...overrides,
+  };
+}
+
+function baseRequest(projectsDir: string, stateDir: string) {
   return {
     projectId: 'builder-console',
     projectsDir,
     stateDir,
     dryRun: true,
+    cadenceMs: 30 * 60 * 1000,
+    reasoningModel: 'Kimi K2.5',
     maxActionsPerTick: 1,
     maxConsecutiveBlocked: 2,
     maxConsecutiveFailures: 2,
