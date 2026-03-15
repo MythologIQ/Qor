@@ -9,6 +9,7 @@
     "dev": "bun run server.ts",
     "build": "bun build ./server.ts --outdir ./dist --target bun",
     "test": "bun test",
+    "eval:memory": "bun run evaluate-memory.ts",
     "typecheck": "tsc --noEmit",
     "start": "bun run server.ts",
     "ingest:victor-scope": "bun run ingest-victor-scope.ts"
