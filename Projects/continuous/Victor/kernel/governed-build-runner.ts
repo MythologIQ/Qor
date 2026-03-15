@@ -71,30 +71,12 @@ export async function runGovernedAutomationBuild(
   const projectsDir = resolveProjectsDir(request.projectsDir);
   const maxActions = request.maxActions ?? 1;
   const dryRun = request.dryRun !== false;
-
-  const preview = await previewGovernedAutomationSelection({
-    projectId,
-    projectsDir,
-  });
-  const selected = preview.selectedTask
-    ? {
-        phase: {
-          phaseId: preview.selectedTask.phaseId,
-          name: '',
-        },
-        task: {
-          taskId: preview.selectedTask.taskId,
-          phaseId: preview.selectedTask.phaseId,
-          title: preview.selectedTask.title,
-          description: '',
-          acceptance: [],
-          status: preview.selectedTask.status,
-        },
-        score: preview.selectedTask.score,
-        reason: preview.reason,
-      }
-    : null;
   const phases = await readPhases(projectId, projectsDir);
+  const pendingSelection = selectPendingGovernedAutomationTask(projectId, phases);
+  const activeSelection = pendingSelection
+    ? null
+    : await assessActiveGovernedAutomationTask(projectId, phases, groundedQuery);
+  const selected = pendingSelection ?? activeSelection?.candidate ?? null;
   const selectedPhaseName = phases.find((phase) => phase.phaseId === selected?.task.phaseId)?.name ?? selected?.phase.name ?? '';
 
   if (!selected) {
@@ -139,12 +121,10 @@ export async function runGovernedAutomationBuild(
   const query = reflectionMode
     ? `What is the next grounded reflection for the active governed automation task "${selected.task.title}" in phase "${selectedPhaseName}"?`
     : `What should happen next with the governed automation task "${selected.task.title}" in phase "${selectedPhaseName}"?`;
-  const groundedContext = reflectionMode
-    ? await groundedQuery(projectId, query)
-    : null;
-  const reflectiveAction = groundedContext
-    ? buildReflectiveDraftTaskAction(projectId, selected.task, selectedPhaseName, query, groundedContext)
-    : null;
+  const groundedContext = activeSelection?.groundedContext
+    ?? (reflectionMode ? await groundedQuery(projectId, query) : null);
+  const reflectiveAction = activeSelection?.action
+    ?? (groundedContext ? buildReflectiveDraftTaskAction(projectId, selected.task, selectedPhaseName, query, groundedContext) : null);
   const action: AutomationAction = reflectiveAction ?? {
     kind: 'update-task-status',
     projectId,
@@ -182,7 +162,11 @@ export async function runGovernedAutomationBuild(
       score: selected.score,
     },
     selectionReason: reflectiveAction
-      ? `${selected.reason} Grounded reflection proposed a governed follow-on draft task.`
+      ? `${selected.reason} ${
+          reflectiveAction.kind === 'update-task-status'
+            ? 'Grounded reflection proposed governed task completion.'
+            : 'Grounded reflection proposed a governed follow-on draft task.'
+        }`
       : selected.reason,
     automation,
   };
@@ -219,49 +203,7 @@ export async function previewGovernedAutomationSelection(
 }
 
 function selectGovernedAutomationTask(projectId: string, phases: BuilderConsolePhase[]) {
-  const pendingCandidates = phases.flatMap((phase) => {
-    const phaseText = `${phase.name} ${phase.objective ?? ''}`;
-    const phaseScore = keywordScore(phaseText);
-    return (phase.tasks ?? [])
-      .filter((task) => task.status === 'pending')
-      .map((task) => {
-        const taskText = `${task.title} ${task.description} ${task.acceptance.join(' ')}`;
-        const score = phaseScore + keywordScore(taskText);
-        return {
-          phase,
-          task,
-          score,
-          reason: `Selected pending task "${task.title}" because it most strongly matches the governed automation objective for ${projectId}.`,
-        };
-      })
-      .filter((candidate) => candidate.score > 0);
-  });
-
-  pendingCandidates.sort((left, right) => right.score - left.score || left.task.title.localeCompare(right.task.title));
-  if (pendingCandidates[0]) {
-    return pendingCandidates[0];
-  }
-
-  const activeCandidates = phases.flatMap((phase) => {
-    const phaseText = `${phase.name} ${phase.objective ?? ''}`;
-    const phaseScore = keywordScore(phaseText);
-    return (phase.tasks ?? [])
-      .filter((task) => task.status === 'in-progress')
-      .map((task) => {
-        const taskText = `${task.title} ${task.description} ${task.acceptance.join(' ')}`;
-        const score = phaseScore + keywordScore(taskText);
-        return {
-          phase,
-          task,
-          score,
-          reason: `Selected active task "${task.title}" for grounded reflection because the governed automation queue for ${projectId} is already in progress.`,
-        };
-      })
-      .filter((candidate) => candidate.score > 0);
-  });
-
-  activeCandidates.sort((left, right) => right.score - left.score || left.task.title.localeCompare(right.task.title));
-  return activeCandidates[0] ?? null;
+  return selectPendingGovernedAutomationTask(projectId, phases) ?? collectActiveCandidates(projectId, phases)[0] ?? null;
 }
 
 async function readPhases(projectId: string, projectsDir: string): Promise<BuilderConsolePhase[]> {
@@ -284,6 +226,177 @@ function keywordScore(text: string): number {
 
 function normalize(value: string): string {
   return value.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+}
+
+function selectPendingGovernedAutomationTask(projectId: string, phases: BuilderConsolePhase[]) {
+  const pendingCandidates = phases.flatMap((phase) => {
+    const phaseText = `${phase.name} ${phase.objective ?? ''}`;
+    const phaseScore = keywordScore(phaseText);
+    return (phase.tasks ?? [])
+      .filter((task) => task.status === 'pending')
+      .map((task) => {
+        const taskText = `${task.title} ${task.description} ${task.acceptance.join(' ')}`;
+        const score = phaseScore + keywordScore(taskText);
+        return {
+          phase,
+          task,
+          score,
+          reason: `Selected pending task "${task.title}" because it most strongly matches the governed automation objective for ${projectId}.`,
+        };
+      })
+      .filter((candidate) => candidate.score > 0);
+  });
+
+  pendingCandidates.sort((left, right) => right.score - left.score || left.task.title.localeCompare(right.task.title));
+  return pendingCandidates[0] ?? null;
+}
+
+function collectActiveCandidates(projectId: string, phases: BuilderConsolePhase[]) {
+  const activeCandidates = phases.flatMap((phase) => {
+    const phaseText = `${phase.name} ${phase.objective ?? ''}`;
+    const phaseScore = keywordScore(phaseText);
+    return (phase.tasks ?? [])
+      .filter((task) => task.status === 'in-progress')
+      .map((task) => {
+        const taskText = `${task.title} ${task.description} ${task.acceptance.join(' ')}`;
+        const score = phaseScore + keywordScore(taskText);
+        return {
+          phase,
+          task,
+          score,
+          reason: `Selected active task "${task.title}" for grounded reflection because the governed automation queue for ${projectId} is already in progress.`,
+        };
+      })
+      .filter((candidate) => candidate.score > 0);
+  });
+
+  activeCandidates.sort((left, right) => right.score - left.score || left.task.title.localeCompare(right.task.title));
+  return activeCandidates;
+}
+
+async function assessActiveGovernedAutomationTask(
+  projectId: string,
+  phases: BuilderConsolePhase[],
+  groundedQuery: (projectId: string, query: string) => Promise<GroundedContextBundle>,
+): Promise<{
+  candidate: ReturnType<typeof collectActiveCandidates>[number];
+  groundedContext: GroundedContextBundle;
+  action: AutomationAction | null;
+} | null> {
+  const activeCandidates = collectActiveCandidates(projectId, phases);
+  const draftCandidates: Array<{
+    candidate: ReturnType<typeof collectActiveCandidates>[number];
+    groundedContext: GroundedContextBundle;
+    action: AutomationAction;
+  }> = [];
+  let fallback: {
+    candidate: ReturnType<typeof collectActiveCandidates>[number];
+    groundedContext: GroundedContextBundle;
+    action: AutomationAction | null;
+  } | null = null;
+
+  for (const candidate of activeCandidates) {
+    const query = `What is the next grounded reflection for the active governed automation task "${candidate.task.title}" in phase "${candidate.phase.name}"?`;
+    const groundedContext = await groundedQuery(projectId, query);
+    const completionAction = buildCompletionStatusAction(projectId, candidate, query, groundedContext);
+    if (completionAction) {
+      return { candidate, groundedContext, action: completionAction };
+    }
+    const draftAction = buildReflectiveDraftTaskAction(
+      projectId,
+      candidate.task,
+      candidate.phase.name,
+      query,
+      groundedContext,
+    );
+    if (draftAction) {
+      draftCandidates.push({ candidate, groundedContext, action: draftAction });
+    }
+    if (!fallback) {
+      fallback = { candidate, groundedContext, action: null };
+    }
+  }
+
+  if (draftCandidates.length > 0) {
+    return draftCandidates[0];
+  }
+
+  return fallback;
+}
+
+function buildCompletionStatusAction(
+  projectId: string,
+  candidate: ReturnType<typeof collectActiveCandidates>[number],
+  query: string,
+  groundedContext: GroundedContextBundle,
+): AutomationAction | null {
+  if (groundedContext.contradictions.length > 0 || groundedContext.missingInformation.length > 0) {
+    return null;
+  }
+  if (shouldHoldUmbrellaTaskOpen(candidate)) {
+    return null;
+  }
+  if (!hasSatisfiedAcceptance(candidate.task.acceptance, groundedContext)) {
+    return null;
+  }
+
+  return {
+    kind: 'update-task-status',
+    projectId,
+    phaseId: candidate.phase.phaseId,
+    taskId: candidate.task.taskId,
+    taskTitle: candidate.task.title,
+    status: 'done',
+    query,
+  };
+}
+
+function shouldHoldUmbrellaTaskOpen(candidate: ReturnType<typeof collectActiveCandidates>[number]): boolean {
+  const siblingInProgressCount = (candidate.phase.tasks ?? [])
+    .filter((task) => task.status === 'in-progress' && task.taskId !== candidate.task.taskId)
+    .length;
+  return siblingInProgressCount > 0 && normalize(candidate.task.title).startsWith('automate ');
+}
+
+function hasSatisfiedAcceptance(acceptance: string[], groundedContext: GroundedContextBundle): boolean {
+  if (acceptance.length === 0) {
+    return false;
+  }
+  return acceptance.every((criterion) => criterionSatisfied(criterion, groundedContext));
+}
+
+function criterionSatisfied(criterion: string, groundedContext: GroundedContextBundle): boolean {
+  const normalizedCriterion = normalizeEvidence(criterion);
+  if (!normalizedCriterion) {
+    return false;
+  }
+
+  const evidenceTexts = [
+    ...groundedContext.semanticNodes.flatMap((node) => [node.label, node.summary]),
+    ...groundedContext.chunkHits.map((hit) => hit.chunk.text),
+  ].map(normalizeEvidence);
+
+  return evidenceTexts.some((evidence) => {
+    if (!evidence) {
+      return false;
+    }
+    if (evidence.includes(normalizedCriterion) || normalizedCriterion.includes(evidence)) {
+      return true;
+    }
+    const criterionTerms = new Set(normalizedCriterion.split(' ').filter(Boolean));
+    const evidenceTerms = new Set(evidence.split(' ').filter(Boolean));
+    const overlap = [...criterionTerms].filter((term) => evidenceTerms.has(term)).length;
+    return criterionTerms.size > 0 && overlap / criterionTerms.size >= 0.7;
+  });
+}
+
+function normalizeEvidence(value: string): string {
+  return value
+    .toLowerCase()
+    .replace(/\bi\s*\/\s*o\b/g, ' input output ')
+    .replace(/\bio\b/g, ' input output ')
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim();
 }
 
 function buildReflectiveDraftTaskAction(

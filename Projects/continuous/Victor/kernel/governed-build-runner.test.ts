@@ -251,6 +251,136 @@ describe('runGovernedAutomationBuild', () => {
     expect(updated?.phases?.[0]?.tasks).toHaveLength(2);
     expect(updated?.phases?.[0]?.tasks?.some((task) => task.title === 'Prompt-construction operations telemetry wiring')).toBe(true);
   });
+
+  it('completes a specific active subtask when all acceptance evidence is grounded', async () => {
+    const projectStore = createProjectStore('builder-console', projectsDir, { enableLedger: true });
+    const pathStore = await projectStore.getViewStore('path');
+    await pathStore.write({
+      phases: [
+        {
+          phaseId: 'phase-1',
+          projectId: 'builder-console',
+          ordinal: 1,
+          name: 'Comms Tab Prompt Automation',
+          objective: 'Advance governed automation in the comms tab.',
+          sourceClusterIds: ['cluster-1'],
+          tasks: [
+            {
+              taskId: 'task-parent',
+              phaseId: 'phase-1',
+              title: 'Automate comms-tab prompt construction',
+              description: 'Umbrella task should stay open while subtasks remain active.',
+              acceptance: ['All child work is complete.'],
+              status: 'in-progress',
+            },
+            {
+              taskId: 'task-audit',
+              phaseId: 'phase-1',
+              title: 'Implement automation audit logging',
+              description: 'Add append-only automation audit records and query APIs.',
+              acceptance: [
+                'Automation runs produce run-started, action, and run-completed audit entries.',
+                'Audit entries capture governance results and before/after state for task mutations.',
+                'Victor exposes a query path for recent automation audit history.',
+              ],
+              status: 'in-progress',
+            },
+          ],
+          status: 'active',
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        },
+      ],
+    });
+
+    const result = await runGovernedAutomationBuild(
+      {
+        projectsDir,
+        dryRun: false,
+        maxActions: 1,
+      },
+      async (_projectId, query) => completionReadyGroundedContext(query),
+    );
+
+    expect(result.status).toBe('completed');
+    expect(result.mode).toBe('execute');
+    expect(result.selectedTask?.taskId).toBe('task-audit');
+    expect(result.selectionReason).toContain('governed task completion');
+    expect(result.automation.results[0]?.kind).toBe('update-task-status');
+    expect(result.automation.results[0]?.status).toBe('updated');
+
+    const updated = await pathStore.read<{ phases?: Array<{ tasks?: Array<{ taskId?: string; status?: string }> }> }>();
+    const tasks = updated?.phases?.[0]?.tasks ?? [];
+    expect(tasks.find((task) => task.taskId === 'task-audit')?.status).toBe('done');
+    expect(tasks.find((task) => task.taskId === 'task-parent')?.status).toBe('in-progress');
+  });
+
+  it('prioritizes completion-ready active subtasks over umbrella draft recommendations', async () => {
+    const projectStore = createProjectStore('builder-console', projectsDir, { enableLedger: true });
+    const pathStore = await projectStore.getViewStore('path');
+    await pathStore.write({
+      phases: [
+        {
+          phaseId: 'phase-1',
+          projectId: 'builder-console',
+          ordinal: 1,
+          name: 'Comms Tab Prompt Automation',
+          objective: 'Advance governed automation in the comms tab.',
+          sourceClusterIds: ['cluster-1'],
+          tasks: [
+            {
+              taskId: 'task-parent',
+              phaseId: 'phase-1',
+              title: 'Automate comms-tab prompt construction',
+              description: 'Umbrella task should stay open while subtasks remain active.',
+              acceptance: ['All child work is complete.'],
+              status: 'in-progress',
+            },
+            {
+              taskId: 'task-audit',
+              phaseId: 'phase-1',
+              title: 'Implement automation audit logging',
+              description: 'Add append-only automation audit records and query APIs.',
+              acceptance: [
+                'Automation runs produce run-started, action, and run-completed audit entries.',
+                'Audit entries capture governance results and before/after state for task mutations.',
+                'Victor exposes a query path for recent automation audit history.',
+              ],
+              status: 'in-progress',
+            },
+          ],
+          status: 'active',
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        },
+      ],
+    });
+
+    const result = await runGovernedAutomationBuild(
+      {
+        projectsDir,
+        dryRun: false,
+        maxActions: 1,
+      },
+      async (_projectId, query) => (
+        query.includes('Automate comms-tab prompt construction')
+          ? groundedContext('in-progress', ['Reduce comms tab to standard chat input/output'])
+          : completionReadyGroundedContext(query)
+      ),
+    );
+
+    expect(result.status).toBe('completed');
+    expect(result.mode).toBe('execute');
+    expect(result.selectedTask?.taskId).toBe('task-audit');
+    expect(result.selectionReason).toContain('governed task completion');
+    expect(result.automation.results[0]?.kind).toBe('update-task-status');
+    expect(result.automation.results[0]?.status).toBe('updated');
+
+    const updated = await pathStore.read<{ phases?: Array<{ tasks?: Array<{ taskId?: string; status?: string }> }> }>();
+    const tasks = updated?.phases?.[0]?.tasks ?? [];
+    expect(tasks.find((task) => task.taskId === 'task-audit')?.status).toBe('done');
+    expect(tasks.find((task) => task.taskId === 'task-parent')?.status).toBe('in-progress');
+  });
 });
 
 function groundedContext(
@@ -303,6 +433,115 @@ function groundedContext(
     cacheEntries: [],
     contradictions: [],
     recommendedNextActions,
+    missingInformation: [],
+  };
+}
+
+function completionReadyGroundedContext(query: string): GroundedContextBundle {
+  return {
+    query,
+    chunkHits: [
+      {
+        score: 8,
+        chunk: {
+          id: 'chunk-audit',
+          documentId: 'doc-audit',
+          index: 0,
+          fingerprint: 'chunk-audit',
+          text: 'Automation runs produce run-started, action, and run-completed audit entries. Audit entries capture governance results and before/after state for task mutations. Victor exposes a query path for recent automation audit history.',
+          tokenEstimate: 32,
+          span: { startLine: 1, endLine: 3, startOffset: 0, endOffset: 80 },
+        },
+      },
+    ],
+    semanticNodes: [
+      {
+        id: 'task-audit',
+        documentId: 'doc-audit',
+        sourceChunkId: 'chunk-audit',
+        nodeType: 'Task',
+        label: 'Implement automation audit logging',
+        summary: 'Implement automation audit logging',
+        fingerprint: 'task-audit',
+        span: { startLine: 1, endLine: 1, startOffset: 0, endOffset: 10 },
+        attributes: { status: 'in-progress', taskId: 'task-audit' },
+        state: 'active',
+      },
+      {
+        id: 'goal-audit-1',
+        documentId: 'doc-audit',
+        sourceChunkId: 'chunk-audit',
+        nodeType: 'Goal',
+        label: 'Automation runs produce run-started, action, and run-completed audit entries.',
+        summary: 'Automation runs produce run-started, action, and run-completed audit entries.',
+        fingerprint: 'goal-audit-1',
+        span: { startLine: 1, endLine: 1, startOffset: 0, endOffset: 10 },
+        attributes: {},
+        state: 'active',
+      },
+      {
+        id: 'goal-audit-2',
+        documentId: 'doc-audit',
+        sourceChunkId: 'chunk-audit',
+        nodeType: 'Goal',
+        label: 'Audit entries capture governance results and before/after state for task mutations.',
+        summary: 'Audit entries capture governance results and before/after state for task mutations.',
+        fingerprint: 'goal-audit-2',
+        span: { startLine: 2, endLine: 2, startOffset: 11, endOffset: 20 },
+        attributes: {},
+        state: 'active',
+      },
+      {
+        id: 'goal-audit-3',
+        documentId: 'doc-audit',
+        sourceChunkId: 'chunk-audit',
+        nodeType: 'Goal',
+        label: 'Victor exposes a query path for recent automation audit history.',
+        summary: 'Victor exposes a query path for recent automation audit history.',
+        fingerprint: 'goal-audit-3',
+        span: { startLine: 3, endLine: 3, startOffset: 21, endOffset: 30 },
+        attributes: {},
+        state: 'active',
+      },
+    ],
+    semanticEdges: [
+      {
+        id: 'edge-audit-1',
+        documentId: 'doc-audit',
+        sourceChunkId: 'chunk-audit',
+        fromNodeId: 'task-audit',
+        toNodeId: 'goal-audit-1',
+        edgeType: 'supports',
+        fingerprint: 'edge-audit-1',
+        attributes: {},
+        state: 'active',
+      },
+      {
+        id: 'edge-audit-2',
+        documentId: 'doc-audit',
+        sourceChunkId: 'chunk-audit',
+        fromNodeId: 'task-audit',
+        toNodeId: 'goal-audit-2',
+        edgeType: 'supports',
+        fingerprint: 'edge-audit-2',
+        attributes: {},
+        state: 'active',
+      },
+      {
+        id: 'edge-audit-3',
+        documentId: 'doc-audit',
+        sourceChunkId: 'chunk-audit',
+        fromNodeId: 'task-audit',
+        toNodeId: 'goal-audit-3',
+        edgeType: 'supports',
+        fingerprint: 'edge-audit-3',
+        attributes: {},
+        state: 'active',
+      },
+    ],
+    cacheEntries: [],
+    contradictions: [],
+    recommendedNextActions: [],
     missingInformation: [],
   };
 }
