@@ -8,6 +8,12 @@ import {
   createStoreIntegrity,
 } from '../../Zo-Qore/runtime/planning';
 import {
+  appendAutomationActionAudit,
+  appendAutomationRunCompleted,
+  appendAutomationRunStarted,
+  type AutomationAuditRunContext,
+} from './automation-audit';
+import {
   createGovernedBuilderConsoleDraftTask,
   updateGovernedBuilderConsoleTaskStatus,
 } from './builder-console-write';
@@ -43,6 +49,7 @@ export type AutomationAction = AutomationDraftTaskAction | AutomationTaskStatusA
 export interface AutomationRunRequest {
   actions: AutomationAction[];
   actorId?: string;
+  runId?: string;
   projectsDir?: string;
   dryRun?: boolean;
   maxActions?: number;
@@ -64,9 +71,14 @@ export interface AutomationActionResult {
   };
   taskId?: string;
   duplicateTaskId?: string;
+  audit?: {
+    before: Record<string, unknown> | null;
+    after: Record<string, unknown> | null;
+  };
 }
 
 export interface AutomationRunResult {
+  runId: string;
   status: 'completed' | 'blocked';
   mode: 'dry-run' | 'execute';
   actionBudget: number;
@@ -80,18 +92,33 @@ export async function runVictorSafeAutomation(
   groundedQuery: (projectId: string, query: string) => Promise<GroundedContextBundle>,
 ): Promise<AutomationRunResult> {
   const actorId = request.actorId?.trim() || 'victor';
+  const runId = request.runId?.trim() || `run_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
   const actionBudget = request.maxActions ?? 1;
   const dryRun = request.dryRun !== false;
   const stopOnBlock = request.stopOnBlock !== false;
+  const auditContext: AutomationAuditRunContext = {
+    runId,
+    actorId,
+    mode: dryRun ? 'dry-run' : 'execute',
+    actionBudget,
+    requestedActionCount: request.actions?.length ?? 0,
+    stopOnBlock,
+  };
+  const projectIds = [...new Set((request.actions ?? []).map((action) => action.projectId).filter(Boolean))];
 
   if (!Array.isArray(request.actions) || request.actions.length === 0) {
     throw new Error('At least one automation action is required.');
   }
 
+  for (const projectId of projectIds) {
+    await appendAutomationRunStarted(projectId, request.projectsDir, auditContext);
+  }
+
   if (request.actions.length > actionBudget) {
-    return {
+    const blockedResult: AutomationRunResult = {
       status: 'blocked',
       mode: dryRun ? 'dry-run' : 'execute',
+      runId,
       actionBudget,
       executedCount: 0,
       blockedCount: 1,
@@ -105,9 +132,23 @@ export async function runVictorSafeAutomation(
           status: 'blocked',
           reason: `Requested ${request.actions.length} actions, which exceeds the safe automation budget of ${actionBudget}.`,
           groundedContext: emptyGroundedContext(request.actions[0]?.query ?? ''),
+          audit: {
+            before: null,
+            after: null,
+          },
         },
       ],
     };
+    for (const projectId of projectIds) {
+      await appendAutomationActionAudit(projectId, request.projectsDir, auditContext, request.actions[0]!, blockedResult.results[0]!);
+      await appendAutomationRunCompleted(projectId, request.projectsDir, {
+        ...auditContext,
+        status: blockedResult.status,
+        executedCount: blockedResult.executedCount,
+        blockedCount: blockedResult.blockedCount,
+      });
+    }
+    return blockedResult;
   }
 
   const results: AutomationActionResult[] = [];
@@ -118,6 +159,7 @@ export async function runVictorSafeAutomation(
       ? await previewAutomationAction(action, groundedContext, actorId, request.projectsDir, actionIndex)
       : await executeAutomationAction(action, groundedContext, actorId, request.projectsDir, actionIndex);
     results.push(result);
+    await appendAutomationActionAudit(action.projectId, request.projectsDir, auditContext, action, result);
 
     if (result.status === 'blocked' && stopOnBlock) {
       break;
@@ -126,8 +168,8 @@ export async function runVictorSafeAutomation(
 
   const blockedCount = results.filter((result) => result.status === 'blocked').length;
   const executedCount = results.filter((result) => result.executed).length;
-
-  return {
+  const finalResult: AutomationRunResult = {
+    runId,
     status: blockedCount > 0 ? 'blocked' : 'completed',
     mode: dryRun ? 'dry-run' : 'execute',
     actionBudget,
@@ -135,6 +177,17 @@ export async function runVictorSafeAutomation(
     blockedCount,
     results,
   };
+
+  for (const projectId of projectIds) {
+    await appendAutomationRunCompleted(projectId, request.projectsDir, {
+      ...auditContext,
+      status: finalResult.status,
+      executedCount: finalResult.executedCount,
+      blockedCount: finalResult.blockedCount,
+    });
+  }
+
+  return finalResult;
 }
 
 async function previewAutomationAction(
@@ -276,6 +329,19 @@ async function executeAutomationAction(
       governance: result.governance,
       taskId: result.task?.taskId,
       duplicateTaskId: result.duplicateTaskId,
+      audit: {
+        before: null,
+        after: result.task
+          ? {
+              taskId: result.task.taskId,
+              phaseId: result.task.phaseId,
+              title: result.task.title,
+              description: result.task.description,
+              acceptance: result.task.acceptance,
+              status: result.task.status,
+            }
+          : null,
+      },
     };
   }
 
@@ -304,6 +370,28 @@ async function executeAutomationAction(
     groundedContext,
     governance: result.governance,
     taskId: result.task?.taskId ?? action.taskId,
+    audit: {
+      before: result.task
+        ? {
+            taskId: result.task.taskId,
+            phaseId: result.task.phaseId,
+            title: result.task.title,
+            description: result.task.description,
+            acceptance: result.task.acceptance,
+            status: result.previousStatus ?? null,
+          }
+        : null,
+      after: result.task
+        ? {
+            taskId: result.task.taskId,
+            phaseId: result.task.phaseId,
+            title: result.task.title,
+            description: result.task.description,
+            acceptance: result.task.acceptance,
+            status: result.task.status,
+          }
+        : null,
+    },
   };
 }
 
@@ -397,6 +485,10 @@ function eligibleActionResult(
     groundedContext,
     governance,
     taskId,
+    audit: {
+      before: null,
+      after: null,
+    },
   };
 }
 
@@ -418,6 +510,10 @@ function blockedActionResult(
     groundedContext,
     governance,
     taskId: action.kind === 'update-task-status' ? action.taskId : undefined,
+    audit: {
+      before: null,
+      after: null,
+    },
   };
 }
 

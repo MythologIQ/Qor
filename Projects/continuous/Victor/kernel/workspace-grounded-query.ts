@@ -244,7 +244,8 @@ class WorkspaceExerciseStore implements LearningStore {
   }
 
   private resolveProjectIdForCache(entry: CacheEntryRecord) {
-    const document = this.documents.get(entry.documentId);
+    const documentRef = entry.dependencyRefs.find((ref) => ref.kind === 'document');
+    const document = documentRef ? this.documents.get(documentRef.id) : undefined;
     return document?.projectId ?? 'unknown';
   }
 }
