@@ -138,6 +138,79 @@ describe('createGovernedBuilderConsoleDraftTask', () => {
     expect(duplicate.status).toBe('duplicate');
     expect(duplicate.duplicateTaskId).toBeString();
   });
+
+  it('blocks task creation when the target phase does not exist', async () => {
+    const result = await createGovernedBuilderConsoleDraftTask(
+      {
+        projectsDir,
+        projectId: 'builder-console',
+        phaseId: 'phase-missing',
+        title: 'Missing phase write',
+        description: 'This should fail because the phase is missing.',
+        query: 'What comms tab prompt automation task exists in Builder Console?',
+      },
+      groundedContext(),
+    );
+
+    expect(result.status).toBe('blocked');
+    expect(result.reason).toContain('target phase was not found');
+  });
+
+  it('blocks task creation when grounded evidence contains contradictions', async () => {
+    const result = await createGovernedBuilderConsoleDraftTask(
+      {
+        projectsDir,
+        projectId: 'builder-console',
+        phaseId: 'phase-1',
+        title: 'Contradictory write',
+        description: 'This should fail because the memory bundle conflicts.',
+        query: 'What is the authority model for Victor?',
+      },
+      {
+        ...groundedContext(),
+        contradictions: [
+          {
+            key: 'Decision:authority model',
+            nodeIds: ['decision-1', 'decision-2'],
+            summaries: ['Victor is authoritative', 'Builder Console is authoritative'],
+          },
+        ],
+      },
+    );
+
+    expect(result.status).toBe('blocked');
+    expect(result.reason).toContain('contains contradictions');
+  });
+
+  it('blocks task creation when Builder Console governance denies the write', async () => {
+    const projectStore = createProjectStore('builder-console', projectsDir, { enableLedger: true });
+    const constellationStore = await projectStore.getViewStore('constellation');
+    await constellationStore.write({
+      constellationId: 'const-1',
+      projectId: 'builder-console',
+      nodes: [{ nodeId: 'node-1', clusterId: 'missing-cluster', position: { x: 0, y: 0 } }],
+      edges: [],
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      status: 'mapped',
+    });
+
+    const result = await createGovernedBuilderConsoleDraftTask(
+      {
+        projectsDir,
+        projectId: 'builder-console',
+        phaseId: 'phase-1',
+        title: 'Governance denied write',
+        description: 'This should fail because project state violates Builder Console governance.',
+        query: 'What comms tab prompt automation task exists in Builder Console?',
+      },
+      groundedContext(),
+    );
+
+    expect(result.status).toBe('blocked');
+    expect(result.governance?.allowed).toBe(false);
+    expect(result.reason).toContain('PL-POL-07');
+  });
 });
 
 function groundedContext(): GroundedContextBundle {
