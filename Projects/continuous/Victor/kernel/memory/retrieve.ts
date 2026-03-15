@@ -38,7 +38,7 @@ export async function retrieveGroundedContext(
   const semanticEdges = uniqueEdges(neighborhood.edges);
   const contradictions = detectContradictions(semanticNodes);
   const missingInformation = inferMissingInformation(query, chunkHits, semanticNodes, contradictions);
-  const recommendedNextActions = inferNextActions(chunkHits, contradictions, missingInformation);
+  const recommendedNextActions = inferNextActions(query, chunkHits, semanticNodes, semanticEdges, contradictions, missingInformation);
 
   return {
     query,
@@ -120,7 +120,10 @@ function inferMissingInformation(
 }
 
 function inferNextActions(
+  query: string,
   chunkHits: SearchChunkHit[],
+  semanticNodes: SemanticNodeRecord[],
+  semanticEdges: GroundedContextBundle['semanticEdges'],
   contradictions: GroundedContextBundle['contradictions'],
   missingInformation: string[],
 ): string[] {
@@ -142,7 +145,58 @@ function inferNextActions(
     actions.push('Create or ingest a task-bearing artifact so the kernel can track execution intent.');
   }
 
+  const activeTaskAction = inferActiveTaskNextAction(query, semanticNodes, semanticEdges);
+  if (activeTaskAction) {
+    actions.push(activeTaskAction);
+  }
+
   return actions;
+}
+
+function inferActiveTaskNextAction(
+  query: string,
+  semanticNodes: SemanticNodeRecord[],
+  semanticEdges: GroundedContextBundle['semanticEdges'],
+): string | null {
+  const taskNodes = semanticNodes.filter((node) => node.nodeType === 'Task');
+  if (taskNodes.length === 0) {
+    return null;
+  }
+
+  const normalizedQuery = normalizeText(query);
+  const activeTask = taskNodes.find((node) => isTaskInProgress(node) && queryReferencesTask(normalizedQuery, node))
+    ?? taskNodes.find(isTaskInProgress)
+    ?? taskNodes.find((node) => queryReferencesTask(normalizedQuery, node))
+    ?? null;
+  if (!activeTask) {
+    return null;
+  }
+
+  const taskTitles = new Set(taskNodes.map((node) => normalizeText(node.label)));
+  const supportedGoalIds = new Set(
+    semanticEdges
+      .filter((edge) => edge.fromNodeId === activeTask.id && edge.edgeType === 'supports')
+      .map((edge) => edge.toNodeId),
+  );
+  const supportedGoals = semanticNodes.filter(
+    (node) => node.nodeType === 'Goal' && supportedGoalIds.has(node.id),
+  );
+
+  for (const goal of supportedGoals) {
+    const recommendation = goalToAction(goal.label);
+    if (!recommendation) {
+      continue;
+    }
+    if (taskTitles.has(normalizeText(recommendation))) {
+      continue;
+    }
+    if (normalizeText(recommendation) === normalizeText(activeTask.label)) {
+      continue;
+    }
+    return recommendation;
+  }
+
+  return null;
 }
 
 async function inferChunkHitsFromSemanticNodes(
@@ -209,4 +263,61 @@ function tokenizeQuery(value: string): string[] {
     .split(/[^a-z0-9]+/i)
     .map((term) => term.trim())
     .filter((term) => term.length >= 3);
+}
+
+function normalizeText(value: string): string {
+  return value.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+}
+
+function isTaskInProgress(node: SemanticNodeRecord): boolean {
+  return normalizeText(String(node.attributes?.status ?? '')) === 'in progress';
+}
+
+function queryReferencesTask(normalizedQuery: string, node: SemanticNodeRecord): boolean {
+  if (!normalizedQuery) {
+    return false;
+  }
+
+  const title = normalizeText(node.label);
+  if (title && normalizedQuery.includes(title)) {
+    return true;
+  }
+
+  const taskId = normalizeText(String(node.attributes?.taskId ?? ''));
+  return Boolean(taskId) && normalizedQuery.includes(taskId);
+}
+
+function goalToAction(goalLabel: string): string | null {
+  const normalized = normalizeText(goalLabel);
+  if (!normalized) {
+    return null;
+  }
+
+  const compactDisplayMatch = goalLabel.match(/compact operations display/i);
+  const provenanceMatch = goalLabel.match(/prompt construction\/?provenance|prompt construction/i);
+  if (compactDisplayMatch && provenanceMatch) {
+    return 'Build prompt-construction operations display';
+  }
+
+  if (/reduced to normal chat input output|standard chat input output/i.test(normalized)) {
+    return 'Reduce comms tab to standard chat input/output';
+  }
+
+  if (/prompt building logic is automated/i.test(normalized)) {
+    return 'Build backend prompt-construction pipeline';
+  }
+
+  const stripped = goalLabel
+    .trim()
+    .replace(/[.?!]+$/g, '')
+    .replace(/^(the|a|an)\s+/i, '')
+    .replace(/\bis reduced to\b/i, ' -> ')
+    .replace(/\bis standard\b/i, ' -> standard')
+    .replace(/\bshows\b/i, 'for')
+    .replace(/\bis automated\b/i, 'automation');
+  if (!stripped) {
+    return null;
+  }
+
+  return `Implement ${stripped.charAt(0).toLowerCase()}${stripped.slice(1)}`;
 }
