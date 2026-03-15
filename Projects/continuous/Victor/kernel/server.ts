@@ -6,7 +6,7 @@
  */
 
 import { Hono } from 'hono';
-import { listAutomationAuditRecords } from './automation-audit';
+import { listAutomationAuditRecords, summarizeAutomationReview } from './automation-audit';
 import { runVictorSafeAutomation } from './automation-runner';
 import { createGovernedBuilderConsoleDraftTask, updateGovernedBuilderConsoleTaskStatus } from './builder-console-write';
 import { runGovernedAutomationBuild } from './governed-build-runner';
@@ -260,6 +260,45 @@ app.get('/api/victor/automation/audit', async (c) => {
     return c.json(
       {
         error: error instanceof Error ? error.message : 'Automation audit query failed',
+      },
+      500,
+    );
+  }
+});
+
+app.get('/api/victor/automation/review', async (c) => {
+  try {
+    const projectId = c.req.query('projectId');
+    if (!projectId) {
+      return c.json({ error: 'Invalid request - projectId is required' }, 400);
+    }
+
+    const hoursValue = c.req.query('hours');
+    const hours = hoursValue ? Number.parseInt(hoursValue, 10) : 12;
+    const limitValue = c.req.query('limit');
+    const limit = limitValue ? Number.parseInt(limitValue, 10) : 100;
+    const since =
+      Number.isFinite(hours) && hours > 0
+        ? new Date(Date.now() - hours * 60 * 60 * 1000).toISOString()
+        : undefined;
+
+    const review = await summarizeAutomationReview(
+      projectId,
+      c.req.query('projectsDir') ?? undefined,
+      {
+        since,
+        limit: Number.isFinite(limit) && limit > 0 ? limit : 100,
+      },
+    );
+
+    return c.json({
+      status: 'ok',
+      review,
+    });
+  } catch (error) {
+    return c.json(
+      {
+        error: error instanceof Error ? error.message : 'Automation overnight review failed',
       },
       500,
     );

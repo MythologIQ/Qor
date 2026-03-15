@@ -5,7 +5,7 @@ import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'bun:test';
 
 import { createProjectStore } from '../../Zo-Qore/runtime/planning';
-import { listAutomationAuditRecords } from './automation-audit';
+import { listAutomationAuditRecords, summarizeAutomationReview } from './automation-audit';
 import { runVictorSafeAutomation } from './automation-runner';
 import type { GroundedContextBundle } from './memory/types';
 
@@ -202,6 +202,66 @@ describe('runVictorSafeAutomation', () => {
     const actionEntry = audit.find((entry) => entry.event === 'action');
     expect(actionEntry?.payload.executed).toBe(true);
     expect(actionEntry?.payload.target).toBeObject();
+  });
+
+  it('summarizes overnight review from automation audit records', async () => {
+    const first = await runVictorSafeAutomation(
+      {
+        dryRun: false,
+        maxActions: 1,
+        projectsDir,
+        actions: [
+          {
+            kind: 'update-task-status',
+            projectId: 'builder-console',
+            phaseId: 'phase-1',
+            taskId: 'task-1',
+            status: 'in-progress',
+            query: 'What should happen next with the comms-tab prompt automation task?',
+          },
+        ],
+      },
+      async () => groundedContext(),
+    );
+
+    const second = await runVictorSafeAutomation(
+      {
+        dryRun: true,
+        maxActions: 1,
+        projectsDir,
+        actions: [
+          {
+            kind: 'update-task-status',
+            projectId: 'builder-console',
+            phaseId: 'phase-1',
+            taskId: 'task-1',
+            status: 'done',
+            query: 'Can Victor mark the comms task as complete?',
+          },
+        ],
+      },
+      async () => ({
+        ...groundedContext(),
+        missingInformation: ['No completion evidence was found in the retrieved context.'],
+      }),
+    );
+
+    expect(first.runId).toBeString();
+    expect(second.runId).toBeString();
+
+    const review = await summarizeAutomationReview('builder-console', projectsDir, {
+      limit: 20,
+      since: new Date(Date.now() - 60 * 60 * 1000).toISOString(),
+    });
+
+    expect(review.totalRuns).toBe(2);
+    expect(review.completedRuns).toBe(1);
+    expect(review.blockedRuns).toBe(1);
+    expect(review.executedActions).toBe(1);
+    expect(review.blockedActions).toBe(1);
+    expect(review.changedTaskIds).toContain('task-1');
+    expect(review.blockedReasons.some((reason) => reason.includes('evidence is incomplete'))).toBe(true);
+    expect(review.recentRuns.length).toBe(2);
   });
 });
 

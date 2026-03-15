@@ -31,6 +31,27 @@ export interface AutomationAuditRecord {
   payload: Record<string, unknown>;
 }
 
+export interface AutomationReviewSummary {
+  projectId: string;
+  generatedAt: string;
+  windowStart: string | null;
+  totalRuns: number;
+  completedRuns: number;
+  blockedRuns: number;
+  executedActions: number;
+  blockedActions: number;
+  changedTaskIds: string[];
+  blockedReasons: string[];
+  recentRuns: Array<{
+    runId: string;
+    timestamp: string;
+    mode: 'dry-run' | 'execute' | 'unknown';
+    status: 'completed' | 'blocked' | 'unknown';
+    executedCount: number;
+    blockedCount: number;
+  }>;
+}
+
 export async function appendAutomationRunStarted(
   projectId: string,
   projectsDir: string | undefined,
@@ -143,6 +164,7 @@ export async function listAutomationAuditRecords(
   options?: {
     runId?: string;
     limit?: number;
+    since?: string;
   },
 ): Promise<AutomationAuditRecord[]> {
   const ledger = createPlanningLedger(projectId, resolveProjectsDir(projectsDir));
@@ -154,6 +176,7 @@ export async function listAutomationAuditRecords(
   return entries
     .filter((entry) => isAutomationAuditPayload(entry.payload))
     .filter((entry) => !options?.runId || entry.payload.runId === options.runId)
+    .filter((entry) => !options?.since || entry.timestamp >= options.since)
     .slice(-(options?.limit ?? 50))
     .reverse()
     .map((entry) => ({
@@ -165,6 +188,57 @@ export async function listAutomationAuditRecords(
       event: entry.payload?.event as AutomationAuditRecord['event'],
       payload: entry.payload ?? {},
     }));
+}
+
+export async function summarizeAutomationReview(
+  projectId: string,
+  projectsDir?: string,
+  options?: {
+    limit?: number;
+    since?: string;
+  },
+): Promise<AutomationReviewSummary> {
+  const records = await listAutomationAuditRecords(projectId, projectsDir, options);
+  const runCompletions = records.filter((record) => record.event === 'run-completed');
+  const actionRecords = records.filter((record) => record.event === 'action');
+  const changedTaskIds = new Set<string>();
+  const blockedReasons = new Set<string>();
+
+  for (const record of actionRecords) {
+    const payload = record.payload;
+    const target = asRecord(payload.target);
+    const after = asRecord(target?.after);
+    const taskId = typeof target?.taskId === 'string' ? target.taskId : typeof after?.taskId === 'string' ? after.taskId : null;
+    if (taskId && payload.executed === true) {
+      changedTaskIds.add(taskId);
+    }
+    if (payload.resultStatus === 'blocked' && typeof payload.reason === 'string') {
+      blockedReasons.add(payload.reason);
+    }
+  }
+
+  const recentRuns = runCompletions.slice(0, 10).map((record) => ({
+    runId: typeof record.payload.runId === 'string' ? record.payload.runId : record.artifactId,
+    timestamp: record.timestamp,
+    mode: parseRunMode(record.payload.mode),
+    status: parseRunStatus(record.payload.status),
+    executedCount: numberOrZero(record.payload.executedCount),
+    blockedCount: numberOrZero(record.payload.blockedCount),
+  }));
+
+  return {
+    projectId,
+    generatedAt: new Date().toISOString(),
+    windowStart: options?.since ?? null,
+    totalRuns: runCompletions.length,
+    completedRuns: runCompletions.filter((record) => record.payload.status === 'completed').length,
+    blockedRuns: runCompletions.filter((record) => record.payload.status === 'blocked').length,
+    executedActions: actionRecords.filter((record) => record.payload.executed === true).length,
+    blockedActions: actionRecords.filter((record) => record.payload.resultStatus === 'blocked').length,
+    changedTaskIds: [...changedTaskIds],
+    blockedReasons: [...blockedReasons],
+    recentRuns,
+  };
 }
 
 function actionPayload(action: AutomationAction): Record<string, unknown> {
@@ -194,6 +268,22 @@ function isAutomationAuditPayload(payload: Record<string, unknown> | undefined):
   event: 'run-started' | 'run-completed' | 'action';
 } {
   return payload?.source === 'victor-automation-run' || payload?.source === 'victor-automation-action';
+}
+
+function asRecord(value: unknown): Record<string, unknown> | null {
+  return value && typeof value === 'object' ? value as Record<string, unknown> : null;
+}
+
+function numberOrZero(value: unknown): number {
+  return typeof value === 'number' && Number.isFinite(value) ? value : 0;
+}
+
+function parseRunMode(value: unknown): 'dry-run' | 'execute' | 'unknown' {
+  return value === 'dry-run' || value === 'execute' ? value : 'unknown';
+}
+
+function parseRunStatus(value: unknown): 'completed' | 'blocked' | 'unknown' {
+  return value === 'completed' || value === 'blocked' ? value : 'unknown';
 }
 
 function resolveProjectsDir(projectsDir?: string): string {
