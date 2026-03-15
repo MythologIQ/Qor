@@ -9,6 +9,7 @@ import {
   createProjectStore,
   createStoreIntegrity,
 } from '../../Zo-Qore/runtime/planning';
+import { appendGovernedBuilderConsolePlanningNote } from './builder-console-write';
 import {
   previewGovernedAutomationSelection,
   runGovernedAutomationBuild,
@@ -160,6 +161,11 @@ export interface HeartbeatTickResult {
   state: HeartbeatState;
   heartbeatStopped: boolean;
   automation?: GovernedBuildResult;
+  reflectiveNote?: {
+    status: 'updated' | 'blocked';
+    clusterId?: string;
+    reason: string;
+  };
   reason: string;
 }
 
@@ -462,6 +468,7 @@ export async function tickHeartbeat(
       },
       groundedQuery,
     );
+    const reflectiveNote = await maybeAppendCooldownReflectionNote(contract, runningState, automation);
 
     const completedAt = new Date().toISOString();
     const nextState = {
@@ -509,6 +516,7 @@ export async function tickHeartbeat(
       state: finalState,
       heartbeatStopped: finalState.status !== 'active',
       automation,
+      reflectiveNote,
       reason: finalState.lastTickReason || automation.status,
     };
   } catch (error) {
@@ -841,6 +849,65 @@ async function appendHeartbeatLedgerEvent(
       ...payload,
     },
   });
+}
+
+async function maybeAppendCooldownReflectionNote(
+  contract: HeartbeatContract,
+  state: HeartbeatState,
+  automation: GovernedBuildResult,
+) {
+  if (state.cadenceMode !== 'cooldown') {
+    return null;
+  }
+  const actionResult = automation.automation.results[0];
+  if (!actionResult || !automation.selectedTask) {
+    return null;
+  }
+
+  const result = await appendGovernedBuilderConsolePlanningNote(
+    {
+      projectId: contract.projectId,
+      phaseId: automation.selectedTask.phaseId,
+      taskId: automation.selectedTask.taskId,
+      query: actionResult.groundedContext.query,
+      content: buildCooldownReflectionNote(contract, automation),
+      actorId: contract.actorId,
+      projectsDir: contract.projectsDir,
+    },
+    actionResult.groundedContext,
+  );
+
+  return {
+    status: result.status,
+    clusterId: result.clusterId,
+    reason: result.reason,
+  };
+}
+
+function buildCooldownReflectionNote(contract: HeartbeatContract, automation: GovernedBuildResult): string {
+  const actionResult = automation.automation.results[0];
+  const groundedContext = actionResult?.groundedContext;
+  const lines = [
+    `## Victor Cooldown Reflection`,
+    `- Timestamp: ${new Date().toISOString()}`,
+    `- Actor: ${contract.actorId}`,
+    `- Task: ${automation.selectedTask?.title ?? 'unknown task'} (${automation.selectedTask?.taskId ?? 'unknown'})`,
+    `- Mode: ${automation.mode}`,
+    `- Selection: ${automation.selectionReason}`,
+    `- Result: ${actionResult?.reason ?? automation.automation.status}`,
+  ];
+
+  if (groundedContext?.contradictions.length) {
+    lines.push(`- Contradictions: ${groundedContext.contradictions.map((item) => item.key).join('; ')}`);
+  }
+  if (groundedContext?.missingInformation.length) {
+    lines.push(`- Missing information: ${groundedContext.missingInformation.join(' ')}`);
+  }
+  if (groundedContext?.recommendedNextActions.length) {
+    lines.push(`- Recommended next actions: ${groundedContext.recommendedNextActions.join(' ')}`);
+  }
+
+  return lines.join('\n');
 }
 
 function normalizePositiveInt(value: number | undefined, fallback: number): number {

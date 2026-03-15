@@ -30,6 +30,17 @@ describe('heartbeat foundation', () => {
       description: 'Heartbeat fixture',
       createdBy: 'tester',
     });
+    const voidStore = await projectStore.getVoidStore();
+    await voidStore.addThought({
+      thoughtId: 'thought-1',
+      projectId: 'builder-console',
+      content: 'Heartbeat reflection anchor.',
+      source: 'text',
+      capturedAt: new Date().toISOString(),
+      capturedBy: 'tester',
+      tags: ['heartbeat'],
+      status: 'raw',
+    }, 'tester');
 
     const revealStore = await projectStore.getViewStore('reveal');
     await revealStore.write({
@@ -212,6 +223,13 @@ describe('heartbeat foundation', () => {
     expect(tick.state.cadenceMs).toBe(30 * 60 * 1000);
     expect(tick.state.focusWindow.status).toBe('cooldown');
     expect(tick.state.focusWindow.cooldownCyclesRemaining).toBe(1);
+    expect(tick.reflectiveNote?.status).toBe('updated');
+    expect(tick.reflectiveNote?.clusterId).toBe('cluster-1');
+
+    const revealPath = join(projectsDir, 'builder-console', 'reveal', 'clusters.json');
+    const reveal = JSON.parse(await readFile(revealPath, 'utf8'));
+    expect(reveal.clusters[0].notes).toContain('Victor Cooldown Reflection');
+    expect(reveal.clusters[0].notes).toContain('Automate comms-tab prompt construction');
   });
 
   it('stops the heartbeat cleanly', async () => {
