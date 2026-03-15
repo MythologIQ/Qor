@@ -153,6 +153,111 @@ export const EVALUATION_CASES: EvaluationCase[] = [
       forbiddenCacheIds: ['cache-stale'],
     },
   },
+  {
+    id: 'builder-console-task-recall',
+    description: 'retrieval should recall a real Builder Console task for comms-tab prompt automation',
+    projectId: 'builder-console',
+    query: 'What comms tab prompt automation task exists in Builder Console?',
+    fixture: {
+      documents: [
+        createDocument('doc-builder-project', 'builder-console', 'builder-console/builder-console/project.md'),
+        createDocument('doc-builder-path', 'builder-console', 'builder-console/builder-console/path.md'),
+      ],
+      chunks: [
+        createChunk(
+          'chunk-builder-project',
+          'doc-builder-project',
+          0,
+          'Decision: Builder Console governance is binding on Victor when operating through these artifacts.',
+        ),
+        createChunk(
+          'chunk-builder-path',
+          'doc-builder-path',
+          0,
+          'Phase: Comms Tab Prompt Automation. Task: Automate comms-tab prompt construction. Move prompt-building components behind an automated pipeline so the visible interface becomes standard chat input/output with a small operations panel that streams prompt-construction steps as they happen.',
+        ),
+      ],
+      semanticNodes: [
+        createNode(
+          'decision-builder-governance',
+          'doc-builder-project',
+          'chunk-builder-project',
+          'Decision',
+          'Builder Console governance is binding on Victor when operating through these artifacts.',
+        ),
+        createNode(
+          'goal-comms-automation',
+          'doc-builder-path',
+          'chunk-builder-path',
+          'Goal',
+          'Automate prompt-building inside the comms tab so the user experience collapses to standard chat input/output plus a compact operations display showing prompt construction in real time.',
+        ),
+        createNode(
+          'task-comms-automation',
+          'doc-builder-path',
+          'chunk-builder-path',
+          'Task',
+          'Automate comms-tab prompt construction',
+        ),
+      ],
+      semanticEdges: [],
+      cacheEntries: [],
+    },
+    expected: {
+      requiredNodeTypes: ['Task', 'Goal'],
+      requiredNodeLabels: ['Automate comms-tab prompt construction'],
+      requiredChunkDocumentPaths: ['builder-console/builder-console/path.md'],
+      missingInformationExcludes: ['No active task node was found in the retrieved context.'],
+    },
+  },
+  {
+    id: 'builder-console-governance-without-task',
+    description: 'retrieval should not hallucinate task-state when Builder Console only exposes governance activity',
+    projectId: 'builder-console',
+    query: 'What Builder Console task is currently active?',
+    fixture: {
+      documents: [
+        createDocument('doc-builder-ledger', 'builder-console', 'builder-console/proj_meta/ledger.md'),
+        createDocument('doc-builder-history', 'builder-console', 'builder-console/proj_meta/history.md'),
+      ],
+      chunks: [
+        createChunk(
+          'chunk-builder-ledger',
+          'doc-builder-ledger',
+          0,
+          'Builder Console Governance Ledger. Recent entry: void/create by actor frostwulf.',
+        ),
+        createChunk(
+          'chunk-builder-history',
+          'doc-builder-history',
+          0,
+          'Builder Console Historical Activity. Recent entries show governance and project creation only.',
+        ),
+      ],
+      semanticNodes: [
+        createNode(
+          'module-builder-ledger',
+          'doc-builder-ledger',
+          'chunk-builder-ledger',
+          'Module',
+          'Builder Console Governance Ledger',
+        ),
+        createNode(
+          'module-builder-history',
+          'doc-builder-history',
+          'chunk-builder-history',
+          'Module',
+          'Builder Console Historical Activity',
+        ),
+      ],
+      semanticEdges: [],
+      cacheEntries: [],
+    },
+    expected: {
+      requiredNodeTypes: ['Module'],
+      missingInformationIncludes: ['No explicit decision node was found in the retrieved context.', 'No active task node was found in the retrieved context.'],
+    },
+  },
 ];
 
 export async function runEvaluationSuite(
