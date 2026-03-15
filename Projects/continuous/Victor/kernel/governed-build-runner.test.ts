@@ -381,6 +381,70 @@ describe('runGovernedAutomationBuild', () => {
     expect(tasks.find((task) => task.taskId === 'task-audit')?.status).toBe('done');
     expect(tasks.find((task) => task.taskId === 'task-parent')?.status).toBe('in-progress');
   });
+
+  it('suppresses umbrella follow-on drafts while concrete child tasks are already in progress', async () => {
+    const projectStore = createProjectStore('builder-console', projectsDir, { enableLedger: true });
+    const pathStore = await projectStore.getViewStore('path');
+    await pathStore.write({
+      phases: [
+        {
+          phaseId: 'phase-1',
+          projectId: 'builder-console',
+          ordinal: 1,
+          name: 'Comms Tab Prompt Automation',
+          objective: 'Advance governed automation in the comms tab.',
+          sourceClusterIds: ['cluster-1'],
+          tasks: [
+            {
+              taskId: 'task-parent',
+              phaseId: 'phase-1',
+              title: 'Automate comms-tab prompt construction',
+              description: 'Umbrella task should stay focused on active child work.',
+              acceptance: ['All child work is complete.'],
+              status: 'in-progress',
+            },
+            {
+              taskId: 'task-backend',
+              phaseId: 'phase-1',
+              title: 'Build backend prompt-construction pipeline',
+              description: 'Implement the backend path that assembles prompt inputs and emits structured prompt-construction events.',
+              acceptance: ['Prompt inputs are assembled by a backend pipeline instead of manual UI composition.'],
+              status: 'in-progress',
+            },
+          ],
+          status: 'active',
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        },
+      ],
+    });
+
+    const result = await runGovernedAutomationBuild(
+      {
+        projectsDir,
+        dryRun: true,
+        maxActions: 1,
+      },
+      async (_projectId, query) => (
+        query.includes('Automate comms-tab prompt construction')
+          ? groundedContext('in-progress', ['Build prompt-construction operations display'])
+          : activeTaskGroundedContext(
+              'Build backend prompt-construction pipeline',
+              'task-backend',
+              'Prompt inputs are assembled by a backend pipeline instead of manual UI composition.',
+            )
+      ),
+    );
+
+    expect(result.status).toBe('completed');
+    expect(result.mode).toBe('dry-run');
+    expect(result.selectedTask?.taskId).toBe('task-backend');
+    expect(result.selectionReason).not.toContain('follow-on draft task');
+    expect(result.automation.results[0]?.reason).toContain('eligible for governed execution');
+
+    const updated = await pathStore.read<{ phases?: Array<{ tasks?: Array<{ taskId?: string }> }> }>();
+    expect(updated?.phases?.[0]?.tasks).toHaveLength(2);
+  });
 });
 
 function groundedContext(
@@ -430,6 +494,74 @@ function groundedContext(
       },
     ],
     semanticEdges: [],
+    cacheEntries: [],
+    contradictions: [],
+    recommendedNextActions,
+    missingInformation: [],
+  };
+}
+
+function activeTaskGroundedContext(
+  title: string,
+  taskId: string,
+  acceptanceEvidence: string,
+  recommendedNextActions: string[] = ['Advance the governed automation task into active execution.'],
+): GroundedContextBundle {
+  return {
+    query: `What is the next grounded reflection for the active governed automation task "${title}"?`,
+    chunkHits: [
+      {
+        score: 5,
+        chunk: {
+          id: `chunk-${taskId}`,
+          documentId: `doc-${taskId}`,
+          index: 0,
+          fingerprint: `chunk-${taskId}`,
+          text: acceptanceEvidence,
+          tokenEstimate: 16,
+          span: { startLine: 1, endLine: 1, startOffset: 0, endOffset: acceptanceEvidence.length },
+        },
+      },
+    ],
+    semanticNodes: [
+      {
+        id: taskId,
+        documentId: `doc-${taskId}`,
+        sourceChunkId: `chunk-${taskId}`,
+        nodeType: 'Task',
+        label: title,
+        summary: title,
+        fingerprint: taskId,
+        span: { startLine: 1, endLine: 1, startOffset: 0, endOffset: title.length },
+        attributes: { status: 'in-progress', taskId },
+        state: 'active',
+      },
+      {
+        id: `goal-${taskId}`,
+        documentId: `doc-${taskId}`,
+        sourceChunkId: `chunk-${taskId}`,
+        nodeType: 'Goal',
+        label: acceptanceEvidence,
+        summary: acceptanceEvidence,
+        fingerprint: `goal-${taskId}`,
+        span: { startLine: 1, endLine: 1, startOffset: 0, endOffset: acceptanceEvidence.length },
+        attributes: {},
+        state: 'active',
+      },
+    ],
+    semanticEdges: [
+      {
+        id: `edge-${taskId}`,
+        documentId: `doc-${taskId}`,
+        sourceChunkId: `chunk-${taskId}`,
+        fromNodeId: taskId,
+        toNodeId: `goal-${taskId}`,
+        edgeType: 'supports',
+        fingerprint: `edge-${taskId}`,
+        attributes: {},
+        state: 'active',
+      },
+    ],
     cacheEntries: [],
     contradictions: [],
     recommendedNextActions,

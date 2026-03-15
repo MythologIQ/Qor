@@ -308,11 +308,12 @@ async function assessActiveGovernedAutomationTask(
       candidate.phase.name,
       query,
       groundedContext,
+      candidate,
     );
     if (draftAction) {
       draftCandidates.push({ candidate, groundedContext, action: draftAction });
     }
-    if (!fallback) {
+    if (!fallback || shouldHoldUmbrellaTaskOpen(fallback.candidate)) {
       fallback = { candidate, groundedContext, action: null };
     }
   }
@@ -356,6 +357,14 @@ function shouldHoldUmbrellaTaskOpen(candidate: ReturnType<typeof collectActiveCa
     .filter((task) => task.status === 'in-progress' && task.taskId !== candidate.task.taskId)
     .length;
   return siblingInProgressCount > 0 && normalize(candidate.task.title).startsWith('automate ');
+}
+
+function shouldSuppressUmbrellaFollowOnDraft(candidate: ReturnType<typeof collectActiveCandidates>[number]): boolean {
+  if (!normalize(candidate.task.title).startsWith('automate ')) {
+    return false;
+  }
+  return (candidate.phase.tasks ?? [])
+    .some((task) => task.taskId !== candidate.task.taskId && task.status === 'in-progress');
 }
 
 function hasSatisfiedAcceptance(acceptance: string[], groundedContext: GroundedContextBundle): boolean {
@@ -405,7 +414,12 @@ function buildReflectiveDraftTaskAction(
   phaseName: string,
   query: string,
   groundedContext: GroundedContextBundle,
+  candidate?: ReturnType<typeof collectActiveCandidates>[number],
 ): AutomationAction | null {
+  if (candidate && shouldSuppressUmbrellaFollowOnDraft(candidate)) {
+    return null;
+  }
+
   const recommendation = selectConcreteRecommendation(task, groundedContext.recommendedNextActions);
   if (!recommendation) {
     return null;
