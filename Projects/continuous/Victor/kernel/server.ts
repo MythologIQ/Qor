@@ -6,7 +6,7 @@
  */
 
 import { Hono, type Context } from 'hono';
-import { listAutomationAuditRecords, summarizeAutomationActivity } from './automation-audit';
+import { listAutomationAuditRecords, summarizeAutomationActivity, summarizeBuildProgress } from './automation-audit';
 import { runVictorSafeAutomation } from './automation-runner';
 import { createGovernedBuilderConsoleDraftTask, updateGovernedBuilderConsoleTaskStatus } from './builder-console-write';
 import { runGovernedAutomationBuild } from './governed-build-runner';
@@ -307,6 +307,45 @@ async function handleAutomationActivitySummary(c: Context) {
 
 app.get('/api/victor/automation/activity', handleAutomationActivitySummary);
 app.get('/api/victor/automation/review', handleAutomationActivitySummary);
+
+app.get('/api/victor/build/progress', async (c) => {
+  try {
+    const projectId = c.req.query('projectId');
+    if (!projectId) {
+      return c.json({ error: 'Invalid request - projectId is required' }, 400);
+    }
+
+    const hoursValue = c.req.query('hours');
+    const hours = hoursValue ? Number.parseInt(hoursValue, 10) : 24;
+    const limitValue = c.req.query('limit');
+    const limit = limitValue ? Number.parseInt(limitValue, 10) : 20;
+    const since =
+      Number.isFinite(hours) && hours > 0
+        ? new Date(Date.now() - hours * 60 * 60 * 1000).toISOString()
+        : undefined;
+
+    const summary = await summarizeBuildProgress(
+      projectId,
+      c.req.query('projectsDir') ?? undefined,
+      {
+        since,
+        limit: Number.isFinite(limit) && limit > 0 ? limit : 20,
+      },
+    );
+
+    return c.json({
+      status: 'ok',
+      summary,
+    });
+  } catch (error) {
+    return c.json(
+      {
+        error: error instanceof Error ? error.message : 'Build progress summary failed',
+      },
+      500,
+    );
+  }
+});
 
 app.post('/api/victor/automation/governed-build', async (c) => {
   try {

@@ -5,7 +5,7 @@ import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'bun:test';
 
 import { createProjectStore } from '../../Zo-Qore/runtime/planning';
-import { listAutomationAuditRecords, summarizeAutomationActivity } from './automation-audit';
+import { listAutomationAuditRecords, summarizeAutomationActivity, summarizeBuildProgress } from './automation-audit';
 import { runVictorSafeAutomation } from './automation-runner';
 import type { GroundedContextBundle } from './memory/types';
 
@@ -262,6 +262,90 @@ describe('runVictorSafeAutomation', () => {
     expect(summary.changedTaskIds).toContain('task-1');
     expect(summary.blockedReasons.some((reason) => reason.includes('evidence is incomplete'))).toBe(true);
     expect(summary.recentRuns.length).toBe(2);
+  });
+
+  it('projects build progress from path state and automation audit entries', async () => {
+    await runVictorSafeAutomation(
+      {
+        dryRun: false,
+        maxActions: 1,
+        projectsDir,
+        actions: [
+          {
+            kind: 'create-draft-task',
+            projectId: 'builder-console',
+            phaseId: 'phase-1',
+            title: 'Implement build progress projection',
+            description: 'Create a builder-facing projection layer for progress visibility.',
+            acceptance: ['Projection exists'],
+            query: 'What Builder Console work should be added to strengthen governed automation visibility?',
+          },
+        ],
+      },
+      async () => ({
+        ...groundedContext(),
+        query: 'What Builder Console work should be added to strengthen governed automation visibility?',
+      }),
+    );
+
+    await runVictorSafeAutomation(
+      {
+        dryRun: false,
+        maxActions: 1,
+        projectsDir,
+        actions: [
+          {
+            kind: 'update-task-status',
+            projectId: 'builder-console',
+            phaseId: 'phase-1',
+            taskId: 'task-1',
+            status: 'in-progress',
+            query: 'What should happen next with the comms-tab prompt automation task?',
+          },
+        ],
+      },
+      async () => groundedContext(),
+    );
+
+    await runVictorSafeAutomation(
+      {
+        dryRun: true,
+        maxActions: 1,
+        projectsDir,
+        actions: [
+          {
+            kind: 'update-task-status',
+            projectId: 'builder-console',
+            phaseId: 'phase-1',
+            taskId: 'task-1',
+            status: 'done',
+            query: 'Can Victor mark the comms task as complete?',
+          },
+        ],
+      },
+      async () => ({
+        ...groundedContext(),
+        missingInformation: ['No completion evidence was found in the retrieved context.'],
+      }),
+    );
+
+    const summary = await summarizeBuildProgress('builder-console', projectsDir, {
+      limit: 10,
+      since: new Date(Date.now() - 60 * 60 * 1000).toISOString(),
+    });
+
+    expect(summary.phaseCount).toBe(1);
+    expect(summary.activePhaseCount).toBe(1);
+    expect(summary.taskCounts.total).toBe(2);
+    expect(summary.taskCounts.inProgress).toBe(1);
+    expect(summary.taskCounts.pending).toBe(1);
+    expect(summary.createdTaskIds.length).toBe(1);
+    expect(summary.changedTaskIds).toContain('task-1');
+    expect(summary.blockedTaskIds).toContain('task-1');
+    expect(summary.deliveryBlockers.some((reason) => reason.includes('evidence is incomplete'))).toBe(true);
+    expect(summary.recentTaskActivity.some((entry) => entry.kind === 'created')).toBe(true);
+    expect(summary.recentTaskActivity.some((entry) => entry.kind === 'status-changed')).toBe(true);
+    expect(summary.recentTaskActivity.some((entry) => entry.kind === 'blocked-attempt')).toBe(true);
   });
 });
 
