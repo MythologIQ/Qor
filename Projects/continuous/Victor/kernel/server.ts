@@ -507,6 +507,8 @@ function parseHeartbeatQueryRequest(c: Context): HeartbeatRequest {
     dryRun: parseBoolValue(c.req.query('dryRun')),
     cadenceMs: parseIntValue(c.req.query('cadenceMs')),
     requestedCadenceMs: parseIntValue(c.req.query('requestedCadenceMs')),
+    supervisedCadenceOverrideMs: parseIntValue(c.req.query('supervisedCadenceOverrideMs')),
+    supervisedCadenceOverrideReason: c.req.query('supervisedCadenceOverrideReason') ?? undefined,
     staleAfterMs: parseIntValue(c.req.query('staleAfterMs')),
     maxActionsPerTick: parseIntValue(c.req.query('maxActionsPerTick')),
     stopOnBlock: parseBoolValue(c.req.query('stopOnBlock')),

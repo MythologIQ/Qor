@@ -64,6 +64,8 @@ export interface HeartbeatRequest {
   dryRun?: boolean;
   cadenceMs?: number;
   requestedCadenceMs?: number;
+  supervisedCadenceOverrideMs?: number;
+  supervisedCadenceOverrideReason?: string;
   staleAfterMs?: number;
   maxActionsPerTick?: number;
   stopOnBlock?: boolean;
@@ -92,6 +94,8 @@ export interface HeartbeatContract {
   stateDir: string;
   workClass: HeartbeatWorkClass;
   requestedCadenceMs: number | null;
+  supervisedCadenceOverrideMs: number | null;
+  supervisedCadenceOverrideReason: string | null;
   focusWindowMode: 'manual' | 'auto' | 'none';
   focusWindowReason: string | null;
 }
@@ -409,6 +413,8 @@ export async function startHeartbeat(
     cadenceMode: state.cadenceMode,
     workClass: state.workClass,
     reasoningModel: state.reasoningModel,
+    supervisedCadenceOverrideMs: preflight.contract.supervisedCadenceOverrideMs,
+    supervisedCadenceOverrideReason: preflight.contract.supervisedCadenceOverrideReason,
     focusWindow: state.focusWindow,
   });
 
@@ -600,12 +606,27 @@ function resolveHeartbeatContract(request: HeartbeatRequest): HeartbeatContract 
   const requestedCadenceMs = request.requestedCadenceMs === undefined
     ? null
     : normalizePositiveInt(request.requestedCadenceMs, MIN_ELEVATED_CADENCE_MS);
-  const cadenceMs = resolveRequestedCadence(request.workClass, baselineCadenceMs, requestedCadenceMs);
+  const supervisedCadenceOverrideMs = request.supervisedCadenceOverrideMs === undefined
+    ? null
+    : normalizePositiveInt(request.supervisedCadenceOverrideMs, 0);
+  const supervisedCadenceOverrideReason = request.supervisedCadenceOverrideReason?.trim() || null;
+  const cadenceMs = resolveRequestedCadence(request, baselineCadenceMs, requestedCadenceMs, supervisedCadenceOverrideMs);
   const staleAfterMs = normalizePositiveInt(request.staleAfterMs, Math.max(DEFAULT_STALE_AFTER_MS, cadenceMs * 3));
   const reasoningModel = request.reasoningModel?.trim() || HEARTBEAT_REASONING_MODEL;
 
   if (reasoningModel !== HEARTBEAT_REASONING_MODEL) {
     throw new Error(`Heartbeat reasoning must use ${HEARTBEAT_REASONING_MODEL}.`);
+  }
+  if (supervisedCadenceOverrideMs !== null) {
+    if (request.dryRun !== false) {
+      throw new Error('Supervised cadence override requires execute mode.');
+    }
+    if (request.focusWindowMode !== 'manual') {
+      throw new Error('Supervised cadence override requires a manual focus window.');
+    }
+    if (!supervisedCadenceOverrideReason) {
+      throw new Error('Supervised cadence override requires an explicit reason.');
+    }
   }
 
   return {
@@ -624,6 +645,8 @@ function resolveHeartbeatContract(request: HeartbeatRequest): HeartbeatContract 
     stateDir: request.stateDir?.trim() || process.env.VICTOR_HEARTBEAT_STATE_DIR?.trim() || DEFAULT_STATE_DIR,
     workClass: request.workClass === 'narrow-execution' ? 'narrow-execution' : 'coordination-review',
     requestedCadenceMs,
+    supervisedCadenceOverrideMs,
+    supervisedCadenceOverrideReason,
     focusWindowMode: request.focusWindowMode === 'manual' || request.focusWindowMode === 'auto' ? request.focusWindowMode : 'none',
     focusWindowReason: request.focusWindowReason?.trim() || null,
   };
@@ -677,12 +700,16 @@ function buildHeartbeatQuery(task: BuilderConsoleTask, phases: BuilderConsolePha
 }
 
 function resolveRequestedCadence(
-  workClass: HeartbeatRequest['workClass'],
+  request: HeartbeatRequest,
   baselineCadenceMs: number,
   requestedCadenceMs: number | null,
+  supervisedCadenceOverrideMs: number | null,
 ): number {
-  if (workClass !== 'narrow-execution') {
+  if (request.workClass !== 'narrow-execution') {
     return baselineCadenceMs;
+  }
+  if (supervisedCadenceOverrideMs !== null) {
+    return supervisedCadenceOverrideMs;
   }
   if (requestedCadenceMs === null) {
     return MIN_ELEVATED_CADENCE_MS;

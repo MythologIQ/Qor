@@ -169,6 +169,37 @@ describe('heartbeat foundation', () => {
     expect(started.state?.focusWindow.source).toBe('self-started');
   });
 
+  it('allows a supervised manual 5m cadence override when explicitly authorized', async () => {
+    const started = await startHeartbeat(
+      request(projectsDir, stateDir, {
+        dryRun: false,
+        workClass: 'narrow-execution',
+        focusWindowMode: 'manual',
+        supervisedCadenceOverrideMs: 5 * 60 * 1000,
+        supervisedCadenceOverrideReason: 'Temporary supervised 5m heartbeat test.',
+      }),
+      groundedQueryResolver,
+    );
+
+    expect(started.status).toBe('started');
+    expect(started.state?.cadenceMode).toBe('elevated');
+    expect(started.state?.cadenceMs).toBe(5 * 60 * 1000);
+  });
+
+  it('rejects a supervised cadence override without explicit reason', async () => {
+    await expect(() =>
+      startHeartbeat(
+        request(projectsDir, stateDir, {
+          dryRun: false,
+          workClass: 'narrow-execution',
+          focusWindowMode: 'manual',
+          supervisedCadenceOverrideMs: 5 * 60 * 1000,
+        }),
+        groundedQueryResolver,
+      ),
+    ).toThrow('requires an explicit reason');
+  });
+
   it('passes preflight for reflective heartbeat work when governed tasks are already in progress', async () => {
     const statePath = join(projectsDir, 'builder-console', 'path', 'phases.json');
     const raw = JSON.parse(await readFile(statePath, 'utf8'));
