@@ -1,0 +1,226 @@
+{
+  "phases": [
+    {
+      "phaseId": "phase_p04mttdp",
+      "projectId": "builder-console",
+      "ordinal": 1,
+      "name": "Comms Tab Prompt Automation",
+      "objective": "Automate prompt-building inside the comms tab so the user experience collapses to standard chat input/output plus a compact operations display showing prompt construction in real time.",
+      "sourceClusterIds": [
+        "cluster_e642e9a1"
+      ],
+      "tasks": [
+        {
+          "taskId": "task_vnjhh7vy",
+          "phaseId": "phase_p04mttdp",
+          "title": "Automate comms-tab prompt construction",
+          "description": "Move prompt-building components behind an automated pipeline so the visible interface becomes standard chat input/output with a small operations panel that streams prompt-construction steps as they happen.",
+          "acceptance": [
+            "Prompt-building logic is automated instead of manually assembled through multiple visible components.",
+            "The comms tab primary surface is reduced to normal chat input/output.",
+            "A compact operations display shows prompt construction/provenance in real time.",
+            "The operations display is observable without overwhelming the main conversation flow.",
+            "The resulting architecture is ready for Victor-mediated automation under Builder Console governance."
+          ],
+          "status": "done"
+        },
+        {
+          "taskId": "task_hjh5vl7u",
+          "phaseId": "phase_p04mttdp",
+          "title": "Build backend prompt-construction pipeline",
+          "description": "Implement the backend path that assembles prompt inputs, applies governed construction steps, and emits structured prompt-construction events for the comms tab operations display.",
+          "acceptance": [
+            "Prompt inputs are assembled by a backend pipeline instead of manual UI composition.",
+            "The pipeline emits structured prompt-construction events or provenance records.",
+            "The backend path is ready to feed a compact operations display without coupling to the main chat surface.",
+            "The design remains compatible with Victor-mediated governed automation."
+          ],
+          "status": "done"
+        },
+        {
+          "taskId": "task_jksdot0b",
+          "phaseId": "phase_p04mttdp",
+          "title": "Build prompt-construction operations display",
+          "description": "Implement the compact operations panel that streams prompt-construction steps, provenance, and system state without overwhelming the main chat input/output surface.",
+          "acceptance": [
+            "The operations display shows prompt-construction steps in real time.",
+            "Provenance or system-state details are visible without taking over the primary chat surface.",
+            "The display consumes structured backend prompt-construction events rather than reconstructing state in the UI.",
+            "The resulting interface stays aligned with Victor-mediated governed automation."
+          ],
+          "status": "done"
+        },
+        {
+          "taskId": "task_6x04b62c",
+          "phaseId": "phase_p04mttdp",
+          "title": "Reduce comms tab to standard chat I/O",
+          "description": "Refactor the comms tab so the visible primary interface becomes standard chat input/output, with prompt construction moved behind the governed backend pipeline and exposed only through the compact operations display.",
+          "acceptance": [
+            "The primary comms-tab surface is standard chat input/output.",
+            "Prompt-building controls are removed from the main visible surface.",
+            "The chat surface consumes the governed backend prompt-construction pipeline instead of assembling prompts directly in the UI.",
+            "Prompt-construction visibility is delegated to the compact operations display.",
+            "The resulting interface stays aligned with Victor-mediated governed automation."
+          ],
+          "status": "done"
+        },
+        {
+          "taskId": "task_vi0dljg3",
+          "phaseId": "phase_p04mttdp",
+          "title": "Implement automation audit logging",
+          "description": "Add append-only automation run and action audit records with run IDs, governance outcomes, before/after mutation snapshots, actor labels, and a queryable API for overnight review.",
+          "acceptance": [
+            "Automation runs produce run-started, action, and run-completed audit entries.",
+            "Audit entries capture governance results and before/after state for task mutations.",
+            "Victor exposes a query path for recent automation audit history."
+          ],
+          "status": "done"
+        }
+      ],
+      "status": "complete",
+      "createdAt": "2026-03-15T05:53:51.328Z",
+      "updatedAt": "2026-03-15T17:11:01.214Z"
+    },
+    {
+      "phaseId": "phase_xtmo109w",
+      "projectId": "builder-console",
+      "ordinal": 2,
+      "name": "Heartbeat Autonomy Foundation",
+      "objective": "Extend Victor from supervised phase-by-phase execution into sustainable governed heartbeat operation with explicit separation between project build progress and non-project self-reflection.",
+      "sourceClusterIds": [
+        "cluster_e642e9a1"
+      ],
+      "tasks": [
+        {
+          "taskId": "task_1rta48hj",
+          "phaseId": "phase_xtmo109w",
+          "title": "Separate non-project reflection from Builder artifacts",
+          "description": "Move heartbeat self-reflection into a system-level memory/audit path so Builder Console only carries project-relevant planning notes and build progress.",
+          "acceptance": [
+            "Heartbeat self-reflection can be written without attaching to a Builder phase or cluster.",
+            "Builder Console continues to receive only project-relevant planning notes and build-progress state.",
+            "Automation activity and build progress remain queryable as separate surfaces."
+          ],
+          "status": "done"
+        },
+        {
+          "taskId": "task_xk7twj7o",
+          "phaseId": "phase_xtmo109w",
+          "title": "Teach heartbeat to select the next governed slice after phase closure",
+          "description": "Allow heartbeat to recognize completed governed phases and either select an existing pending phase or stop cleanly with an explicit recommendation for the next slice.",
+          "acceptance": [
+            "Heartbeat does not stall or fabricate work when the active governed phase is complete.",
+            "Heartbeat can identify the next eligible governed phase or produce a governed recommendation instead of looping on a finished phase.",
+            "The transition decision is visible in automation audit records."
+          ],
+          "status": "done"
+        },
+        {
+          "taskId": "task_7t8od2o0",
+          "phaseId": "phase_xtmo109w",
+          "title": "Prepare unattended 30m heartbeat operation with safe stop conditions",
+          "description": "Harden the 30-minute heartbeat path so Victor can run unattended under bounded action budgets, cooldown rules, and explicit stop/escalation conditions.",
+          "acceptance": [
+            "Unattended 30m heartbeat execution respects focus-window, cooldown, and action-budget policy.",
+            "Repeated blocks or missing eligible work stop the unattended loop cleanly instead of churning.",
+            "Audit output is sufficient to explain unattended heartbeat behavior after the fact."
+          ],
+          "status": "done"
+        }
+      ],
+      "status": "complete",
+      "createdAt": "2026-03-15T17:13:35.753Z",
+      "updatedAt": "2026-03-15T17:31:15.601Z"
+    },
+    {
+      "phaseId": "phase_3mh4r070",
+      "projectId": "builder-console",
+      "ordinal": 3,
+      "name": "30m Heartbeat Dry-Run Soak Test",
+      "objective": "Run a bounded unattended 30m dry-run heartbeat against real governed work and verify safety signals before unattended execution is allowed.",
+      "sourceClusterIds": [
+        "cluster_e642e9a1"
+      ],
+      "tasks": [
+        {
+          "taskId": "task_tqushu89",
+          "phaseId": "phase_3mh4r070",
+          "title": "Run unattended 30m dry-run heartbeat soak",
+          "description": "Run the real unattended heartbeat loop at 30m baseline in dry-run mode with explicit tick and runtime limits.",
+          "acceptance": [
+            "Heartbeat starts cleanly, remains bounded, and emits audit-backed tick evidence without writes."
+          ],
+          "status": "done"
+        },
+        {
+          "taskId": "task_d2unxklt",
+          "phaseId": "phase_3mh4r070",
+          "title": "Review dry-run soak audit signals",
+          "description": "Inspect run state, selected tasks, stop conditions, and blocked reasons from the soak output.",
+          "acceptance": [
+            "The soak produces enough evidence to judge whether unattended execution is safe to promote."
+          ],
+          "status": "done"
+        },
+        {
+          "taskId": "task_b68oboxf",
+          "phaseId": "phase_3mh4r070",
+          "title": "Define unattended execute-mode promotion gate",
+          "description": "Turn soak evidence into explicit promotion criteria for unattended write-capable heartbeat operation.",
+          "acceptance": [
+            "Promotion criteria are explicit, auditable, and stricter than the dry-run soak baseline."
+          ],
+          "status": "done"
+        }
+      ],
+      "status": "complete",
+      "createdAt": "2026-03-15T18:49:02.246Z",
+      "updatedAt": "2026-03-15T22:39:47.788Z"
+    },
+    {
+      "phaseId": "phase_builder_forecast_ops",
+      "projectId": "builder-console",
+      "ordinal": 4,
+      "name": "Forecast and Dependency Operations",
+      "objective": "Turn the new Victor and Builder planning artifacts into Builder-managed operational work so unattended execution has a governed next queue.",
+      "sourceClusterIds": [
+        "cluster_e642e9a1"
+      ],
+      "tasks": [
+        {
+          "taskId": "task_builder_forecast_delivery",
+          "phaseId": "phase_builder_forecast_ops",
+          "title": "Forecast remaining Builder delivery work",
+          "description": "Translate the current Builder forecast into Builder-managed operational tasks and dependency-aware planning state.",
+          "acceptance": [
+            "Builder has an explicit next-step forecast instead of relying on narrative summaries."
+          ],
+          "status": "pending"
+        },
+        {
+          "taskId": "task_builder_victor_dependency",
+          "phaseId": "phase_builder_forecast_ops",
+          "title": "Project Victor autonomy dependency impact into Builder surfaces",
+          "description": "Expose how Victor promotion state affects Builder delivery readiness without collapsing the Victor and Builder views together.",
+          "acceptance": [
+            "Builder surfaces reflect Victor dependency impact only where it materially affects delivery."
+          ],
+          "status": "pending"
+        },
+        {
+          "taskId": "task_builder_queue_next_slices",
+          "phaseId": "phase_builder_forecast_ops",
+          "title": "Queue next governed slices across Victor and Builder",
+          "description": "Keep the next governed work items explicit across both project tracks so unattended execution advances known priorities instead of fabricating work.",
+          "acceptance": [
+            "The next governed slices for Victor and Builder are Builder-visible and ordered."
+          ],
+          "status": "pending"
+        }
+      ],
+      "status": "active",
+      "createdAt": "2026-03-15T23:18:00.000Z",
+      "updatedAt": "2026-03-15T23:18:00.000Z"
+    }
+  ]
+}
