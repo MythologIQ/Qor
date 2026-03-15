@@ -230,4 +230,97 @@ describe('retrieveGroundedContext', () => {
     expect(result.missingInformation).not.toContain('No matching source chunks were found for this query.');
     expect(result.missingInformation).not.toContain('No explicit decision node was found in the retrieved context.');
   });
+
+  it('infers a concrete next action for active-task reflection from supported goals', async () => {
+    const store = makeStore();
+    store.searchChunks = async () => [
+      {
+        chunk: {
+          id: 'chunk-1',
+          documentId: 'doc-1',
+          index: 0,
+          fingerprint: 'chunk',
+          text: 'Automate comms-tab prompt construction with a compact operations display.',
+          tokenEstimate: 10,
+          span: { startLine: 1, endLine: 1, startOffset: 0, endOffset: 10 },
+        },
+        score: 8,
+      },
+    ];
+    store.searchSemanticNodes = async () => [
+      {
+        id: 'task-1',
+        documentId: 'doc-1',
+        sourceChunkId: 'chunk-1',
+        nodeType: 'Task',
+        label: 'Automate comms-tab prompt construction',
+        summary: 'Automate comms-tab prompt construction',
+        fingerprint: 'task-1',
+        span: { startLine: 1, endLine: 1, startOffset: 0, endOffset: 10 },
+        attributes: { status: 'in-progress', taskId: 'task-1' },
+        state: 'active',
+      },
+      {
+        id: 'goal-1',
+        documentId: 'doc-1',
+        sourceChunkId: 'chunk-1',
+        nodeType: 'Goal',
+        label: 'A compact operations display shows prompt construction/provenance in real time.',
+        summary: 'A compact operations display shows prompt construction/provenance in real time.',
+        fingerprint: 'goal-1',
+        span: { startLine: 2, endLine: 2, startOffset: 11, endOffset: 20 },
+        attributes: {},
+        state: 'active',
+      },
+    ];
+    store.expandNeighborhood = async () => ({
+      nodes: [
+        {
+          id: 'task-1',
+          documentId: 'doc-1',
+          sourceChunkId: 'chunk-1',
+          nodeType: 'Task',
+          label: 'Automate comms-tab prompt construction',
+          summary: 'Automate comms-tab prompt construction',
+          fingerprint: 'task-1',
+          span: { startLine: 1, endLine: 1, startOffset: 0, endOffset: 10 },
+          attributes: { status: 'in-progress', taskId: 'task-1' },
+          state: 'active',
+        },
+        {
+          id: 'goal-1',
+          documentId: 'doc-1',
+          sourceChunkId: 'chunk-1',
+          nodeType: 'Goal',
+          label: 'A compact operations display shows prompt construction/provenance in real time.',
+          summary: 'A compact operations display shows prompt construction/provenance in real time.',
+          fingerprint: 'goal-1',
+          span: { startLine: 2, endLine: 2, startOffset: 11, endOffset: 20 },
+          attributes: {},
+          state: 'active',
+        },
+      ],
+      edges: [
+        {
+          id: 'edge-1',
+          documentId: 'doc-1',
+          sourceChunkId: 'chunk-1',
+          fromNodeId: 'task-1',
+          toNodeId: 'goal-1',
+          edgeType: 'supports',
+          fingerprint: 'edge-1',
+          attributes: {},
+          state: 'active',
+        },
+      ],
+    });
+
+    const result = await retrieveGroundedContext(
+      store,
+      'victor',
+      'What is the next grounded reflection for the active governed automation task "Automate comms-tab prompt construction"?',
+    );
+
+    expect(result.recommendedNextActions).toContain('Build prompt-construction operations display');
+  });
 });
