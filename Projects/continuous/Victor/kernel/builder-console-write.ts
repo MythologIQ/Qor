@@ -648,7 +648,13 @@ function findDuplicateTask(
 }
 
 function normalize(value: string): string {
-  return value.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+  return value
+    .toLowerCase()
+    .replace(/\bi\s*\/\s*o\b/g, ' input output ')
+    .replace(/\bio\b/g, ' input output ')
+    .replace(/\bui\b/g, ' user interface ')
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim();
 }
 
 function normalizeTaskStatus(
