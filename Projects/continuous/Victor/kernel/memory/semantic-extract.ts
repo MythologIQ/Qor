@@ -16,7 +16,8 @@ export function extractSemanticGraph(chunks: SourceChunkRecord[]): ExtractionRes
     let moduleNodeId: string | null = null;
     let moduleLabel: string | null = null;
 
-    for (const rawLine of lines) {
+    for (let index = 0; index < lines.length; index += 1) {
+      const rawLine = lines[index];
       const line = rawLine.trim();
       if (!line) {
         continue;
@@ -32,12 +33,53 @@ export function extractSemanticGraph(chunks: SourceChunkRecord[]): ExtractionRes
         continue;
       }
 
-      const taskMatch = line.match(/^[-*]\s+\[(?: |x)\]\s+(.+)$/i);
+      const taskMatch = line.match(/^[-*]\s+\[( |x)\]\s+(.+)$/i);
       if (taskMatch) {
-        const body = taskMatch[1].trim();
+        const done = taskMatch[1].toLowerCase() === 'x';
+        const body = taskMatch[2].trim();
         const dependencyMatch = body.match(/\bdepends on\b\s+(.+)$/i);
         const taskLabel = dependencyMatch ? body.slice(0, dependencyMatch.index).trim() : body;
-        const taskNode = createNode(chunk, 'Task', taskLabel, body, {});
+        const taskAttributes: Record<string, string> = {
+          status: done ? 'done' : 'pending',
+        };
+        const taskSummaryParts = [body];
+        const relatedNodeSpecs: Array<{
+          nodeType: SemanticNodeRecord['nodeType'];
+          label: string;
+          edgeType: SemanticEdgeRecord['edgeType'];
+        }> = [];
+
+        let lookahead = index + 1;
+        while (lookahead < lines.length) {
+          const metadataLine = lines[lookahead];
+          const metadataMatch = metadataLine.match(/^\s{2,}-\s+(Description|Acceptance|Owner|Depends On|Blocks|Status):\s+(.+)$/i);
+          if (!metadataMatch) {
+            break;
+          }
+
+          const field = metadataMatch[1].toLowerCase();
+          const value = metadataMatch[2].trim();
+          taskSummaryParts.push(`${metadataMatch[1]}: ${value}`);
+
+          if (field === 'status') {
+            taskAttributes.status = value.toLowerCase();
+          } else if (field === 'description') {
+            taskAttributes.description = value;
+          } else if (field === 'acceptance') {
+            relatedNodeSpecs.push({ nodeType: 'Goal', label: value, edgeType: 'supports' });
+          } else if (field === 'owner') {
+            taskAttributes.owner = value;
+            relatedNodeSpecs.push({ nodeType: 'Actor', label: value, edgeType: 'owned-by' });
+          } else if (field === 'depends on') {
+            relatedNodeSpecs.push({ nodeType: 'Dependency', label: value, edgeType: 'depends-on' });
+          } else if (field === 'blocks') {
+            relatedNodeSpecs.push({ nodeType: 'Dependency', label: value, edgeType: 'blocks' });
+          }
+
+          lookahead += 1;
+        }
+
+        const taskNode = createNode(chunk, 'Task', taskLabel, taskSummaryParts.join('. '), taskAttributes);
         localNodes.push(taskNode);
 
         if (moduleNodeId) {
@@ -50,6 +92,14 @@ export function extractSemanticGraph(chunks: SourceChunkRecord[]): ExtractionRes
           localNodes.push(dependencyNode);
           edges.push(createEdge(chunk, taskNode.id, dependencyNode.id, 'depends-on'));
         }
+
+        for (const spec of relatedNodeSpecs) {
+          const relatedNode = createNode(chunk, spec.nodeType, spec.label, spec.label, {});
+          localNodes.push(relatedNode);
+          edges.push(createEdge(chunk, taskNode.id, relatedNode.id, spec.edgeType));
+        }
+
+        index = lookahead - 1;
 
         continue;
       }

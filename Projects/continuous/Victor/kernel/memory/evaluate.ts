@@ -255,7 +255,8 @@ export const EVALUATION_CASES: EvaluationCase[] = [
     },
     expected: {
       requiredNodeTypes: ['Module'],
-      missingInformationIncludes: ['No explicit decision node was found in the retrieved context.', 'No active task node was found in the retrieved context.'],
+      missingInformationIncludes: ['No active task node was found in the retrieved context.'],
+      missingInformationExcludes: ['No explicit decision node was found in the retrieved context.'],
     },
   },
 ];

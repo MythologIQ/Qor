@@ -226,6 +226,8 @@ describe('retrieveGroundedContext', () => {
     const result = await retrieveGroundedContext(store, 'victor', 'authoritative memory decision');
 
     expect(result.semanticNodes.some((node) => node.id === 'decision-1')).toBe(true);
+    expect(result.chunkHits.some((hit) => hit.chunk.id === 'chunk-1')).toBe(true);
+    expect(result.missingInformation).not.toContain('No matching source chunks were found for this query.');
     expect(result.missingInformation).not.toContain('No explicit decision node was found in the retrieved context.');
   });
 });
