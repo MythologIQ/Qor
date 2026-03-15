@@ -8,8 +8,10 @@
 import { Hono } from 'hono';
 import { runVictorSafeAutomation } from './automation-runner';
 import { createGovernedBuilderConsoleDraftTask, updateGovernedBuilderConsoleTaskStatus } from './builder-console-write';
+import { runGovernedAutomationBuild } from './governed-build-runner';
 import { victorKernel } from './victor-kernel';
 import { VictorKernelUnified } from './victor-kernel-unified';
+import { createWorkspaceGroundedQuery } from './workspace-grounded-query';
 
 const app = new Hono();
 const PORT = process.env.PORT ? parseInt(process.env.PORT) : 9500;
@@ -167,6 +169,7 @@ app.post('/api/victor/builder-console/tasks/status', async (c) => {
         projectId: request.projectId,
         phaseId: request.phaseId,
         taskId: request.taskId,
+        taskTitle: request.taskTitle,
         status: request.status,
         actorId: request.actorId,
         query: request.query,
@@ -222,6 +225,48 @@ app.post('/api/victor/automation/run', async (c) => {
     return c.json(
       {
         error: error instanceof Error ? error.message : 'Victor safe automation run failed',
+      },
+      500,
+    );
+  }
+});
+
+app.post('/api/victor/automation/governed-build', async (c) => {
+  try {
+    const request = await c.req.json().catch(() => ({}));
+    const groundedQuery = await (async () => {
+      try {
+        const kernel = await getMemoryKernel();
+        return async (projectId: string, query: string) => kernel.groundedQuery(projectId, query);
+      } catch (error) {
+        if (!request.projectsDir) {
+          throw error;
+        }
+        return createWorkspaceGroundedQuery(request.projectsDir, request.projectId || 'builder-console');
+      }
+    })();
+    const result = await runGovernedAutomationBuild(
+      {
+        projectId: request.projectId,
+        projectsDir: request.projectsDir,
+        dryRun: request.dryRun,
+        actorId: request.actorId,
+        maxActions: request.maxActions,
+      },
+      groundedQuery,
+    );
+
+    const status =
+      result.status === 'completed'
+        ? result.mode === 'dry-run'
+          ? 200
+          : 201
+        : 422;
+    return c.json(result, status);
+  } catch (error) {
+    return c.json(
+      {
+        error: error instanceof Error ? error.message : 'Victor governed build run failed',
       },
       500,
     );

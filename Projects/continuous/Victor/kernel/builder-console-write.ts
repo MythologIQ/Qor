@@ -58,6 +58,7 @@ export interface UpdateTaskStatusRequest {
   projectId: string;
   phaseId: string;
   taskId: string;
+  taskTitle?: string;
   status: BuilderConsoleTaskStatus;
   actorId?: string;
   query: string;
@@ -395,6 +396,7 @@ function validateTaskStatusRequest(
       node.nodeType === 'Task'
       && (
         node.id === request.taskId
+        || (request.taskTitle ? normalize(node.label) === normalize(request.taskTitle) : false)
         || normalize(node.label) === normalize(request.taskId)
         || normalize(String(node.attributes?.taskId ?? '')) === normalize(request.taskId)
       ),

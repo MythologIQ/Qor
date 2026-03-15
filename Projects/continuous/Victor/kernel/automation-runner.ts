@@ -33,6 +33,7 @@ export interface AutomationTaskStatusAction {
   projectId: string;
   phaseId: string;
   taskId: string;
+  taskTitle?: string;
   status: BuilderConsoleTaskStatus;
   query: string;
 }
@@ -221,6 +222,7 @@ async function previewAutomationAction(
     {
       phaseId: action.phaseId,
       taskId: action.taskId,
+      taskTitle: action.taskTitle,
       status: action.status,
       query: action.query,
       groundedNodeIds: groundedContext.semanticNodes.slice(0, 8).map((node) => node.id),
@@ -282,6 +284,7 @@ async function executeAutomationAction(
       projectId: action.projectId,
       phaseId: action.phaseId,
       taskId: action.taskId,
+      taskTitle: action.taskTitle,
       status: action.status,
       actorId,
       query: action.query,
@@ -364,6 +367,7 @@ function validateTaskStatusEvidence(
       node.nodeType === 'Task'
       && (
         node.id === action.taskId
+        || (action.taskTitle ? normalize(node.label) === normalize(action.taskTitle) : false)
         || normalize(node.label) === normalize(action.taskId)
         || normalize(String(node.attributes?.taskId ?? '')) === normalize(action.taskId)
       ),
