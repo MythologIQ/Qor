@@ -6,7 +6,12 @@
  */
 
 import { Hono, type Context } from 'hono';
-import { listAutomationAuditRecords, summarizeAutomationActivity, summarizeBuildProgress } from './automation-audit';
+import {
+  listAutomationAuditRecords,
+  summarizeAutomationActivity,
+  summarizeBuildProgress,
+  summarizeVerificationReport,
+} from './automation-audit';
 import { runVictorSafeAutomation } from './automation-runner';
 import { createGovernedBuilderConsoleDraftTask, updateGovernedBuilderConsoleTaskStatus } from './builder-console-write';
 import { runGovernedAutomationBuild } from './governed-build-runner';
@@ -323,6 +328,46 @@ async function handleAutomationActivitySummary(c: Context) {
 
 app.get('/api/victor/automation/activity', handleAutomationActivitySummary);
 app.get('/api/victor/automation/review', handleAutomationActivitySummary);
+
+app.get('/api/victor/automation/verification-report', async (c) => {
+  try {
+    const projectId = c.req.query('projectId');
+    if (!projectId) {
+      return c.json({ error: 'Invalid request - projectId is required' }, 400);
+    }
+
+    const hoursValue = c.req.query('hours');
+    const hours = hoursValue ? Number.parseInt(hoursValue, 10) : 24;
+    const limitValue = c.req.query('limit');
+    const limit = limitValue ? Number.parseInt(limitValue, 10) : 50;
+    const since =
+      Number.isFinite(hours) && hours > 0
+        ? new Date(Date.now() - hours * 60 * 60 * 1000).toISOString()
+        : undefined;
+
+    const summary = await summarizeVerificationReport(
+      projectId,
+      c.req.query('projectsDir') ?? undefined,
+      {
+        runId: c.req.query('runId') ?? undefined,
+        since,
+        limit: Number.isFinite(limit) && limit > 0 ? limit : 50,
+      },
+    );
+
+    return c.json({
+      status: 'ok',
+      summary,
+    });
+  } catch (error) {
+    return c.json(
+      {
+        error: error instanceof Error ? error.message : 'Verification report failed',
+      },
+      500,
+    );
+  }
+});
 
 app.get('/api/victor/promotion/soak', async (c) => {
   try {

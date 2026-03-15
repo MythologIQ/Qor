@@ -81,6 +81,35 @@ export interface BuildProgressSummary {
   }>;
 }
 
+export interface VerificationEvidence {
+  source: 'audit-ledger' | 'path-state';
+  reference: string;
+  detail: string;
+}
+
+export interface VerificationClaim {
+  classification: 'observed' | 'inferred' | 'unverified';
+  claim: string;
+  evidence: VerificationEvidence[];
+}
+
+export interface VerificationReportSummary {
+  projectId: string;
+  generatedAt: string;
+  windowStart: string | null;
+  stats: {
+    runCount: number;
+    actionCount: number;
+    executedActionCount: number;
+    blockedActionCount: number;
+  };
+  claims: {
+    observed: VerificationClaim[];
+    inferred: VerificationClaim[];
+    unverified: VerificationClaim[];
+  };
+}
+
 export async function appendAutomationRunStarted(
   projectId: string,
   projectsDir: string | undefined,
@@ -404,6 +433,225 @@ export async function summarizeBuildProgress(
   };
 }
 
+export async function summarizeVerificationReport(
+  projectId: string,
+  projectsDir?: string,
+  options?: {
+    limit?: number;
+    since?: string;
+    runId?: string;
+  },
+): Promise<VerificationReportSummary> {
+  const resolvedProjectsDir = resolveProjectsDir(projectsDir);
+  const records = await listAutomationAuditRecords(projectId, resolvedProjectsDir, options);
+  const runStarted = records.filter((record) => record.event === 'run-started');
+  const runCompleted = records.filter((record) => record.event === 'run-completed');
+  const actions = records.filter((record) => record.event === 'action');
+  const phases = await readPathPhases(projectId, resolvedProjectsDir);
+  const taskIndex = indexTasks(phases);
+
+  const observed: VerificationClaim[] = [];
+  const inferred: VerificationClaim[] = [];
+  const unverified: VerificationClaim[] = [];
+
+  observed.push({
+    classification: 'observed',
+    claim: `${runCompleted.length} automation run(s) and ${actions.length} action record(s) were observed in the selected window.`,
+    evidence: [
+      {
+        source: 'audit-ledger',
+        reference: `${projectId}:autonomy`,
+        detail: `Filtered ${records.length} automation audit ledger entries for the requested window.`,
+      },
+    ],
+  });
+
+  for (const record of runCompleted.slice(0, 5)) {
+    observed.push({
+      classification: 'observed',
+      claim: `Run ${stringOrDefault(record.payload.runId, record.artifactId)} ${stringOrDefault(record.payload.status, 'completed')} in ${stringOrDefault(record.payload.mode, 'unknown')} mode with ${numberOrZero(record.payload.executedCount)} executed and ${numberOrZero(record.payload.blockedCount)} blocked action(s).`,
+      evidence: [
+        {
+          source: 'audit-ledger',
+          reference: record.entryId,
+          detail: `Run completion ledger entry at ${record.timestamp}.`,
+        },
+      ],
+    });
+  }
+
+  for (const record of actions.slice(0, 8)) {
+    const payload = record.payload;
+    const request = asRecord(payload.request);
+    const target = asRecord(payload.target);
+    const before = asRecord(target?.before);
+    const after = asRecord(target?.after);
+    const taskId =
+      stringOrNull(target?.taskId)
+      ?? stringOrNull(after?.taskId)
+      ?? stringOrNull(request?.taskId);
+    const title =
+      stringOrNull(after?.title)
+      ?? stringOrNull(request?.title)
+      ?? (taskId ? taskIndex.get(taskId)?.title ?? taskId : 'unknown task');
+    const actionKind = stringOrDefault(payload.actionKind, 'unknown-action');
+
+    if (payload.executed === true && actionKind === 'create-draft-task') {
+      observed.push({
+        classification: 'observed',
+        claim: `Victor created draft task "${title}" under governance.`,
+        evidence: [
+          {
+            source: 'audit-ledger',
+            reference: record.entryId,
+            detail: `Create-draft audit entry at ${record.timestamp}.`,
+          },
+          {
+            source: 'path-state',
+            reference: taskId ?? 'unknown-task',
+            detail: `Current Builder path state includes the drafted task as "${title}".`,
+          },
+        ],
+      });
+      continue;
+    }
+
+    if (payload.executed === true && actionKind === 'update-task-status') {
+      observed.push({
+        classification: 'observed',
+        claim: `Victor changed "${title}" from ${stringOrDefault(before?.status, 'unknown')} to ${stringOrDefault(after?.status, 'unknown')}.`,
+        evidence: [
+          {
+            source: 'audit-ledger',
+            reference: record.entryId,
+            detail: `Status update audit entry at ${record.timestamp}.`,
+          },
+          {
+            source: 'path-state',
+            reference: taskId ?? 'unknown-task',
+            detail: `Current Builder path state resolves this task as "${title}".`,
+          },
+        ],
+      });
+      continue;
+    }
+
+    if (payload.resultStatus === 'blocked') {
+      observed.push({
+        classification: 'observed',
+        claim: `Victor attempted ${actionKind} on "${title}" and it was blocked: ${stringOrDefault(payload.reason, 'No reason recorded.')}`,
+        evidence: [
+          {
+            source: 'audit-ledger',
+            reference: record.entryId,
+            detail: `Blocked action audit entry at ${record.timestamp}.`,
+          },
+        ],
+      });
+    }
+  }
+
+  const actionKinds = [...new Set(actions.map((record) => stringOrNull(record.payload.actionKind)).filter(Boolean))];
+  if (actionKinds.length > 0) {
+    const bounded = actionKinds.every((kind) => kind === 'create-draft-task' || kind === 'update-task-status');
+    inferred.push({
+      classification: 'inferred',
+      claim: bounded
+        ? `Recent automation stayed within the low-risk governed action set: ${actionKinds.join(', ')}.`
+        : `Recent automation included action kinds outside the expected low-risk governed set: ${actionKinds.join(', ')}.`,
+      evidence: actions.slice(0, 8).map((record) => ({
+        source: 'audit-ledger',
+        reference: record.entryId,
+        detail: `Action kind ${stringOrDefault(record.payload.actionKind, 'unknown')} recorded at ${record.timestamp}.`,
+      })),
+    });
+  }
+
+  const activePhases = phases.filter((phase) => normalizePhaseStatus(phase.status) === 'active');
+  if (activePhases.length > 0) {
+    inferred.push({
+      classification: 'inferred',
+      claim: `Current Builder state suggests the project is still in active delivery, with ${activePhases.length} active phase(s) and ${countTasksByStatus(phases, 'in-progress')} in-progress task(s).`,
+      evidence: activePhases.slice(0, 5).map((phase) => ({
+        source: 'path-state',
+        reference: stringOrDefault(phase.phaseId, 'unknown-phase'),
+        detail: `Active phase "${stringOrDefault(phase.name, 'Untitled phase')}" from current Builder path state.`,
+      })),
+    });
+  }
+
+  const completedRunIds = new Set(runCompleted.map((record) => stringOrDefault(record.payload.runId, record.artifactId)));
+  const incompleteRuns = runStarted
+    .map((record) => stringOrDefault(record.payload.runId, record.artifactId))
+    .filter((runId) => !completedRunIds.has(runId));
+  if (incompleteRuns.length > 0) {
+    unverified.push({
+      classification: 'unverified',
+      claim: `${incompleteRuns.length} run(s) started without a matching completion record in the current window.`,
+      evidence: incompleteRuns.slice(0, 5).map((runId) => ({
+        source: 'audit-ledger',
+        reference: runId,
+        detail: 'Run-started record exists, but a matching run-completed record was not found in the selected window.',
+      })),
+    });
+  }
+
+  const snapshotGaps = actions.filter((record) => {
+    const payload = record.payload;
+    if (payload.executed !== true) {
+      return false;
+    }
+    const target = asRecord(payload.target);
+    if (payload.actionKind === 'create-draft-task') {
+      return !stringOrNull(target?.taskId);
+    }
+    const after = asRecord(target?.after);
+    return !after;
+  });
+  if (snapshotGaps.length > 0) {
+    unverified.push({
+      classification: 'unverified',
+      claim: `${snapshotGaps.length} executed action(s) are missing full mutation snapshots, so their final state should not be reported as certain.`,
+      evidence: snapshotGaps.slice(0, 5).map((record) => ({
+        source: 'audit-ledger',
+        reference: record.entryId,
+        detail: `Executed action ${stringOrDefault(record.payload.actionKind, 'unknown')} lacks a complete before/after snapshot.`,
+      })),
+    });
+  }
+
+  if (actions.length === 0) {
+    unverified.push({
+      classification: 'unverified',
+      claim: 'No automation action evidence was found in the selected window, so any behavior summary would be speculative.',
+      evidence: [
+        {
+          source: 'audit-ledger',
+          reference: `${projectId}:autonomy`,
+          detail: 'No action records matched the requested filters.',
+        },
+      ],
+    });
+  }
+
+  return {
+    projectId,
+    generatedAt: new Date().toISOString(),
+    windowStart: options?.since ?? null,
+    stats: {
+      runCount: runCompleted.length,
+      actionCount: actions.length,
+      executedActionCount: actions.filter((record) => record.payload.executed === true).length,
+      blockedActionCount: actions.filter((record) => record.payload.resultStatus === 'blocked').length,
+    },
+    claims: {
+      observed,
+      inferred,
+      unverified,
+    },
+  };
+}
+
 function actionPayload(action: AutomationAction): Record<string, unknown> {
   if (action.kind === 'create-draft-task') {
     return {
@@ -474,6 +722,22 @@ function indexTasks(phases: Array<Record<string, unknown>>) {
     }
   }
   return tasks;
+}
+
+function countTasksByStatus(
+  phases: Array<Record<string, unknown>>,
+  status: 'pending' | 'in-progress' | 'done' | 'blocked',
+): number {
+  let count = 0;
+  for (const phase of phases) {
+    const taskList = Array.isArray(phase.tasks) ? phase.tasks : [];
+    for (const task of taskList) {
+      if (normalizeTaskStatus(task.status) === status) {
+        count += 1;
+      }
+    }
+  }
+  return count;
 }
 
 function stringOrNull(value: unknown): string | null {

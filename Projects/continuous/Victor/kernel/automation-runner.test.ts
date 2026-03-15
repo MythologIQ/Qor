@@ -5,7 +5,13 @@ import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'bun:test';
 
 import { createProjectStore } from '../../Zo-Qore/runtime/planning';
-import { listAutomationAuditRecords, summarizeAutomationActivity, summarizeBuildProgress } from './automation-audit';
+import {
+  appendAutomationRunStarted,
+  listAutomationAuditRecords,
+  summarizeAutomationActivity,
+  summarizeBuildProgress,
+  summarizeVerificationReport,
+} from './automation-audit';
 import { runVictorSafeAutomation } from './automation-runner';
 import type { GroundedContextBundle } from './memory/types';
 
@@ -408,6 +414,84 @@ describe('runVictorSafeAutomation', () => {
     expect(summary.recentTaskActivity.some((entry) => entry.kind === 'created')).toBe(true);
     expect(summary.recentTaskActivity.some((entry) => entry.kind === 'status-changed')).toBe(true);
     expect(summary.recentTaskActivity.some((entry) => entry.kind === 'blocked-attempt')).toBe(true);
+  });
+
+  it('separates observed, inferred, and unverified claims in the verification report', async () => {
+    const first = await runVictorSafeAutomation(
+      {
+        dryRun: false,
+        maxActions: 1,
+        projectsDir,
+        actions: [
+          {
+            kind: 'update-task-status',
+            projectId: 'builder-console',
+            phaseId: 'phase-1',
+            taskId: 'task-1',
+            status: 'in-progress',
+            query: 'What should happen next with the comms-tab prompt automation task?',
+          },
+        ],
+      },
+      async () => groundedContext(),
+    );
+
+    const second = await runVictorSafeAutomation(
+      {
+        dryRun: true,
+        maxActions: 1,
+        projectsDir,
+        actions: [
+          {
+            kind: 'update-task-status',
+            projectId: 'builder-console',
+            phaseId: 'phase-1',
+            taskId: 'task-1',
+            status: 'done',
+            query: 'Can Victor mark the comms task as complete?',
+          },
+        ],
+      },
+      async () => ({
+        ...groundedContext(),
+        missingInformation: ['No completion evidence was found in the retrieved context.'],
+      }),
+    );
+
+    expect(first.runId).toBeString();
+    expect(second.runId).toBeString();
+
+    const ledger = await listAutomationAuditRecords('builder-console', projectsDir, { runId: first.runId });
+    const runStarted = ledger.find((entry) => entry.event === 'run-started');
+    expect(runStarted).toBeDefined();
+
+    const summary = await summarizeVerificationReport('builder-console', projectsDir, {
+      limit: 20,
+      since: new Date(Date.now() - 60 * 60 * 1000).toISOString(),
+    });
+
+    expect(summary.stats.runCount).toBe(2);
+    expect(summary.claims.observed.some((claim) => claim.claim.includes('changed'))).toBe(true);
+    expect(summary.claims.inferred.some((claim) => claim.claim.includes('low-risk governed action set'))).toBe(true);
+    expect(summary.claims.unverified.length).toBe(0);
+  });
+
+  it('marks incomplete runs as unverified in the verification report', async () => {
+    await appendAutomationRunStarted('builder-console', projectsDir, {
+      runId: 'run-incomplete',
+      actorId: 'tester',
+      mode: 'execute',
+      actionBudget: 1,
+      requestedActionCount: 1,
+      stopOnBlock: true,
+    });
+
+    const summary = await summarizeVerificationReport('builder-console', projectsDir, {
+      limit: 20,
+      since: new Date(Date.now() - 60 * 60 * 1000).toISOString(),
+    });
+
+    expect(summary.claims.unverified.some((claim) => claim.claim.includes('started without a matching completion record'))).toBe(true);
   });
 });
 
