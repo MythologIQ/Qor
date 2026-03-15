@@ -42,14 +42,91 @@
                 <span class="app-name">Zo-Qore Mobile</span>
             </div>
             <div class="header-right">
-                <span id="header-tab-name" class="header-tab-name">Projects</span>
+                <div class="view-switcher" role="tablist" aria-label="Primary view switcher">
+                    <button class="view-toggle-btn active" data-view="view-victor" data-label="Victor" role="tab" aria-selected="true">Victor</button>
+                    <button class="view-toggle-btn" data-view="view-builder" data-label="Builder" role="tab" aria-selected="false">Builder</button>
+                </div>
+                <span id="header-status-chip" class="header-status-chip">Red</span>
+                <span id="header-tab-name" class="header-tab-name">Victor</span>
             </div>
         </header>
 
         <main class="content-area">
-            
-            <!-- TAB 1: PROJECTS (Strategy) -->
-            <section id="tab-strategy" class="tab-content active">
+
+            <!-- PRIMARY VIEW: VICTOR -->
+            <section id="view-victor" class="tab-content primary-view active">
+                <div class="glass-card verdict-card verdict-red" id="victor-verdict-card">
+                    <div class="verdict-header">
+                        <span class="section-label">Promotion Verdict</span>
+                        <span class="verdict-pill" id="victor-verdict-pill">Red</span>
+                    </div>
+                    <div class="verdict-body">
+                        <div>
+                            <div class="verdict-title" id="victor-verdict-title">Execute mode is not ready.</div>
+                            <div class="verdict-detail" id="victor-verdict-detail">Promotion gate not evaluated yet.</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="glass-card heartbeat-card">
+                    <div class="card-header-row">
+                        <span class="section-label" style="margin-bottom:0;">Heartbeat Status</span>
+                        <span class="heartbeat-pill" id="victor-heartbeat-mode">Dry Run</span>
+                    </div>
+                    <div class="heartbeat-grid">
+                        <div class="heartbeat-stat">
+                            <span class="heartbeat-label">Cadence</span>
+                            <span class="heartbeat-value" id="victor-heartbeat-cadence">30m</span>
+                        </div>
+                        <div class="heartbeat-stat">
+                            <span class="heartbeat-label">State</span>
+                            <span class="heartbeat-value" id="victor-heartbeat-state">Unknown</span>
+                        </div>
+                        <div class="heartbeat-stat">
+                            <span class="heartbeat-label">Ticks</span>
+                            <span class="heartbeat-value" id="victor-heartbeat-ticks">0</span>
+                        </div>
+                        <div class="heartbeat-stat">
+                            <span class="heartbeat-label">Focus</span>
+                            <span class="heartbeat-value" id="victor-heartbeat-focus">Inactive</span>
+                        </div>
+                    </div>
+                    <div class="heartbeat-footnote" id="victor-heartbeat-last">No heartbeat state loaded.</div>
+                </div>
+
+                <div class="glass-card">
+                    <div class="card-header-row">
+                        <span class="section-label" style="margin-bottom:0;">Promotion Gate</span>
+                        <span class="mini-chip" id="victor-gate-summary-chip">0 unmet</span>
+                    </div>
+                    <div class="stack-list" id="victor-gate-criteria">
+                        <div class="stack-item muted">Loading promotion criteria...</div>
+                    </div>
+                </div>
+
+                <div class="glass-card">
+                    <div class="card-header-row">
+                        <span class="section-label" style="margin-bottom:0;">Soak Evidence</span>
+                        <span class="mini-chip" id="victor-soak-summary-chip">0 ticks</span>
+                    </div>
+                    <div class="stack-list" id="victor-soak-checks">
+                        <div class="stack-item muted">Loading soak evidence...</div>
+                    </div>
+                </div>
+
+                <div class="glass-card">
+                    <div class="card-header-row">
+                        <span class="section-label" style="margin-bottom:0;">Automation Activity</span>
+                        <span class="mini-chip" id="victor-activity-summary-chip">No runs</span>
+                    </div>
+                    <div class="stack-list" id="victor-activity-list">
+                        <div class="stack-item muted">Loading automation activity...</div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- PRIMARY VIEW: BUILDER -->
+            <section id="view-builder" class="tab-content primary-view">
                 
                 <div class="glass-card dropdown-trigger" id="repo-selector-btn">
                     <span class="dropdown-label">Repository</span>
@@ -59,10 +136,30 @@
                     </div>
                 </div>
 
+                <div class="builder-insight-grid">
+                    <div class="glass-card">
+                        <div class="card-header-row">
+                            <span class="section-label" style="margin-bottom:0;">Forecast Snapshot</span>
+                            <span class="mini-chip" id="builder-forecast-confidence">Medium confidence</span>
+                        </div>
+                        <div class="builder-forecast-band" id="builder-forecast-band">Forecast unavailable</div>
+                        <div class="builder-forecast-detail" id="builder-forecast-detail">Waiting for project progress data.</div>
+                    </div>
+
+                    <div class="glass-card dependency-card" id="builder-dependency-card">
+                        <div class="card-header-row">
+                            <span class="section-label" style="margin-bottom:0;">Victor Dependency</span>
+                            <span class="mini-chip" id="builder-dependency-chip">Clear</span>
+                        </div>
+                        <div class="builder-dependency-state" id="builder-dependency-state">No Victor dependency is currently impacting this project.</div>
+                        <div class="builder-dependency-detail" id="builder-dependency-detail">Dependency details will appear here only when Victor promotion state materially affects Builder delivery.</div>
+                    </div>
+                </div>
+
                 <!-- Overall Project Status Bar -->
                 <div class="glass-card status-overview-card">
                     <div class="status-header">
-                        <span class="section-label">Overall Project Status</span>
+                        <span class="section-label">Build Progress</span>
                         <span class="status-percent">65%</span>
                     </div>
                     <div class="project-progress-track">
@@ -160,7 +257,7 @@
             </section>
 
             <!-- TAB 2: CONSOLE (Engine) -->
-            <section id="tab-console" class="tab-content" style="display:none;">
+            <section id="tab-console" class="tab-content legacy-tab" style="display:none;">
                 
                 <!-- Deployment Stage Viz -->
                 <div class="glass-card">
@@ -223,7 +320,7 @@
             </section>
 
             <!-- TAB 3: MONITOR (Health) -->
-            <section id="tab-monitor" class="tab-content" style="display:none;">
+            <section id="tab-monitor" class="tab-content legacy-tab" style="display:none;">
                 
                 <!-- Sentinel Status Card -->
                 <div class="glass-card sentinel-card">
@@ -306,7 +403,7 @@
             </section>
 
             <!-- TAB 4: BRAINSTORM (Voice) -->
-            <section id="tab-brainstorm" class="tab-content" style="display:none;">
+            <section id="tab-brainstorm" class="tab-content legacy-tab" style="display:none;">
                 <canvas id="brainstorm-void-canvas"></canvas>
                 
                 <div class="brainstorm-center">
@@ -346,7 +443,7 @@
         </main>
 
         <!-- Bottom Navigation -->
-        <nav class="bottom-nav">
+        <nav class="bottom-nav" aria-hidden="true">
             <button class="nav-item active" data-target="tab-strategy" data-label="Projects">
                 <span class="icon">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -536,13 +633,13 @@
     <script src="mobile.js?v=20260218b"></script>
     <script>
         document.addEventListener('DOMContentLoaded', () => {
-            const tabs = document.querySelectorAll('.tab-content');
-            const navItems = document.querySelectorAll('.nav-item');
+            const primaryViews = document.querySelectorAll('.primary-view');
+            const viewToggleBtns = document.querySelectorAll('.view-toggle-btn');
             const headerTabName = document.getElementById('header-tab-name');
             const queueItems = document.querySelectorAll('.queue-item');
 
-            window.switchTab = function(targetId, label) {
-                tabs.forEach(tab => {
+            window.switchPrimaryView = function(targetId, label) {
+                primaryViews.forEach(tab => {
                     tab.style.display = '';
                     tab.classList.remove('active');
                 });
@@ -553,33 +650,33 @@
                     targetTab.classList.add('active');
                 }
 
-                navItems.forEach(item => {
-                    if (item.dataset.target === targetId) {
+                viewToggleBtns.forEach(item => {
+                    if (item.dataset.view === targetId) {
                         item.classList.add('active');
-                        item.querySelector('.icon svg').style.stroke = 'var(--accent-cyan)';
+                        item.setAttribute('aria-selected', 'true');
                     } else {
                         item.classList.remove('active');
-                        item.querySelector('.icon svg').style.stroke = 'currentColor';
+                        item.setAttribute('aria-selected', 'false');
                     }
                 });
                 
-                // Update Header Label
                 if(label) {
                     headerTabName.textContent = label;
                 }
                 
-                // Save state to local storage for persistence on refresh
-                localStorage.setItem('zoqore-active-tab', targetId);
-                localStorage.setItem('zoqore-tab-label', label || 'Projects');
+                localStorage.setItem('zoqore-primary-view', targetId);
+                localStorage.setItem('zoqore-primary-view-label', label || 'Victor');
             }
 
-            navItems.forEach(item => {
+            window.switchTab = window.switchPrimaryView;
+
+            viewToggleBtns.forEach(item => {
                 item.addEventListener('click', (e) => {
                     e.preventDefault();
-                    const btn = e.target.closest('.nav-item');
-                    const targetId = btn.dataset.target;
+                    const btn = e.target.closest('.view-toggle-btn');
+                    const targetId = btn.dataset.view;
                     const label = btn.dataset.label;
-                    switchTab(targetId, label);
+                    switchPrimaryView(targetId, label);
                 });
             });
 
@@ -801,9 +898,9 @@
             const savedModel = localStorage.getItem('zoqore-model') || '';
             setModel(savedModel);
 
-            const savedTab = localStorage.getItem('zoqore-active-tab') || 'tab-strategy';
-            const savedLabel = localStorage.getItem('zoqore-tab-label') || 'Projects';
-            switchTab(savedTab, savedLabel);
+            const savedView = localStorage.getItem('zoqore-primary-view') || 'view-victor';
+            const savedLabel = localStorage.getItem('zoqore-primary-view-label') || 'Victor';
+            switchPrimaryView(savedView, savedLabel);
         });
     </script>
 </body>

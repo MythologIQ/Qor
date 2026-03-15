@@ -3,6 +3,11 @@ document.addEventListener('DOMContentLoaded', () => {
   const CONFIG = {
     apiHub: '/api/hub',
     apiDashboard: '/api/projects/dashboard',
+    apiBuildProgress: '/api/victor/build/progress',
+    apiPromotionGate: '/api/victor/promotion/gate',
+    apiPromotionSoak: '/api/victor/promotion/soak',
+    apiHeartbeatStatus: '/api/victor/heartbeat/status',
+    apiAutomationActivity: '/api/victor/automation/activity',
     apiSkills: '/api/skills',
     apiEval: '/api/qore/evaluate',
     apiAsk: '/api/zo/ask',
@@ -18,6 +23,11 @@ document.addEventListener('DOMContentLoaded', () => {
     connection: 'connecting',
     hub: null,
     dashboard: null,
+    buildProgress: null,
+    victorGate: null,
+    victorSoak: null,
+    victorHeartbeat: null,
+    victorActivity: null,
     skills: [],
     ws: null,
     reconnectAttempts: 0,
@@ -39,6 +49,13 @@ document.addEventListener('DOMContentLoaded', () => {
   const statusStageEl = document.querySelector('.status-stage .highlight');
   const statusHealthEl = document.querySelector('.status-health .good, .status-health .warn, .status-health .bad');
   const milestoneListEl = document.getElementById('milestone-list');
+  const builderForecastBandEl = document.getElementById('builder-forecast-band');
+  const builderForecastDetailEl = document.getElementById('builder-forecast-detail');
+  const builderForecastConfidenceEl = document.getElementById('builder-forecast-confidence');
+  const builderDependencyCardEl = document.getElementById('builder-dependency-card');
+  const builderDependencyChipEl = document.getElementById('builder-dependency-chip');
+  const builderDependencyStateEl = document.getElementById('builder-dependency-state');
+  const builderDependencyDetailEl = document.getElementById('builder-dependency-detail');
 
   // ─── Elements: Monitor ───
   const sentinelOrb = document.querySelector('.sentinel-orb');
@@ -59,6 +76,25 @@ document.addEventListener('DOMContentLoaded', () => {
   const footerPolicyEl = document.querySelectorAll('.footer-stat')[1]?.querySelector('span');
   const footerLatencyEl = document.querySelectorAll('.footer-stats-row')[1]?.querySelector('.footer-stat span');
   const footerRefreshBtn = document.querySelector('.footer-refresh');
+  const headerStatusChip = document.getElementById('header-status-chip');
+
+  // ─── Elements: Victor ───
+  const victorVerdictCard = document.getElementById('victor-verdict-card');
+  const victorVerdictPill = document.getElementById('victor-verdict-pill');
+  const victorVerdictTitle = document.getElementById('victor-verdict-title');
+  const victorVerdictDetail = document.getElementById('victor-verdict-detail');
+  const victorHeartbeatMode = document.getElementById('victor-heartbeat-mode');
+  const victorHeartbeatCadence = document.getElementById('victor-heartbeat-cadence');
+  const victorHeartbeatState = document.getElementById('victor-heartbeat-state');
+  const victorHeartbeatTicks = document.getElementById('victor-heartbeat-ticks');
+  const victorHeartbeatFocus = document.getElementById('victor-heartbeat-focus');
+  const victorHeartbeatLast = document.getElementById('victor-heartbeat-last');
+  const victorGateSummaryChip = document.getElementById('victor-gate-summary-chip');
+  const victorGateCriteria = document.getElementById('victor-gate-criteria');
+  const victorSoakSummaryChip = document.getElementById('victor-soak-summary-chip');
+  const victorSoakChecks = document.getElementById('victor-soak-checks');
+  const victorActivitySummaryChip = document.getElementById('victor-activity-summary-chip');
+  const victorActivityList = document.getElementById('victor-activity-list');
 
   // ─── Elements: Repo Modal ───
   const repoModalList = document.querySelector('#repo-modal .skill-list, #repo-modal .repo-list');
@@ -163,8 +199,56 @@ document.addEventListener('DOMContentLoaded', () => {
       if (!res.ok) throw new Error(`Dashboard ${res.status}`);
       state.dashboard = await res.json();
       renderProjects();
+      const projectId = state.dashboard?.project?.id || 'builder-console';
+      fetchBuildProgress(projectId);
     } catch (err) {
       console.error('[Mobile] fetchDashboard:', err);
+    }
+  }
+
+  async function fetchBuildProgress(projectId) {
+    if (!projectId) return;
+    try {
+      const res = await fetch(`${CONFIG.apiBuildProgress}?projectId=${encodeURIComponent(projectId)}`);
+      if (!res.ok) throw new Error(`Build progress ${res.status}`);
+      const data = await res.json();
+      state.buildProgress = data?.summary || null;
+      renderProjects();
+    } catch (err) {
+      console.error('[Mobile] fetchBuildProgress:', err);
+    }
+  }
+
+  async function fetchVictorView() {
+    try {
+      const [gateRes, soakRes, heartbeatRes, activityRes] = await Promise.all([
+        fetch(`${CONFIG.apiPromotionGate}?projectId=builder-console&victorProjectId=victor-resident`),
+        fetch(`${CONFIG.apiPromotionSoak}?projectId=builder-console`),
+        fetch(`${CONFIG.apiHeartbeatStatus}?projectId=builder-console`),
+        fetch(`${CONFIG.apiAutomationActivity}?projectId=builder-console&hours=24&limit=20`),
+      ]);
+
+      if (gateRes.ok) {
+        const gateData = await gateRes.json();
+        state.victorGate = gateData?.summary || null;
+      }
+      if (soakRes.ok) {
+        const soakData = await soakRes.json();
+        state.victorSoak = soakData?.summary || null;
+      }
+      if (heartbeatRes.ok) {
+        const heartbeatData = await heartbeatRes.json();
+        state.victorHeartbeat = heartbeatData?.state || null;
+      }
+      if (activityRes.ok) {
+        const activityData = await activityRes.json();
+        state.victorActivity = activityData?.summary || null;
+      }
+
+      renderVictorView();
+      renderProjects();
+    } catch (err) {
+      console.error('[Mobile] fetchVictorView:', err);
     }
   }
 
@@ -228,6 +312,8 @@ document.addEventListener('DOMContentLoaded', () => {
     if (milestoneListEl) {
       if (milestones.length === 0 && phases.length === 0) {
         milestoneListEl.innerHTML = '<div class="milestone-item"><div class="milestone-info"><div class="milestone-title" style="color:var(--text-muted)">No milestones yet</div><div class="milestone-feature">Run a planning session to generate milestones</div></div></div>';
+        renderRepoModal(allProjects, project);
+        renderBuilderInsights(project);
         return;
       }
 
@@ -303,6 +389,62 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Update repo modal with real projects
     renderRepoModal(allProjects, project);
+    renderBuilderInsights(project);
+  }
+
+  function renderBuilderInsights(project) {
+    if (!builderForecastBandEl || !builderForecastDetailEl || !builderForecastConfidenceEl) return;
+
+    const summary = state.buildProgress;
+    const taskCounts = summary?.taskCounts || { pending: 0, inProgress: 0, blocked: 0, done: 0, total: 0 };
+    const openTasks = (taskCounts.pending || 0) + (taskCounts.inProgress || 0) + (taskCounts.blocked || 0);
+    const blockers = summary?.deliveryBlockers || [];
+
+    let band = 'Forecast unavailable';
+    let confidence = 'Medium confidence';
+    if (openTasks === 0 && taskCounts.total > 0) {
+      band = 'No open governed work';
+      confidence = 'High confidence';
+    } else if (openTasks <= 2) {
+      band = 'Small remaining effort';
+      confidence = blockers.length > 0 ? 'Low confidence' : 'Medium confidence';
+    } else if (openTasks <= 4) {
+      band = 'Medium remaining effort';
+      confidence = blockers.length > 0 ? 'Low confidence' : 'Medium confidence';
+    } else {
+      band = 'Large remaining effort';
+      confidence = blockers.length > 0 ? 'Low confidence' : 'Medium confidence';
+    }
+
+    builderForecastBandEl.textContent = band;
+    builderForecastConfidenceEl.textContent = confidence;
+    builderForecastDetailEl.textContent = summary
+      ? `${openTasks} open governed task(s), ${taskCounts.done || 0} done, ${blockers.length} delivery blocker(s).`
+      : 'Waiting for project progress data.';
+
+    if (!builderDependencyCardEl || !builderDependencyChipEl || !builderDependencyStateEl || !builderDependencyDetailEl) {
+      return;
+    }
+
+    const currentProjectId = project?.id || 'builder-console';
+    const gate = state.victorGate;
+    const dependencyActive = currentProjectId === 'builder-console' && gate && gate.internalState !== 'ready';
+
+    if (!dependencyActive) {
+      builderDependencyCardEl.style.display = 'block';
+      builderDependencyChipEl.textContent = 'Clear';
+      builderDependencyStateEl.textContent = 'No Victor dependency is currently impacting this project.';
+      builderDependencyDetailEl.textContent = 'Dependency details will appear here only when Victor promotion state materially affects Builder delivery.';
+      return;
+    }
+
+    builderDependencyCardEl.style.display = 'block';
+    builderDependencyChipEl.textContent = gate.uiLabel;
+    builderDependencyStateEl.textContent = `Victor execute-mode promotion is ${gate.uiLabel}.`;
+    const unmet = (gate.criteria || []).filter((criterion) => criterion.status !== 'met').slice(0, 2);
+    builderDependencyDetailEl.textContent = unmet.length > 0
+      ? unmet.map((criterion) => criterion.detail).join(' ')
+      : 'Victor promotion state is constraining Builder delivery readiness.';
   }
 
   function renderRepoModal(allProjects, activeProject) {
@@ -439,6 +581,131 @@ document.addEventListener('DOMContentLoaded', () => {
     if (sliderThumb) sliderThumb.style.left = `${policyTrend}%`;
     if (sliderFill) sliderFill.style.width = `${policyTrend}%`;
     if (sliderVal) sliderVal.textContent = `${policyTrend}%`;
+  }
+
+  function renderVictorView() {
+    const gate = state.victorGate;
+    const soak = state.victorSoak;
+    const heartbeat = state.victorHeartbeat;
+    const activity = state.victorActivity;
+
+    if (victorVerdictCard && gate) {
+      victorVerdictCard.classList.remove('verdict-red', 'verdict-yellow', 'verdict-green');
+      victorVerdictCard.classList.add(`verdict-${String(gate.uiLabel || 'Red').toLowerCase()}`);
+    }
+    if (victorVerdictPill) victorVerdictPill.textContent = gate?.uiLabel || 'Red';
+    if (headerStatusChip) headerStatusChip.textContent = gate?.uiLabel || 'Red';
+    if (victorVerdictTitle) {
+      victorVerdictTitle.textContent = gate
+        ? `Execute mode is ${String(gate.uiLabel).toLowerCase()}.`
+        : 'Execute mode is not ready.';
+    }
+    if (victorVerdictDetail) {
+      const unmet = (gate?.criteria || []).filter((criterion) => criterion.status !== 'met');
+      victorVerdictDetail.textContent = unmet.length > 0
+        ? unmet.slice(0, 2).map((criterion) => criterion.detail).join(' ')
+        : 'Promotion gate data is not available yet.';
+    }
+
+    if (victorHeartbeatMode) victorHeartbeatMode.textContent = formatHeartbeatMode(heartbeat?.mode);
+    if (victorHeartbeatCadence) victorHeartbeatCadence.textContent = formatCadence(heartbeat?.cadenceMs);
+    if (victorHeartbeatState) victorHeartbeatState.textContent = formatHeartbeatState(heartbeat?.status);
+    if (victorHeartbeatTicks) victorHeartbeatTicks.textContent = String(heartbeat?.tickCount || 0);
+    if (victorHeartbeatFocus) {
+      victorHeartbeatFocus.textContent = heartbeat?.focusWindow?.status
+        ? String(heartbeat.focusWindow.status).replace('-', ' ')
+        : 'Inactive';
+    }
+    if (victorHeartbeatLast) {
+      victorHeartbeatLast.textContent = heartbeat?.lastTickReason
+        ? `${formatHeartbeatState(heartbeat?.lastTickStatus)}: ${heartbeat.lastTickReason}`
+        : 'No heartbeat state loaded.';
+    }
+
+    if (victorGateSummaryChip) {
+      const unmetCount = (gate?.criteria || []).filter((criterion) => criterion.status !== 'met').length;
+      victorGateSummaryChip.textContent = `${unmetCount} unmet`;
+    }
+    if (victorGateCriteria) {
+      const criteria = gate?.criteria || [];
+      victorGateCriteria.innerHTML = criteria.length > 0
+        ? criteria.map((criterion) => renderStackItem(criterion.label, criterion.detail, criterion.status)).join('')
+        : '<div class="stack-item muted">Loading promotion criteria...</div>';
+    }
+
+    if (victorSoakSummaryChip) {
+      victorSoakSummaryChip.textContent = `${soak?.metrics?.completedTicks || 0} ticks`;
+    }
+    if (victorSoakChecks) {
+      const checks = soak?.checks || [];
+      victorSoakChecks.innerHTML = checks.length > 0
+        ? checks.map((check) => renderStackItem(check.label, check.detail, check.status)).join('')
+        : '<div class="stack-item muted">Loading soak evidence...</div>';
+    }
+
+    if (victorActivitySummaryChip) {
+      victorActivitySummaryChip.textContent = activity
+        ? `${activity.totalRuns || 0} runs`
+        : 'No runs';
+    }
+    if (victorActivityList) {
+      const runs = activity?.recentRuns || [];
+      victorActivityList.innerHTML = runs.length > 0
+        ? runs.map((run) => renderStackItem(
+            `${formatHeartbeatMode(run.mode)} • ${run.executedCount} write(s)`,
+            `${run.status} at ${formatTimestamp(run.timestamp)}. ${run.blockedCount || 0} blocked action(s).`,
+            run.status === 'completed' ? 'met' : 'partial',
+          )).join('')
+        : '<div class="stack-item muted">No automation runs recorded yet.</div>';
+    }
+  }
+
+  function renderStackItem(title, detail, status) {
+    return `<div class="stack-item">
+      <div class="stack-item-title">
+        <span>${escapeHtml(title || 'Untitled')}</span>
+        <span class="status-chip status-${statusClass(status)}">${escapeHtml(statusLabel(status))}</span>
+      </div>
+      <div class="stack-item-detail">${escapeHtml(detail || '')}</div>
+    </div>`;
+  }
+
+  function statusClass(status) {
+    if (status === 'met' || status === 'ready' || status === 'completed') return 'met';
+    if (status === 'partial' || status === 'blocked') return 'partial';
+    return 'unmet';
+  }
+
+  function statusLabel(status) {
+    if (status === 'met') return 'Met';
+    if (status === 'partial') return 'Partial';
+    if (status === 'ready') return 'Ready';
+    if (status === 'completed') return 'Completed';
+    if (status === 'blocked') return 'Blocked';
+    return 'Unmet';
+  }
+
+  function formatCadence(value) {
+    if (!value) return '30m';
+    return `${Math.round(value / 60000)}m`;
+  }
+
+  function formatHeartbeatMode(value) {
+    if (value === 'execute') return 'Execute';
+    if (value === 'dry-run') return 'Dry Run';
+    return 'Unknown';
+  }
+
+  function formatHeartbeatState(value) {
+    if (!value) return 'Unknown';
+    return String(value).replace(/-/g, ' ').replace(/\b\w/g, (letter) => letter.toUpperCase());
+  }
+
+  function formatTimestamp(value) {
+    if (!value) return 'unknown time';
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return value;
+    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   }
 
   // ─── Render: Footer ───
@@ -708,6 +975,7 @@ document.addEventListener('DOMContentLoaded', () => {
     footerRefreshBtn.addEventListener('click', () => {
       fetchHub();
       fetchDashboard();
+      fetchVictorView();
     });
   }
 
@@ -965,11 +1233,13 @@ document.addEventListener('DOMContentLoaded', () => {
   connectWebSocket();
   fetchHub();
   fetchDashboard();
+  fetchVictorView();
   fetchSkills();
 
   // Periodic polling as fallback
   state.pollTimer = setInterval(() => {
     fetchHub();
     fetchDashboard();
+    fetchVictorView();
   }, CONFIG.pollInterval);
 });
