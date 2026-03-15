@@ -154,6 +154,35 @@ describe('createGovernedBuilderConsoleDraftTask', () => {
     expect(duplicate.duplicateTaskId).toBeString();
   });
 
+  it('treats input/output wording as a duplicate of I/O wording', async () => {
+    await createGovernedBuilderConsoleDraftTask(
+      {
+        projectsDir,
+        projectId: 'builder-console',
+        phaseId: 'phase-1',
+        title: 'Reduce comms tab to standard chat I/O',
+        description: 'Collapse the comms tab to standard chat I/O.',
+        query: 'What comms tab prompt automation task exists in Builder Console?',
+      },
+      groundedContext(),
+    );
+
+    const duplicate = await createGovernedBuilderConsoleDraftTask(
+      {
+        projectsDir,
+        projectId: 'builder-console',
+        phaseId: 'phase-1',
+        title: 'Reduce comms tab to standard chat input/output',
+        description: 'Equivalent wording for the same work.',
+        query: 'What comms tab prompt automation task exists in Builder Console?',
+      },
+      groundedContext(),
+    );
+
+    expect(duplicate.status).toBe('duplicate');
+    expect(duplicate.duplicateTaskId).toBeString();
+  });
+
   it('blocks task creation when the target phase does not exist', async () => {
     const result = await createGovernedBuilderConsoleDraftTask(
       {
