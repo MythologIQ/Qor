@@ -506,12 +506,19 @@ function parseHeartbeatQueryRequest(c: Context): HeartbeatRequest {
     actorId: c.req.query('actorId') ?? undefined,
     dryRun: parseBoolValue(c.req.query('dryRun')),
     cadenceMs: parseIntValue(c.req.query('cadenceMs')),
+    requestedCadenceMs: parseIntValue(c.req.query('requestedCadenceMs')),
     staleAfterMs: parseIntValue(c.req.query('staleAfterMs')),
     maxActionsPerTick: parseIntValue(c.req.query('maxActionsPerTick')),
     stopOnBlock: parseBoolValue(c.req.query('stopOnBlock')),
     maxConsecutiveBlocked: parseIntValue(c.req.query('maxConsecutiveBlocked')),
     maxConsecutiveFailures: parseIntValue(c.req.query('maxConsecutiveFailures')),
     stateDir: c.req.query('stateDir') ?? undefined,
+    workClass: c.req.query('workClass') === 'narrow-execution' ? 'narrow-execution' : c.req.query('workClass') === 'coordination-review' ? 'coordination-review' : undefined,
+    focusWindowMode: c.req.query('focusWindowMode') === 'manual' || c.req.query('focusWindowMode') === 'auto' || c.req.query('focusWindowMode') === 'none'
+      ? c.req.query('focusWindowMode') as 'manual' | 'auto' | 'none'
+      : undefined,
+    focusWindowReason: c.req.query('focusWindowReason') ?? undefined,
+    reasoningModel: c.req.query('reasoningModel') ?? undefined,
   };
 }
 
