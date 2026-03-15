@@ -108,10 +108,10 @@ export async function loadFullProjectState(
 
   const [thoughts, clusters, constellation, phases, risks, autonomyConfig] = await Promise.all([
     voidStore.getAllThoughts().catch(() => []),
-    getViewStore("reveal").then(s => s.read<RevealCluster[]>().catch(() => [] as RevealCluster[])),
+    getViewStore("reveal").then(s => s.read<RevealCluster[] | { clusters?: RevealCluster[] }>().then(normalizeClusters).catch(() => [] as RevealCluster[])),
     getViewStore("constellation").then(s => s.read<ConstellationMap | null>().catch(() => null)),
-    getViewStore("path").then(s => s.read<PathPhase[]>().catch(() => [] as PathPhase[])),
-    getViewStore("risk").then(s => s.read<RiskEntry[]>().catch(() => [] as RiskEntry[])),
+    getViewStore("path").then(s => s.read<PathPhase[] | { phases?: PathPhase[] }>().then(normalizePhases).catch(() => [] as PathPhase[])),
+    getViewStore("risk").then(s => s.read<RiskEntry[] | { risks?: RiskEntry[] }>().then(normalizeRisks).catch(() => [] as RiskEntry[])),
     getViewStore("autonomy").then(s => s.read<AutonomyConfig | null>().catch(() => null)),
   ]);
 
@@ -124,4 +124,34 @@ export async function loadFullProjectState(
   }
 
   return createFullProjectState(project, thoughts, safeClusters, constellation, safePhases, safeRisks, autonomyConfig);
+}
+
+function normalizeClusters(data: RevealCluster[] | { clusters?: RevealCluster[] } | null): RevealCluster[] {
+  if (!data) {
+    return [];
+  }
+  if (Array.isArray(data)) {
+    return data;
+  }
+  return data.clusters ?? [];
+}
+
+function normalizePhases(data: PathPhase[] | { phases?: PathPhase[] } | null): PathPhase[] {
+  if (!data) {
+    return [];
+  }
+  if (Array.isArray(data)) {
+    return data;
+  }
+  return data.phases ?? [];
+}
+
+function normalizeRisks(data: RiskEntry[] | { risks?: RiskEntry[] } | null): RiskEntry[] {
+  if (!data) {
+    return [];
+  }
+  if (Array.isArray(data)) {
+    return data;
+  }
+  return data.risks ?? [];
 }

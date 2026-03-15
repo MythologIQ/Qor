@@ -570,6 +570,71 @@ export class PlanningRoutes {
         return this.sendUpdated(res, updatedPhase);
       }
 
+      // POST /api/projects/:projectId/path/phases/:phaseId/tasks - Create task
+      const createTaskMatch = url.match(new RegExp(`^/api/projects/${projectId}/path/phases/([^/]+)/tasks$`));
+      if (method === "POST" && createTaskMatch) {
+        const phaseId = createTaskMatch[1];
+        const body = await this.readJsonBody(req);
+        const { title, description, acceptance, actorId } = body as {
+          title?: string;
+          description?: string;
+          acceptance?: string[];
+          actorId: string;
+        };
+        if (!title || !description || !actorId) {
+          return this.sendError(res, 400, "BAD_REQUEST" as ApiErrorCode, "title, description, actorId required", traceId);
+        }
+
+        const pathStore = new ViewStore(projectsDir, projectId, "path", {
+          ledger: planningLedger,
+          integrity: storeIntegrity,
+        });
+        const existing = this.readPhasePayload(await pathStore.read<{ phases?: Array<Record<string, unknown>> }>());
+        const phases = existing.phases;
+        const phaseIndex = phases.findIndex((phase) => phase.phaseId === phaseId);
+        if (phaseIndex === -1) {
+          return this.sendError(res, 404, "NOT_FOUND" as ApiErrorCode, "Phase not found", traceId);
+        }
+
+        const phase = phases[phaseIndex] as Record<string, unknown> & { tasks?: Array<Record<string, unknown>> };
+        const newTask = {
+          taskId: this.generateId("task"),
+          phaseId,
+          title,
+          description,
+          acceptance: Array.isArray(acceptance) ? acceptance : [],
+          status: "pending" as const,
+        };
+
+        const nextTasks = [...(phase.tasks ?? []), newTask];
+        const updatedPhase = {
+          ...phase,
+          tasks: nextTasks,
+          status: this.derivePhaseStatus(nextTasks),
+          updatedAt: new Date().toISOString(),
+        };
+
+        const { response } = await planningGovernance.evaluateAndExecute(
+          actorId,
+          "planning:path:create-task" as ContractPlanningAction,
+          projectId,
+          async () => {
+            phases[phaseIndex] = updatedPhase;
+            await pathStore.write({ phases });
+            await projectStore.updatePipelineState("path", "active", actorId);
+          },
+          {
+            phaseId,
+            title,
+          },
+        );
+
+        if (!response.allowed) {
+          return this.sendError(res, 403, "POLICY_DENIED" as ApiErrorCode, response.reason ?? "Policy denied", traceId);
+        }
+        return this.sendCreated(res, newTask);
+      }
+
       // PATCH /api/projects/:projectId/path/phases/:phaseId/tasks/:taskId - Update task status
       const updateTaskMatch = url.match(new RegExp(`^/api/projects/${projectId}/path/phases/([^/]+)/tasks/([^/]+)$`));
       if (method === "PATCH" && updateTaskMatch) {

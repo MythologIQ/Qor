@@ -168,6 +168,14 @@
       });
     },
 
+    createTask: function(phaseId, taskData) {
+      var projectId = this.getCurrentProjectId();
+      return this._fetch(API_BASE + '/' + projectId + '/path/phases/' + phaseId + '/tasks', {
+        method: 'POST',
+        body: taskData
+      });
+    },
+
     updateTaskStatus: function(phaseId, taskId, status, actorId) {
       var projectId = this.getCurrentProjectId();
       return this._fetch(API_BASE + '/' + projectId + '/path/phases/' + phaseId + '/tasks/' + taskId, {

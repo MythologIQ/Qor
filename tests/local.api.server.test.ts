@@ -7,6 +7,7 @@ import { EvaluationRouter } from "../risk/engine/EvaluationRouter";
 import { LedgerManager } from "../ledger/engine/LedgerManager";
 import { QoreRuntimeService } from "../runtime/service/QoreRuntimeService";
 import { LocalApiServer } from "../runtime/service/LocalApiServer";
+import { createProjectStore } from "../runtime/planning";
 import { defaultQoreConfig } from "@mythologiq/qore-contracts/runtime/QoreConfig";
 import { InMemorySecretStore } from "../runtime/support/InMemoryStores";
 
@@ -200,5 +201,121 @@ describe("LocalApiServer", () => {
       ledger.close();
     }
   });
-});
 
+  it("creates a path task through governed planning routes", async () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "qore-api-planning-"));
+    tempDirs.push(dir);
+
+    const ledger = new LedgerManager({
+      ledgerPath: path.join(dir, "soa_ledger.db"),
+      secretStore: new InMemorySecretStore(),
+    });
+    const runtime = new QoreRuntimeService(
+      new PolicyEngine(),
+      EvaluationRouter.fromConfig(defaultQoreConfig),
+      ledger,
+      defaultQoreConfig,
+    );
+    await runtime.initialize(path.join(process.cwd(), "policy", "definitions"));
+
+    const projectsDir = path.join(dir, "projects");
+    const projectId = "proj_governed_task";
+    const projectStore = createProjectStore(projectId, projectsDir, { enableLedger: true });
+    await projectStore.create({
+      name: "Governed Task Project",
+      description: "Project for task creation route test",
+      createdBy: "tester",
+    });
+
+    const revealStore = await projectStore.getViewStore("reveal");
+    await revealStore.write({
+      clusters: [
+        {
+          clusterId: "cluster-1",
+          projectId,
+          label: "Governed Work",
+          thoughtIds: [],
+          notes: "Cluster backing the execution phase",
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+          status: "formed",
+        },
+      ],
+    });
+
+    const constellationStore = await projectStore.getViewStore("constellation");
+    await constellationStore.write({
+      constellationId: "const-1",
+      projectId,
+      nodes: [
+        {
+          nodeId: "node-1",
+          clusterId: "cluster-1",
+          position: { x: 0, y: 0 },
+        },
+      ],
+      edges: [],
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      status: "mapped",
+    });
+
+    const pathStore = await projectStore.getViewStore("path");
+    await pathStore.write({
+      phases: [
+        {
+          phaseId: "phase-1",
+          projectId,
+          ordinal: 1,
+          name: "Execution",
+          objective: "Execute governed work",
+          sourceClusterIds: ["cluster-1"],
+          tasks: [],
+          status: "planned",
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        },
+      ],
+    });
+
+    const apiKey = "test-api-key";
+    const api = new LocalApiServer(runtime, { apiKey, projectsDir, maxBodyBytes: 2048 });
+    try {
+      await api.start();
+      const addr = api.getAddress();
+      const base = `http://${addr.host}:${addr.port}`;
+
+      const response = await fetch(`${base}/api/projects/${projectId}/path/phases/phase-1/tasks`, {
+        method: "POST",
+        headers: { "content-type": "application/json", "x-qore-api-key": apiKey },
+        body: JSON.stringify({
+          title: "Create governed draft task",
+          description: "Allow Victor to create low-risk draft tasks through Builder Console governance.",
+          acceptance: ["Task is persisted under the requested phase"],
+          actorId: "victor",
+        }),
+      });
+
+      expect(response.status).toBe(201);
+      const payload = (await response.json()) as {
+        data: {
+          taskId: string;
+          phaseId: string;
+          title: string;
+          status: string;
+          acceptance: string[];
+        };
+      };
+      expect(payload.data.phaseId).toBe("phase-1");
+      expect(payload.data.title).toBe("Create governed draft task");
+      expect(payload.data.status).toBe("pending");
+
+      const phases = await pathStore.read<{ phases: Array<{ tasks: Array<{ title: string }> }> }>();
+      expect(phases?.phases[0]?.tasks).toHaveLength(1);
+      expect(phases?.phases[0]?.tasks[0]?.title).toBe("Create governed draft task");
+    } finally {
+      await api.stop();
+      ledger.close();
+    }
+  });
+});
