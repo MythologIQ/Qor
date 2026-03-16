@@ -150,6 +150,7 @@ describe('retrieveGroundedContext', () => {
     expect(result.semanticNodes.some((node) => node.nodeType === 'Task')).toBe(true);
     expect(result.cacheEntries[0].id).toBe('cache-1');
     expect(result.missingInformation).toEqual([]);
+    expect(result.recallDecision?.mode).toBe('grounded');
   });
 
   it('returns insufficient evidence signals when retrieval is empty', async () => {
@@ -165,6 +166,7 @@ describe('retrieveGroundedContext', () => {
     expect(result.chunkHits).toHaveLength(0);
     expect(result.missingInformation[0]).toContain('No matching source chunks');
     expect(result.recommendedNextActions[0]).toContain('Ingest');
+    expect(result.recallDecision?.mode).toBe('blocked');
   });
 
   it('prefers vector hits when an embedding function is available', async () => {
@@ -443,10 +445,64 @@ describe('retrieveGroundedContext', () => {
     const result = await retrieveGroundedContext(
       store,
       'victor',
-      'What should happen next with the governed automation task "Forecast remaining Builder delivery work" in phase "Forecast and Dependency Operations"?',
+      'What dependency should be checked next for the governed automation task "Forecast remaining Builder delivery work" in phase "Forecast and Dependency Operations"?',
     );
 
     expect(result.semanticNodes.some((node) => node.nodeType === 'Dependency' && node.label === 'Victor promotion review packet')).toBe(true);
+    expect(result.missingInformation).not.toContain('No dependency node was found in the retrieved context.');
+  });
+
+  it('does not require dependency nodes just because the task title contains dependency language', async () => {
+    const store = makeStore();
+    store.searchChunks = async () => [
+      {
+        chunk: {
+          id: 'chunk-impact',
+          documentId: 'doc-1',
+          index: 0,
+          fingerprint: 'chunk-impact',
+          text: 'Project Victor autonomy dependency impact into Builder surfaces.',
+          tokenEstimate: 9,
+          span: { startLine: 1, endLine: 1, startOffset: 0, endOffset: 10 },
+        },
+        score: 8,
+      },
+    ];
+    store.searchSemanticNodes = async () => [
+      {
+        id: 'task-impact',
+        documentId: 'doc-1',
+        sourceChunkId: 'chunk-impact',
+        nodeType: 'Task',
+        label: 'Project Victor autonomy dependency impact into Builder surfaces',
+        summary: 'Project Victor autonomy dependency impact into Builder surfaces',
+        fingerprint: 'task-impact',
+        span: { startLine: 1, endLine: 1, startOffset: 0, endOffset: 10 },
+        attributes: { status: 'pending', taskId: 'task_builder_victor_dependency' },
+        state: 'active',
+      },
+      {
+        id: 'decision-impact',
+        documentId: 'doc-1',
+        sourceChunkId: 'chunk-impact',
+        nodeType: 'Decision',
+        label: 'Builder should show Victor impact only where it changes delivery readiness.',
+        summary: 'Builder should show Victor impact only where it changes delivery readiness.',
+        fingerprint: 'decision-impact',
+        span: { startLine: 1, endLine: 1, startOffset: 0, endOffset: 10 },
+        attributes: {},
+        state: 'active',
+      },
+    ];
+    store.expandNeighborhood = async () => ({ nodes: [], edges: [] });
+
+    const result = await retrieveGroundedContext(
+      store,
+      'victor',
+      'What should happen next with the governed automation task "Project Victor autonomy dependency impact into Builder surfaces" in phase "Forecast and Planning Operations"?',
+    );
+
+    expect(result.semanticNodes.some((node) => node.id === 'task-impact')).toBe(true);
     expect(result.missingInformation).not.toContain('No dependency node was found in the retrieved context.');
   });
 });

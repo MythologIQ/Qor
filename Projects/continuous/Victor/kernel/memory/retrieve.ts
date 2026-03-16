@@ -1,3 +1,4 @@
+import { buildRecallDecision, createGovernanceMetadata } from './governance';
 import { detectContradictions } from './contradictions';
 import { rankCacheEntries, rankChunkHits, rankSemanticNodes, uniqueEdges, uniqueNodes } from './rank';
 import type { LearningStore } from './store';
@@ -39,9 +40,29 @@ export async function retrieveGroundedContext(
     ...neighborhood.nodes,
   ]);
   const semanticEdges = uniqueEdges(neighborhood.edges);
-  const contradictions = detectContradictions(semanticNodes);
+  const contradictions = detectContradictions(semanticNodes).map((item) => ({
+    ...item,
+    governance: createGovernanceMetadata({
+      state: 'contested',
+      epistemicType: 'source-claim',
+      provenanceComplete: true,
+      confidence: {
+        extraction: 0.8,
+        grounding: 0.82,
+        crossSource: 0.2,
+        operational: 0.4,
+      },
+      rationale: 'Contradiction surfaced from retrieved semantic claims that remain simultaneously grounded.',
+    }),
+  }));
   const missingInformation = inferMissingInformation(query, chunkHits, semanticNodes, contradictions, expectedTypes);
   const recommendedNextActions = inferNextActions(query, chunkHits, semanticNodes, semanticEdges, contradictions, missingInformation);
+  const recallDecision = buildRecallDecision({
+    chunkHitCount: chunkHits.length,
+    semanticNodeCount: semanticNodes.length,
+    contradictions,
+    missingInformation,
+  });
 
   return {
     query,
@@ -52,6 +73,7 @@ export async function retrieveGroundedContext(
     contradictions,
     missingInformation,
     recommendedNextActions,
+    recallDecision,
   };
 }
 
@@ -275,7 +297,7 @@ function uniqueChunkHits(hits: SearchChunkHit[]): SearchChunkHit[] {
 }
 
 function inferExpectedNodeTypes(query: string): Set<SemanticNodeRecord['nodeType']> {
-  const terms = tokenizeQuery(query);
+  const terms = tokenizeQuery(stripQuotedSegments(query));
   const expected = new Set<SemanticNodeRecord['nodeType']>();
 
   if (terms.some((term) => ['decision', 'authority', 'model', 'governance', 'boundary', 'constraint'].includes(term))) {
@@ -292,6 +314,10 @@ function inferExpectedNodeTypes(query: string): Set<SemanticNodeRecord['nodeType
   }
 
   return expected;
+}
+
+function stripQuotedSegments(value: string): string {
+  return value.replace(/"[^"]*"/g, ' ');
 }
 
 function tokenizeQuery(value: string): string[] {
