@@ -10,6 +10,7 @@ document.addEventListener('DOMContentLoaded', () => {
     apiPromotionFallback: '/api/victor/promotion/fallback',
     apiHeartbeatStatus: '/api/victor/heartbeat/status',
     apiAutomationActivity: '/api/victor/automation/activity',
+    apiVerificationReport: '/api/victor/automation/verification-report',
     apiSkills: '/api/skills',
     apiEval: '/api/qore/evaluate',
     apiAsk: '/api/zo/ask',
@@ -32,6 +33,7 @@ document.addEventListener('DOMContentLoaded', () => {
     victorFallback: null,
     victorHeartbeat: null,
     victorActivity: null,
+    victorVerification: null,
     skills: [],
     ws: null,
     reconnectAttempts: 0,
@@ -229,13 +231,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
   async function fetchVictorView() {
     try {
-      const [gateRes, soakRes, budgetRes, fallbackRes, heartbeatRes, activityRes] = await Promise.all([
+      const [gateRes, soakRes, budgetRes, fallbackRes, heartbeatRes, activityRes, verificationRes] = await Promise.all([
         fetch(`${CONFIG.apiPromotionGate}?projectId=builder-console&victorProjectId=victor-resident`),
         fetch(`${CONFIG.apiPromotionSoak}?projectId=builder-console`),
         fetch(`${CONFIG.apiPromotionBudget}?projectId=builder-console`),
         fetch(`${CONFIG.apiPromotionFallback}?projectId=builder-console&victorProjectId=victor-resident`),
         fetch(`${CONFIG.apiHeartbeatStatus}?projectId=builder-console`),
         fetch(`${CONFIG.apiAutomationActivity}?projectId=builder-console&hours=24&limit=20`),
+        fetch(`${CONFIG.apiVerificationReport}?projectId=builder-console&hours=24&limit=20`),
       ]);
 
       if (gateRes.ok) {
@@ -261,6 +264,10 @@ document.addEventListener('DOMContentLoaded', () => {
       if (activityRes.ok) {
         const activityData = await activityRes.json();
         state.victorActivity = activityData?.summary || null;
+      }
+      if (verificationRes.ok) {
+        const verificationData = await verificationRes.json();
+        state.victorVerification = verificationData?.summary || null;
       }
 
       renderVictorView();
@@ -446,7 +453,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const currentProjectId = project?.id || 'builder-console';
     const gate = state.victorGate;
-    const dependencyActive = currentProjectId === 'builder-console' && gate && gate.internalState !== 'ready';
+    const verification = state.victorVerification;
+    const blockedClaims = verification?.claims?.observed?.filter((claim) => String(claim.claim || '').includes('was blocked')) || [];
+    const dependencyActive =
+      currentProjectId === 'builder-console'
+      && gate
+      && (gate.internalState !== 'ready' || blockedClaims.length > 0);
 
     if (!dependencyActive) {
       builderDependencyCardEl.style.display = 'block';
@@ -457,12 +469,16 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     builderDependencyCardEl.style.display = 'block';
-    builderDependencyChipEl.textContent = gate.uiLabel;
-    builderDependencyStateEl.textContent = `Victor execute-mode promotion is ${gate.uiLabel}.`;
+    builderDependencyChipEl.textContent = blockedClaims.length > 0 ? 'Attention' : gate.uiLabel;
+    builderDependencyStateEl.textContent = blockedClaims.length > 0
+      ? 'Observed automation blockers are affecting Builder delivery.'
+      : `Victor execute-mode promotion is ${gate.uiLabel}.`;
     const unmet = (gate.criteria || []).filter((criterion) => criterion.status !== 'met').slice(0, 2);
-    builderDependencyDetailEl.textContent = unmet.length > 0
-      ? unmet.map((criterion) => criterion.detail).join(' ')
-      : 'Victor promotion state is constraining Builder delivery readiness.';
+    builderDependencyDetailEl.textContent = blockedClaims.length > 0
+      ? blockedClaims[0].claim
+      : unmet.length > 0
+        ? unmet.map((criterion) => criterion.detail).join(' ')
+        : 'Victor promotion state is constraining Builder delivery readiness.';
   }
 
   function renderRepoModal(allProjects, activeProject) {
