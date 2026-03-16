@@ -455,6 +455,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const gate = state.victorGate;
     const verification = state.victorVerification;
     const blockedClaims = verification?.claims?.observed?.filter((claim) => String(claim.claim || '').includes('was blocked')) || [];
+    const latestRunClaim = verification?.claims?.observed?.find((claim) => String(claim.claim || '').startsWith('Run ')) || null;
+    const latestRunCompletedCleanly = latestRunClaim
+      ? String(latestRunClaim.claim).includes('completed') && !String(latestRunClaim.claim).includes('blocked')
+      : false;
     const dependencyActive =
       currentProjectId === 'builder-console'
       && gate
@@ -471,11 +475,15 @@ document.addEventListener('DOMContentLoaded', () => {
     builderDependencyCardEl.style.display = 'block';
     builderDependencyChipEl.textContent = blockedClaims.length > 0 ? 'Attention' : gate.uiLabel;
     builderDependencyStateEl.textContent = blockedClaims.length > 0
-      ? 'Observed automation blockers are affecting Builder delivery.'
+      ? latestRunCompletedCleanly
+        ? 'Recent audit history includes blocked automation that should be reviewed against current delivery state.'
+        : 'Observed automation blockers are affecting Builder delivery.'
       : `Victor execute-mode promotion is ${gate.uiLabel}.`;
     const unmet = (gate.criteria || []).filter((criterion) => criterion.status !== 'met').slice(0, 2);
     builderDependencyDetailEl.textContent = blockedClaims.length > 0
-      ? blockedClaims[0].claim
+      ? latestRunCompletedCleanly
+        ? `${blockedClaims[0].claim} Latest run completed cleanly, so treat this as recent audit history until a current blocker reappears.`
+        : blockedClaims[0].claim
       : unmet.length > 0
         ? unmet.map((criterion) => criterion.detail).join(' ')
         : 'Victor promotion state is constraining Builder delivery readiness.';
