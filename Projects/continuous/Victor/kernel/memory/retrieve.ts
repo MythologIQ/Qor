@@ -14,6 +14,7 @@ export async function retrieveGroundedContext(
   },
   limit = DEFAULT_LIMIT,
 ): Promise<GroundedContextBundle> {
+  const expectedTypes = inferExpectedNodeTypes(query);
   const initialChunkHits = await resolveChunkHits(store, projectId, query, options?.embedQuery, limit);
   const directSemanticNodes = rankSemanticNodes(await store.searchSemanticNodes(projectId, query, limit), query);
   const semanticChunkHits = await inferChunkHitsFromSemanticNodes(store, directSemanticNodes, query);
@@ -31,13 +32,15 @@ export async function retrieveGroundedContext(
   const seedNodeIds = seedNodes.map((node) => node.id);
   const neighborhood = await store.expandNeighborhood(seedNodeIds, 2);
   const cacheEntries = rankCacheEntries(await store.loadFreshCacheEntries(projectId), query).slice(0, 3);
+  const expectedTypeNodes = await inferExpectedTypeNodes(store, chunkHits, seedNodes, expectedTypes);
   const semanticNodes = uniqueNodes([
     ...seedNodes,
+    ...expectedTypeNodes,
     ...neighborhood.nodes,
   ]);
   const semanticEdges = uniqueEdges(neighborhood.edges);
   const contradictions = detectContradictions(semanticNodes);
-  const missingInformation = inferMissingInformation(query, chunkHits, semanticNodes, contradictions);
+  const missingInformation = inferMissingInformation(query, chunkHits, semanticNodes, contradictions, expectedTypes);
   const recommendedNextActions = inferNextActions(query, chunkHits, semanticNodes, semanticEdges, contradictions, missingInformation);
 
   return {
@@ -83,14 +86,48 @@ async function inferSeedNodes(
     .filter((node) => chunkIds.has(node.sourceChunkId) && node.state === 'active');
 }
 
+async function inferExpectedTypeNodes(
+  store: LearningStore,
+  chunkHits: SearchChunkHit[],
+  seedNodes: SemanticNodeRecord[],
+  expectedTypes: Set<SemanticNodeRecord['nodeType']>,
+): Promise<SemanticNodeRecord[]> {
+  if (expectedTypes.size === 0) {
+    return [];
+  }
+
+  const presentTypes = new Set(seedNodes.map((node) => node.nodeType));
+  const missingTypes = [...expectedTypes].filter((nodeType) => !presentTypes.has(nodeType));
+  if (missingTypes.length === 0) {
+    return [];
+  }
+
+  const documentIds = [...new Set([
+    ...chunkHits.map((hit) => hit.chunk.documentId),
+    ...seedNodes.map((node) => node.documentId),
+  ])];
+
+  if (documentIds.length === 0) {
+    return [];
+  }
+
+  const snapshots = await Promise.all(documentIds.map((documentId) => store.loadDocumentSnapshot(documentId)));
+  return rankSemanticNodes(
+    snapshots
+      .flatMap((snapshot) => snapshot.semanticNodes)
+      .filter((node) => node.state === 'active' && missingTypes.includes(node.nodeType)),
+    [...missingTypes, ...seedNodes.map((node) => node.label)].join(' '),
+  ).slice(0, missingTypes.length * 2);
+}
+
 function inferMissingInformation(
   query: string,
   chunkHits: SearchChunkHit[],
   semanticNodes: SemanticNodeRecord[],
   contradictions: GroundedContextBundle['contradictions'],
+  expectedTypes = inferExpectedNodeTypes(query),
 ): string[] {
   const missing: string[] = [];
-  const expectedTypes = inferExpectedNodeTypes(query);
 
   if (chunkHits.length === 0) {
     missing.push('No matching source chunks were found for this query.');

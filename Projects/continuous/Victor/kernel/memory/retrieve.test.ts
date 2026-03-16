@@ -323,4 +323,130 @@ describe('retrieveGroundedContext', () => {
 
     expect(result.recommendedNextActions).toContain('Build prompt-construction operations display');
   });
+
+  it('pulls dependency nodes from grounded documents when dependency intent is implied by the phase query', async () => {
+    const store = makeStore();
+    store.searchChunks = async () => [
+      {
+        chunk: {
+          id: 'chunk-forecast',
+          documentId: 'doc-1',
+          index: 0,
+          fingerprint: 'chunk-forecast',
+          text: 'Forecast remaining Builder delivery work in Forecast and Planning Operations.',
+          tokenEstimate: 10,
+          span: { startLine: 1, endLine: 1, startOffset: 0, endOffset: 10 },
+        },
+        score: 9,
+      },
+    ];
+    store.searchSemanticNodes = async () => [
+      {
+        id: 'task-forecast',
+        documentId: 'doc-1',
+        sourceChunkId: 'chunk-forecast',
+        nodeType: 'Task',
+        label: 'Forecast remaining Builder delivery work',
+        summary: 'Forecast remaining Builder delivery work',
+        fingerprint: 'task-forecast',
+        span: { startLine: 1, endLine: 1, startOffset: 0, endOffset: 10 },
+        attributes: { status: 'pending', taskId: 'task-forecast' },
+        state: 'active',
+      },
+      {
+        id: 'module-forecast',
+        documentId: 'doc-1',
+        sourceChunkId: 'chunk-forecast',
+        nodeType: 'Module',
+        label: 'Phase 4: Forecast and Dependency Operations',
+        summary: 'Phase 4: Forecast and Dependency Operations',
+        fingerprint: 'module-forecast',
+        span: { startLine: 1, endLine: 1, startOffset: 0, endOffset: 10 },
+        attributes: {},
+        state: 'active',
+      },
+    ];
+    store.loadDocumentSnapshot = async (documentId) => ({
+      document: {
+        id: documentId,
+        path: 'forecast.md',
+        projectId: 'victor',
+        title: 'forecast.md',
+        contentType: 'text/markdown',
+        fingerprint: 'doc-forecast',
+        contentLength: 100,
+        updatedAt: 1,
+      },
+      chunks: [
+        {
+          id: 'chunk-forecast',
+          documentId,
+          index: 0,
+          fingerprint: 'chunk-forecast',
+          text: 'Forecast remaining Builder delivery work in Forecast and Dependency Operations.',
+          tokenEstimate: 10,
+          span: { startLine: 1, endLine: 1, startOffset: 0, endOffset: 10 },
+        },
+        {
+          id: 'chunk-dependency',
+          documentId,
+          index: 1,
+          fingerprint: 'chunk-dependency',
+          text: 'Depends On: Victor promotion review packet',
+          tokenEstimate: 7,
+          span: { startLine: 2, endLine: 2, startOffset: 11, endOffset: 30 },
+        },
+      ],
+      semanticNodes: [
+        {
+          id: 'task-forecast',
+          documentId,
+          sourceChunkId: 'chunk-forecast',
+          nodeType: 'Task',
+          label: 'Forecast remaining Builder delivery work',
+          summary: 'Forecast remaining Builder delivery work',
+          fingerprint: 'task-forecast',
+          span: { startLine: 1, endLine: 1, startOffset: 0, endOffset: 10 },
+          attributes: { status: 'pending', taskId: 'task-forecast' },
+          state: 'active',
+        },
+        {
+          id: 'module-forecast',
+          documentId,
+          sourceChunkId: 'chunk-forecast',
+          nodeType: 'Module',
+          label: 'Phase 4: Forecast and Dependency Operations',
+          summary: 'Phase 4: Forecast and Dependency Operations',
+          fingerprint: 'module-forecast',
+          span: { startLine: 1, endLine: 1, startOffset: 0, endOffset: 10 },
+          attributes: {},
+          state: 'active',
+        },
+        {
+          id: 'dependency-forecast',
+          documentId,
+          sourceChunkId: 'chunk-dependency',
+          nodeType: 'Dependency',
+          label: 'Victor promotion review packet',
+          summary: 'Victor promotion review packet',
+          fingerprint: 'dependency-forecast',
+          span: { startLine: 2, endLine: 2, startOffset: 11, endOffset: 30 },
+          attributes: {},
+          state: 'active',
+        },
+      ],
+      semanticEdges: [],
+      cacheEntries: [],
+    });
+    store.expandNeighborhood = async () => ({ nodes: [], edges: [] });
+
+    const result = await retrieveGroundedContext(
+      store,
+      'victor',
+      'What should happen next with the governed automation task "Forecast remaining Builder delivery work" in phase "Forecast and Dependency Operations"?',
+    );
+
+    expect(result.semanticNodes.some((node) => node.nodeType === 'Dependency' && node.label === 'Victor promotion review packet')).toBe(true);
+    expect(result.missingInformation).not.toContain('No dependency node was found in the retrieved context.');
+  });
 });
