@@ -1,0 +1,17 @@
+CREATE CONSTRAINT learning_event_id IF NOT EXISTS FOR (event:LearningEvent) REQUIRE event.id IS UNIQUE;
+CREATE CONSTRAINT heatmap_node_id IF NOT EXISTS FOR (node:HeatMapNode) REQUIRE node.node_id IS UNIQUE;
+CREATE CONSTRAINT source_document_id IF NOT EXISTS FOR (document:SourceDocument) REQUIRE document.id IS UNIQUE;
+CREATE CONSTRAINT source_chunk_id IF NOT EXISTS FOR (chunk:SourceChunk) REQUIRE chunk.id IS UNIQUE;
+CREATE CONSTRAINT semantic_node_id IF NOT EXISTS FOR (node:SemanticNode) REQUIRE node.id IS UNIQUE;
+CREATE CONSTRAINT semantic_edge_id IF NOT EXISTS FOR (edge:SemanticEdge) REQUIRE edge.id IS UNIQUE;
+CREATE CONSTRAINT cache_entry_id IF NOT EXISTS FOR (entry:CacheEntry) REQUIRE entry.id IS UNIQUE;
+CREATE CONSTRAINT ingestion_run_id IF NOT EXISTS FOR (run:IngestionRun) REQUIRE run.id IS UNIQUE;
+CREATE CONSTRAINT governance_event_id IF NOT EXISTS FOR (event:GovernanceEvent) REQUIRE event.id IS UNIQUE;
+CREATE CONSTRAINT failure_memory_id IF NOT EXISTS FOR (failure:FailureMemory) REQUIRE failure.id IS UNIQUE;
+CREATE INDEX source_document_path IF NOT EXISTS FOR (document:SourceDocument) ON (document.path);
+CREATE INDEX semantic_node_type IF NOT EXISTS FOR (node:SemanticNode) ON (node.nodeType);
+CREATE INDEX source_document_governance_state IF NOT EXISTS FOR (document:SourceDocument) ON (document.governanceState);
+CREATE INDEX semantic_node_governance_state IF NOT EXISTS FOR (node:SemanticNode) ON (node.governanceState);
+CREATE INDEX semantic_node_epistemic_type IF NOT EXISTS FOR (node:SemanticNode) ON (node.epistemicType);
+CREATE INDEX failure_memory_status IF NOT EXISTS FOR (failure:FailureMemory) ON (failure.remediationStatus);
+CREATE INDEX failure_memory_mode IF NOT EXISTS FOR (failure:FailureMemory) ON (failure.failureMode);
