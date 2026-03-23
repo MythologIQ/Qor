@@ -1,0 +1,40 @@
+{
+  "name": "victor-kernel",
+  "version": "1.0.0",
+  "description": "Victor - Deterministic Virtual Collaborator with Agent OS Foundation",
+  "author": "MythologIQ <frostwulf.zo.computer>",
+  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "dev": "bun run server.ts",
+    "build": "bun build ./server.ts --outdir ./dist --target bun",
+    "test": "bun test",
+    "eval:memory": "bun run evaluate-memory.ts",
+    "typecheck": "tsc --noEmit",
+    "start": "bun run server.ts",
+    "ingest:victor-scope": "bun run ingest-victor-scope.ts",
+    "ingest:builder-console": "bun run ingest-builder-console.ts",
+    "ingest:documents": "bun run ingest-corpus.ts --root=/home/workspace/Documents --project-id=victor-research",
+    "ingest:documents-reflect": "bun run ingest-documents-with-reflection.ts --root=/home/workspace/Documents --project-id=victor-research",
+    "challenge:memory-live": "bun run run-live-memory-challenges.ts",
+    "reflect:self-live": "bun run run-live-self-reflection.ts",
+    "identity:questions": "bun run run-direct-identity-questions.ts",
+    "exercise:documents-memory": "bun run exercise-documents-memory.ts --root=/home/workspace/Documents --project-id=victor-research",
+    "exercise:documents-memory-offline": "bun run exercise-documents-memory-offline.ts --root=/home/workspace/Documents --project-id=victor-research",
+    "exercise:builder-console-live": "bun run exercise-builder-console-live.ts",
+    "readiness:memory-automation": "bun run memory-automation-readiness.ts",
+    "neo4j:start-local": "bash start-neo4j-local.sh",
+    "readiness:memory-automation-live": "bash check-memory-readiness-live.sh",
+    "run:governed-build": "bun run run-governed-build.ts",
+    "run:heartbeat": "bun run run-heartbeat.ts"
+  },
+  "dependencies": {
+    "@xenova/transformers": "^2.17.2",
+    "hono": "^4.0.0",
+    "neo4j-driver": "^6.0.1"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "typescript": "^5.9.2"
+  }
+}

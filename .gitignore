@@ -1,0 +1,9 @@
+node_modules/
+.runtime/
+dist/
+*.log
+*.wav
+.cache/
+.codex/
+.DS_Store
+*.tgz
