@@ -1,0 +1,47 @@
+import { RuntimeError, ErrorCode } from "../service/errors";
+
+export type PlanningStoreErrorCode =
+  | "PROJECT_NOT_FOUND"
+  | "PROJECT_ALREADY_EXISTS"
+  | "ARTIFACT_NOT_FOUND"
+  | "ARTIFACTCorrupted"
+  | "INTEGRITY_CHECK_FAILED"
+  | "INVALID_PROJECT_DATA"
+  | "INVALID_ARTIFACT_DATA"
+  | "WRITE_FAILED"
+  | "READ_FAILED"
+  | "CHECKSUM_MISMATCH"
+  | "EXPORT_FAILED"
+  | "VALIDATION_FAILED"
+  | "QUERY_FAILED";
+
+const errorMessages: Record<PlanningStoreErrorCode, string> = {
+  PROJECT_NOT_FOUND: "Project not found",
+  PROJECT_ALREADY_EXISTS: "Project already exists",
+  ARTIFACT_NOT_FOUND: "Artifact not found",
+  ARTIFACTCorrupted: "Artifact data is corrupted",
+  INTEGRITY_CHECK_FAILED: "Store integrity check failed",
+  INVALID_PROJECT_DATA: "Invalid project data",
+  INVALID_ARTIFACT_DATA: "Invalid artifact data",
+  WRITE_FAILED: "Failed to write data",
+  READ_FAILED: "Failed to read data",
+  CHECKSUM_MISMATCH: "Checksum mismatch detected",
+  EXPORT_FAILED: "Failed to export project data",
+  VALIDATION_FAILED: "Validation failed",
+  QUERY_FAILED: "Query processing failed",
+};
+
+export class PlanningStoreError extends RuntimeError {
+  constructor(
+    code: PlanningStoreErrorCode,
+    message?: string,
+    details?: Record<string, unknown>,
+  ) {
+    super(
+      code as ErrorCode,
+      message || errorMessages[code],
+      details,
+    );
+    this.name = "PlanningStoreError";
+  }
+}

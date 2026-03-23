@@ -1,0 +1,139 @@
+{
+  "phases": [
+    {
+      "phaseId": "phase_victor_lifecycle",
+      "projectId": "victor-resident",
+      "ordinal": 1,
+      "name": "Victor Lifecycle and Forecast Foundation",
+      "objective": "Model Victor as a separate governed project inside Builder and define the forecasting signals for remaining autonomy work.",
+      "sourceClusterIds": [
+        "cluster_victor_foundation"
+      ],
+      "tasks": [
+        {
+          "taskId": "task_victor_lifecycle_model",
+          "phaseId": "phase_victor_lifecycle",
+          "title": "Model Victor project lifecycle from concept to completion",
+          "description": "Define the stages Builder should use to track Victor work without collapsing it into Builder infrastructure work.",
+          "acceptance": [
+            "Victor lifecycle stages are explicit and separate from Builder Console infrastructure stages."
+          ],
+          "status": "done"
+        },
+        {
+          "taskId": "task_victor_forecast_signals",
+          "phaseId": "phase_victor_lifecycle",
+          "title": "Define Victor remaining-effort forecast signals",
+          "description": "Specify confidence, blockers, dependencies, and effort-band inputs for forecasting Victor progress.",
+          "acceptance": [
+            "Victor forecast inputs are evidence-backed and separate from generic automation activity."
+          ],
+          "status": "done"
+        },
+        {
+          "taskId": "task_victor_builder_dependencies",
+          "phaseId": "phase_victor_lifecycle",
+          "title": "Record Builder dependencies that gate Victor autonomy promotion",
+          "description": "Capture which Builder capabilities must mature before Victor can safely escalate autonomy.",
+          "acceptance": [
+            "Victor dependencies on Builder infrastructure are explicit and governable."
+          ],
+          "status": "done"
+        }
+      ],
+      "status": "complete",
+      "createdAt": "2026-03-15T20:00:05.911Z",
+      "updatedAt": "2026-03-15T20:50:58.402Z"
+    },
+    {
+      "phaseId": "phase_wfatnb2o",
+      "projectId": "victor-resident",
+      "ordinal": 2,
+      "name": "Unattended Execute Promotion Review",
+      "objective": "Define the execute-mode promotion bar for Victor and tie unattended operation to explicit evidence, fallback, and revocation rules.",
+      "sourceClusterIds": [
+        "cluster_victor_foundation"
+      ],
+      "tasks": [
+        {
+          "taskId": "task_nh3uccrf",
+          "phaseId": "phase_wfatnb2o",
+          "title": "Define Victor unattended execute-mode promotion criteria",
+          "description": "Turn the current dry-run soak and dependency gates into explicit promotion criteria for unattended write-capable heartbeat operation.",
+          "acceptance": [
+            "Execute-mode promotion criteria are explicit, governed, and stricter than dry-run soak success alone."
+          ],
+          "status": "done"
+        },
+        {
+          "taskId": "task_w0bcrdpz",
+          "phaseId": "phase_wfatnb2o",
+          "title": "Review 30m dry-run soak evidence against promotion gate",
+          "description": "Compare the unattended 30m dry-run audit trail against the execute-mode promotion criteria before any autonomy increase.",
+          "acceptance": [
+            "Dry-run soak evidence is reviewed against the gate and any missing proof is explicit."
+          ],
+          "status": "done"
+        },
+        {
+          "taskId": "task_4enp5awq",
+          "phaseId": "phase_wfatnb2o",
+          "title": "Record unattended execute fallback and revocation triggers",
+          "description": "Capture the kill conditions, fallback rules, and revocation criteria that should force Victor out of unattended execute mode.",
+          "acceptance": [
+            "Execute-mode fallback and revocation triggers are explicit and Builder-visible."
+          ],
+          "status": "done"
+        }
+      ],
+      "status": "complete",
+      "createdAt": "2026-03-15T20:53:44.501Z",
+      "updatedAt": "2026-03-15T23:18:00.000Z"
+    },
+    {
+      "phaseId": "phase_victor_execute_pilot",
+      "projectId": "victor-resident",
+      "ordinal": 3,
+      "name": "Bounded Unattended Execute Pilot",
+      "objective": "Run the first bounded unattended execute window, review its evidence, and decide whether Victor has earned any wider autonomy.",
+      "sourceClusterIds": [
+        "cluster_victor_foundation"
+      ],
+      "tasks": [
+        {
+          "taskId": "task_victor_execute_pilot_run",
+          "phaseId": "phase_victor_execute_pilot",
+          "title": "Run bounded unattended 30m execute pilot",
+          "description": "Run Victor in unattended execute mode at the 30-minute baseline with explicit kill-switch, tick, and runtime limits.",
+          "acceptance": [
+            "Unattended execute pilot runs within the bounded action budget and leaves a reviewable verification packet."
+          ],
+          "status": "in-progress"
+        },
+        {
+          "taskId": "task_victor_execute_pilot_review",
+          "phaseId": "phase_victor_execute_pilot",
+          "title": "Review unattended execute verification packet",
+          "description": "Inspect the verification-grade report after the unattended execute pilot and classify any drift, block, or revocation signals.",
+          "acceptance": [
+            "Observed, inferred, and unverified claims are reviewed before any autonomy expansion decision."
+          ],
+          "status": "pending"
+        },
+        {
+          "taskId": "task_victor_execute_expand",
+          "phaseId": "phase_victor_execute_pilot",
+          "title": "Define post-pilot autonomy expansion rule",
+          "description": "Decide what evidence would be required before Victor gains broader unattended scope, faster cadence, or wider project coverage.",
+          "acceptance": [
+            "Autonomy expansion remains evidence-gated and does not self-authorize from a single successful pilot."
+          ],
+          "status": "pending"
+        }
+      ],
+      "status": "active",
+      "createdAt": "2026-03-15T23:18:00.000Z",
+      "updatedAt": "2026-03-15T23:18:00.000Z"
+    }
+  ]
+}

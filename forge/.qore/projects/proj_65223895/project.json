@@ -1,0 +1,17 @@
+{
+  "projectId": "proj_65223895",
+  "name": "Meta Test",
+  "description": "",
+  "createdAt": "2026-02-24T11:14:51.806Z",
+  "updatedAt": "2026-02-24T11:14:51.806Z",
+  "createdBy": "actor",
+  "pipelineState": {
+    "void": "empty",
+    "reveal": "empty",
+    "constellation": "empty",
+    "path": "empty",
+    "risk": "empty",
+    "autonomy": "empty"
+  },
+  "checksum": ""
+}

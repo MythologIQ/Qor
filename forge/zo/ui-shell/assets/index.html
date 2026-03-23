@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Victor - Dashboard</title>
+  <link rel="icon" href="/victor-icon.png">
+  <link rel="stylesheet" href="/victor.css">
+</head>
+<body>
+  <div id="login-screen" style="display:none;">
+    <div class="login-box">
+      <div class="login-avatar">V</div>
+      <div class="login-title">Victor</div>
+      <div class="login-subtitle">Executive Ally</div>
+      <input type="password" id="password-input" class="login-input" placeholder="Enter password" autofocus>
+      <button class="login-btn" onclick="authenticate()">Access</button>
+    </div>
+  </div>
+  
+  <div id="app-container">
+    <nav class="victor-nav">
+      <div class="nav-brand">
+        <div class="nav-avatar">V</div>
+        <span class="nav-title">Victor</span>
+      </div>
+      <div class="nav-links">
+        <a href="index.html" class="nav-link active"><span class="nav-icon">⌂</span><span class="nav-label">Dashboard</span></a>
+        <a href="emails.html" class="nav-link"><span class="nav-icon">✉</span><span class="nav-label">Emails</span></a>
+        <a href="calendar.html" class="nav-link"><span class="nav-icon">📅</span><span class="nav-label">Calendar</span></a>
+        <a href="tasks.html" class="nav-link"><span class="nav-icon">☑</span><span class="nav-label">Tasks</span></a>
+        <a href="victor.html" class="nav-link"><span class="nav-icon">💬</span><span class="nav-label">Chat</span></a>
+        <a href="victor-dashboard.html" class="nav-link"><span class="nav-icon">⚙</span><span class="nav-label">Config</span></a>
+        <a href="/ui/" class="nav-link builder-link"><span class="nav-icon">🧱</span><span class="nav-label">Builder</span></a>
+      </div>
+      <button class="nav-logout" onclick="logout()">Logout</button>
+    </nav>
+    
+    <div class="app-content">
+      <section class="page-hero">
+        <div>
+          <div class="hero-kicker">EXECUTIVE CONSOLE</div>
+          <h1 class="hero-title">Command Center</h1>
+          <p class="hero-meta">Real-time brief of inbox, calendar, and commitments. Make fast decisions from one surface.</p>
+        </div>
+        <div>
+          <div class="status-pill" id="status-pill">SYSTEM ONLINE</div>
+          <div class="hero-actions" style="margin-top: 12px;">
+            <a href="victor.html" class="btn btn-primary">Open Chat</a>
+            <a href="tasks.html" class="btn btn-secondary">Review Tasks</a>
+          </div>
+        </div>
+      </section>
+
+      <div class="grid grid-4" id="stats-grid">
+        <div class="card stat-card">
+          <div class="stat-icon">✉</div>
+          <div class="stat-value" id="email-count">-</div>
+          <div class="stat-label">Unread Emails</div>
+        </div>
+        <div class="card stat-card">
+          <div class="stat-icon">📅</div>
+          <div class="stat-value" id="event-count">-</div>
+          <div class="stat-label">Today's Events</div>
+        </div>
+        <div class="card stat-card">
+          <div class="stat-icon">☑</div>
+          <div class="stat-value" id="task-count">-</div>
+          <div class="stat-label">Active Tasks</div>
+        </div>
+        <div class="card stat-card">
+          <div class="stat-icon">⚡</div>
+          <div class="stat-value" id="status">ONLINE</div>
+          <div class="stat-label">System Status</div>
+        </div>
+      </div>
+
+      <div class="grid grid-2" style="margin-top: 18px;">
+        <div class="card">
+          <div class="card-header">
+            <h2 class="card-title">Recent Emails</h2>
+            <a href="emails.html" class="btn btn-secondary">View All</a>
+          </div>
+          <div id="recent-emails" class="loading"><div class="spinner"></div></div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <h2 class="card-title">Upcoming Events</h2>
+            <a href="calendar.html" class="btn btn-secondary">View All</a>
+          </div>
+          <div id="upcoming-events" class="loading"><div class="spinner"></div></div>
+        </div>
+      </div>
+
+      <div class="card" style="margin-top: 18px;">
+        <div class="card-header">
+          <h2 class="card-title">Active Tasks</h2>
+          <a href="tasks.html" class="btn btn-secondary">View All</a>
+        </div>
+        <div id="active-tasks" class="loading"><div class="spinner"></div></div>
+      </div>
+    </div>
+  </div>
+
+  <script src="victor-app.js"></script>
+  <script>
+    // Auth check
+    const auth = sessionStorage.getItem('victor-auth');
+    if (auth === 'authenticated') {
+      document.getElementById('login-screen').style.display = 'none';
+      document.getElementById('app-container').style.display = 'block';
+      loadDashboard();
+    } else {
+      document.getElementById('login-screen').style.display = 'flex';
+      document.getElementById('app-container').style.display = 'none';
+    }
+    
+    // Password input handler
+    document.getElementById('password-input').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') authenticate();
+    });
+    
+    async function loadDashboard() {
+      try {
+        // Load emails
+        const emailData = await VictorApp.api('/victor/emails');
+        const emails = emailData.emails || [];
+        document.getElementById('email-count').textContent = emails.length;
+        
+        const emailHtml = emails.slice(0, 3).map(e => `
+          <div class="list-row">
+            <div class="list-row-main">
+              <div class="list-row-title">${escapeHtml(e.subject)}</div>
+              <div class="list-row-sub">${escapeHtml(e.from)} • ${e.date}</div>
+            </div>
+          </div>
+        `).join('') || '<div class="empty-state">No emails</div>';
+        document.getElementById('recent-emails').innerHTML = emailHtml;
+        
+        // Load calendar
+        const calData = await VictorApp.api('/victor/calendar');
+        const events = calData.events || [];
+        document.getElementById('event-count').textContent = events.length;
+        
+        const eventHtml = events.slice(0, 3).map(e => `
+          <div class="list-row">
+            <div class="list-row-main">
+              <div class="list-row-title">${escapeHtml(e.summary)}</div>
+              <div class="list-row-sub">${formatTime(e.start)} ${e.location ? '• ' + escapeHtml(e.location) : ''}</div>
+            </div>
+          </div>
+        `).join('') || '<div class="empty-state">No events</div>';
+        document.getElementById('upcoming-events').innerHTML = eventHtml;
+        
+        // Load tasks from localStorage
+        const tasks = JSON.parse(localStorage.getItem('victor_tasks') || '[]');
+        const activeTasks = tasks.filter(t => !t.completed);
+        document.getElementById('task-count').textContent = activeTasks.length;
+        
+        const taskHtml = activeTasks.slice(0, 5).map(t => `
+          <div class="task-item">
+            <input type="checkbox" class="task-checkbox" ${t.completed ? 'checked' : ''} onchange="toggleTask('${t.id}')">
+            <div class="task-content">
+              <div class="task-text ${t.completed ? 'completed' : ''}">${escapeHtml(t.text)}</div>
+              ${t.dueDate ? `<div class="task-meta">Due: ${t.dueDate}</div>` : ''}
+            </div>
+            <span class="badge badge-${t.priority === 'high' ? 'error' : t.priority === 'medium' ? 'warning' : 'info'}">${t.priority}</span>
+          </div>
+        `).join('') || '<div class="empty-state">No active tasks</div>';
+        document.getElementById('active-tasks').innerHTML = taskHtml;
+        
+      } catch (err) {
+        console.error('Dashboard load error:', err);
+        document.getElementById('status').textContent = 'ERROR';
+        document.getElementById('status-pill').textContent = 'SYSTEM ERROR';
+        document.getElementById('status-pill').style.borderColor = 'rgba(255, 94, 115, 0.56)';
+        document.getElementById('status-pill').style.background = 'rgba(255, 94, 115, 0.15)';
+        document.getElementById('status-pill').style.color = '#ffdce2';
+      }
+    }
+    
+    function toggleTask(id) {
+      const tasks = JSON.parse(localStorage.getItem('victor_tasks') || '[]');
+      const task = tasks.find(t => t.id === id);
+      if (task) {
+        task.completed = !task.completed;
+        localStorage.setItem('victor_tasks', JSON.stringify(tasks));
+        loadDashboard();
+      }
+    }
+    
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text || '';
+      return div.innerHTML;
+    }
+    
+    function formatTime(dateStr) {
+      if (!dateStr) return '';
+      const d = new Date(dateStr);
+      return d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+    }
+  </script>
+</body>
+</html>
