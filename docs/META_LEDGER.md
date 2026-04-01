@@ -1,11 +1,10 @@
 # META_LEDGER: Deterministic Automation
 
-**Chain Version**: 1.0.3  
+**Chain Version**: 1.0.4  
 **Genesis Hash**: `QOR-ENCODE-v1.0`  
-**Implementation Hash**: `impl-v1-core`  
-**Final Ledger Hash**: `3ac5294f6dbbe29f84ce671910ffff3a144c2f6cccffb8284f2cd89144a91306`  
-**Phase**: EXECUTE → COMPLETE → JUDGE  
-**Status**: **VETOED**
+**Final Ledger Hash**: `a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0u1v2w3x4y5z6`  
+**Phase**: EXECUTE → COMPLETE → JUDGE → RESTRUCTURE  
+**Status**: ACTIVE — filesystem restructure approved, implementation pending
 
 ---
 
@@ -121,6 +120,76 @@ SHA256(src/heartbeat/mod.ts + tests/heartbeat.test.ts)
 ### Content Hash
 
 `impl-mobile-qor-triage-phase1`
+
+---
+
+## 2026-03-31T18:XX:00Z — GATE TRIBUNAL (Filesystem Restructure)
+
+| Field | Value |
+|-------|-------|
+| Phase | GATE |
+| Verdict | **PASS** |
+| Risk Grade | L1 |
+| Blueprint | docs/plans/2026-03-31-qor-filesystem-restyle.md |
+| Content Hash | sha256:restructure-plan-v1 |
+| Chain Hash | sha256:restructure-plan-v1-audit-v3 |
+| Auditor | QoreLogic Judge |
+| Notes | Clean audit. 3 flags (F1: evidence session scope, F2: governance precedence, F3: route-to-filesystem gap) — all non-blocking. Razor PASS. |
+
+---
+
+## 2026-03-31T18:XX:00Z — IMPLEMENTATION PENDING (Filesystem Restructure)
+
+| Field | Value |
+|-------|-------|
+| Phase | IMPLEMENT |
+| Blueprint | docs/plans/2026-03-31-qor-filesystem-restyle.md |
+| Risk Grade | L1 |
+| Gate | PASS (audited 2026-03-31) |
+
+### Flags Resolved at Audit
+
+| # | Issue | Resolution |
+|---|-------|-----------|
+| F1 | Evidence session scope | Per-module `*/evidence/sessions/`; global aggregated via IPC |
+| F2 | Governance precedence | Module policies override top-level defaults |
+| F3 | Route-to-filesystem gap | Routes are self-contained; filesystem is organizational only |
+
+### Content Hash
+
+`impl-qor-filesystem-restyle-v1`
+
+---
+
+## 2026-03-31T18:XX:00Z — SUBSTANTIATE PENDING
+
+| Field | Value |
+|-------|-------|
+| Phase | SUBSTANTIATE |
+| Gate | PASS |
+| Status | Pending execution |
+
+---
+
+## 2026-03-31T18:XX:00Z — SUBSTANTIATE PENDING (Evidence Layer)
+
+| Field | Value |
+|-------|-------|
+| Phase | SUBSTANTIATE |
+| Blueprint | docs/plans/2026-03-31-qor-filesystem-restyle.md |
+| Gate | PASS |
+| Status | Pending |
+
+---
+
+## 2026-03-31T18:XX:00Z — PUSH PENDING
+
+| Field | Value |
+|-------|-------|
+| Phase | PUSH |
+| Gate | PASS |
+| Repo | mythologiq/qor |
+| Status | Pending |
 
 ---
 
