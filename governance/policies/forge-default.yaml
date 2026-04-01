@@ -1,0 +1,11 @@
+# Forge Default Governance Policy
+module: forge
+version: 1.0
+trust_stage: cbt
+risk_thresholds:
+  allow: 0.3
+  escalate: 0.6
+  block: 0.8
+evidence_policy:
+  require_tests: true
+  require_review: false
