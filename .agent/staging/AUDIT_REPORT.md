@@ -1,20 +1,18 @@
-# AUDIT REPORT: QOR Filesystem Restructure
+# AUDIT REPORT: Config-Driven Path Resolution
 
 **Verdict**: PASS  
-**Risk Grade**: L1  
-**Blueprint**: `docs/plans/2026-03-31-qor-filesystem-restyle.md`  
-**Blueprint Hash**: `sha256:restructure-plan-v1`  
-**Chain Hash**: `sha256:restructure-plan-v1-audit-v3`  
+**Risk Grade**: L2  
+**Blueprint**: `docs/plans/2026-04-01-api-path-config.md`  
+**Blueprint Hash**: `sha256:api-path-config-v1`  
+**Chain Hash**: `sha256:api-path-config-v1-audit-v4`  
 **Auditor**: QoreLogic Judge  
-**Date**: 2026-03-31
+**Date**: 2026-04-01
 
 ---
 
 ## Summary
 
-The QOR Filesystem Restructure Plan reorganizes the QOR workspace from a flat, victor-biased structure into a 4-module architecture matching the system design: Qor > Victor, Qora, Forge, EvolveAI.
-
-All mandatory audit passes completed. No VETO conditions found.
+The plan extracts all hardcoded filesystem paths from two API routes into a single `PATHS` config object, restores data and kernel files from Trash to the new `Qor/` structure, and updates import paths. No new surfaces, no new dependencies.
 
 ---
 
@@ -22,28 +20,24 @@ All mandatory audit passes completed. No VETO conditions found.
 
 | Pass | Result | Notes |
 |------|--------|-------|
-| Security (L3) | ✅ PASS | Pure reorg, no new surfaces |
-| Ghost UI | ✅ PASS | No UI elements in plan |
-| Razor | ✅ PASS | No new functions, declarative structure |
-| Dependency | ✅ PASS | No new dependencies |
-| Macro-Level | ✅ PASS | 3 flags (non-blocking) |
-| Orphan | ✅ PASS | All paths connected or documented |
+| Security (L3) | ✅ PASS | No auth changes; data restored from local Trash, no external calls |
+| Ghost UI | ✅ PASS | No UI changes in this plan |
+| Razor | ✅ PASS | `PATHS` object adds ~15 lines; route line counts unchanged |
+| Dependency | ✅ PASS | No new packages; kernel files are existing code relocated |
+| Macro-Level | ✅ PASS | Single source of truth for paths; eliminates scattered constants |
+| Orphan | ✅ PASS | All restored files are referenced by API routes |
 
 ---
 
 ## Flagged Items (Non-Blocking)
 
-### F1: Evidence Session Scope
-**Issue**: Unclear whether `evidence/sessions/` is global (cross-cutting) or per-module.
-**Remediation**: Victor, Qora, Forge each own `*/evidence/sessions/`. Global evidence is aggregated via IPC from running system.
+### F1: Kernel Import Fragility
+**Issue**: The `project-state` route uses `import` for TypeScript kernel files. zo.space bundles these at build time. If kernel files move again, the route breaks silently until next build.
+**Remediation**: Future phase should inline the needed kernel functions or convert them to a shared API route that reads data at runtime instead of build time.
 
-### F2: Governance Precedence
-**Issue**: Top-level `governance/` and per-module `*/governance/` may conflict.
-**Remediation**: Module-level policies override top-level defaults. Document precedence explicitly.
-
-### F3: Route-to-Filesystem Mapping
-**Issue**: zo.space routes (`/qor/forge/mindmap`, etc.) are self-contained inline code, not filesystem imports. The mapping is organizational naming, not a build dependency.
-**Remediation**: No refactoring of zo.space routes needed. Filesystem structure is for developer organization; routes are independent.
+### F2: /tmp/victor-heartbeat Ephemeral State
+**Issue**: Heartbeat state files in `/tmp/` are lost on reboot. The API already handles absence gracefully, but fresh boots will show empty state until the heartbeat agent runs.
+**Remediation**: Document this as expected behavior; the heartbeat agent re-creates state on first run.
 
 ---
 
@@ -51,18 +45,10 @@ All mandatory audit passes completed. No VETO conditions found.
 
 | Check | Limit | Actual | Status |
 |-------|-------|--------|--------|
-| Function lines | 40 | 0 (declarative) | ✅ |
-| File lines | 250 | ~40 max | ✅ |
-| Nesting depth | 3 | 0 | ✅ |
-| Nested ternaries | 0 | 0 | ✅ |
-
----
-
-## Recommendations
-
-1. Migrate `META_LEDGER.md` to `governance/ledger.jsonl` as authoritative store; Markdown becomes rendered view
-2. Make `/qor/evidence/sessions` and `/qor/shadow-genome` routes GET-only; writes come from running system
-3. Clarify shadow-genome's cross-module index role in governance API surface
+| Function lines | 40 | No new functions | ✅ |
+| File lines | 250 | Routes already within limit | ✅ |
+| Nesting depth | 3 | No change | ✅ |
+| Nested ternaries | 0 | No new ternaries | ✅ |
 
 ---
 
