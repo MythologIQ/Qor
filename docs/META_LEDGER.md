@@ -270,3 +270,47 @@ SHA256(src/heartbeat/mod.ts + tests/heartbeat.test.ts)
 ### Content Hash
 
 `impl-qor-filesystem-restyle-v1`
+
+---
+
+## 2026-04-02T22:30:00Z — IMPLEMENTATION (P0/P1 Forge Debug)
+
+| Field | Value |
+|-------|-------|
+| Phase | IMPLEMENT |
+| Blueprint | docs/plans/2026-04-02-p0-forge-debug.md |
+| Risk Grade | L1 |
+| Gate | PASS (audited 2026-04-02T22:10:00Z) |
+
+### Routes Fixed
+
+| Route | Type | Fix |
+|-------|------|-----|
+| `/qor/forge` | Page | Added missing `useState` (selectedProjectId, tab), fixed `state` → `data`, removed `loading`, fixed `useEffect` polling |
+| `/api/forge/status` | API | Belt-and-suspenders `Array.isArray` guard, accept `"complete"` status, accept `"in-progress"` for active phase |
+| `/qor/forge/roadmap` | Page | Rewired fetch from `/api/victor/project-state` → `/api/forge/status` |
+| `/qor/forge/constellation` | Page | Rewired fetch from `/api/victor/project-state` → `/api/forge/status` |
+
+### Infrastructure
+
+| Action | Status |
+|--------|--------|
+| `/tmp/victor-heartbeat/` created | ✅ |
+| Victor Heartbeat agent verified (10m, Kimi K2.5) | ✅ Active |
+| Qora Heartbeat agent verified (15m, Kimi K2.5) | ✅ Active |
+
+### Verification
+
+| Check | Result |
+|-------|--------|
+| `/api/forge/status` HTTP 200 | ✅ |
+| Progress: 85% | ✅ |
+| Phases completed: 19/23 | ✅ |
+| Active phase: Forge Source of Truth Realignment | ✅ |
+| All 6 Forge page routes HTTP 200 | ✅ |
+| `get_space_errors()` runtime errors: 0 | ✅ |
+| No Forge route references `/api/victor/project-state` | ✅ (roadmap + constellation rewired) |
+
+### Content Hash
+
+`impl-p0p1-forge-debug-v1`
