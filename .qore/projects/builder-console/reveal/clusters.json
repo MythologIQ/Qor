@@ -1,0 +1,92 @@
+{
+  "clusters": [
+    {
+      "clusterId": "cluster_builder_truth",
+      "projectId": "builder-console",
+      "label": "Builder Source of Truth",
+      "theme": "Operator Surface",
+      "thoughtIds": [],
+      "notes": "Canonical planning and visualization layer. Owns roadmap accuracy, recursive priorities, and live substantiation of what the product plan actually is.",
+      "createdAt": "2026-03-20T16:39:48.025Z",
+      "updatedAt": "2026-03-20T16:39:48.025Z",
+      "status": "formed"
+    },
+    {
+      "clusterId": "cluster_governed_automation",
+      "projectId": "builder-console",
+      "label": "Governed Automation Foundation",
+      "theme": "Execution Governance",
+      "thoughtIds": [],
+      "notes": "Heartbeat, execute mode, bounded pilot, governance bridge, audit logging, and other core action-control primitives.",
+      "createdAt": "2026-03-20T16:39:48.025Z",
+      "updatedAt": "2026-03-20T16:39:48.025Z",
+      "status": "formed"
+    },
+    {
+      "clusterId": "cluster_packaging_ingress",
+      "projectId": "builder-console",
+      "label": "Unified Ingress Packaging",
+      "theme": "Packaging",
+      "thoughtIds": [],
+      "notes": "Channels, webhooks, cron, Gmail Pub/Sub, and the governed event envelope that makes them feel productized instead of bespoke.",
+      "createdAt": "2026-03-20T16:39:48.025Z",
+      "updatedAt": "2026-03-20T16:39:48.025Z",
+      "status": "formed"
+    },
+    {
+      "clusterId": "cluster_packaging_execution",
+      "projectId": "builder-console",
+      "label": "Execution Gateway and Adapters",
+      "theme": "Packaging",
+      "thoughtIds": [],
+      "notes": "One bounded execution plane for browser, exec, web, providers, services, plugins, and future tools.",
+      "createdAt": "2026-03-20T16:39:48.025Z",
+      "updatedAt": "2026-03-20T16:39:48.025Z",
+      "status": "formed"
+    },
+    {
+      "clusterId": "cluster_memory_governance",
+      "projectId": "builder-console",
+      "label": "Memory Governance Core",
+      "theme": "Memory",
+      "thoughtIds": [],
+      "notes": "Epistemic typing, promotion policy, deterministic lifecycle interceptors, governance ledger events, and retrieval legibility.",
+      "createdAt": "2026-03-20T16:39:48.025Z",
+      "updatedAt": "2026-03-20T16:39:48.025Z",
+      "status": "formed"
+    },
+    {
+      "clusterId": "cluster_memory_temporal",
+      "projectId": "builder-console",
+      "label": "Temporal and Reliability Memory Stack",
+      "theme": "Memory",
+      "thoughtIds": [],
+      "notes": "UOR identity, decay, pinning, crystallization, temporal memory, reliability, and operator-facing memory APIs.",
+      "createdAt": "2026-03-20T16:39:48.025Z",
+      "updatedAt": "2026-03-20T16:39:48.025Z",
+      "status": "formed"
+    },
+    {
+      "clusterId": "cluster_evolveai",
+      "projectId": "builder-console",
+      "label": "EvolveAI Recursive Learning",
+      "theme": "Learning",
+      "thoughtIds": [],
+      "notes": "Governed learning packets, experiment proposals, self-modification review, and recursive improvement loops.",
+      "createdAt": "2026-03-20T16:39:48.025Z",
+      "updatedAt": "2026-03-20T16:39:48.025Z",
+      "status": "formed"
+    },
+    {
+      "clusterId": "cluster_quarantine_ui",
+      "projectId": "builder-console",
+      "label": "Quarantine and External Discourse",
+      "theme": "Safety",
+      "thoughtIds": [],
+      "notes": "Moltbook intake, quarantine visibility, adversarial content handling, and safe external exploration boundaries.",
+      "createdAt": "2026-03-20T16:39:48.025Z",
+      "updatedAt": "2026-03-20T16:39:48.025Z",
+      "status": "formed"
+    }
+  ]
+}

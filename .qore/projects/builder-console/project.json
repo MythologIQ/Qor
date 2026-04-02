@@ -1,0 +1,17 @@
+{
+  "projectId": "builder-console",
+  "name": "Builder Console",
+  "description": "Canonical visualization and operator surface for the full Zo-Qore/Victor product roadmap.",
+  "createdAt": "2026-03-15T05:53:51.331Z",
+  "updatedAt": "2026-03-20T16:39:48.025Z",
+  "createdBy": "frostwulf",
+  "pipelineState": {
+    "void": "active",
+    "reveal": "active",
+    "constellation": "active",
+    "path": "active",
+    "risk": "empty",
+    "autonomy": "active"
+  },
+  "checksum": ""
+}

@@ -1,0 +1,17 @@
+{
+  "projectId": "proj_8e22198d",
+  "name": "Test",
+  "description": "",
+  "createdAt": "2026-02-24T11:19:23.521Z",
+  "updatedAt": "2026-02-24T11:19:23.521Z",
+  "createdBy": "actor",
+  "pipelineState": {
+    "void": "empty",
+    "reveal": "empty",
+    "constellation": "empty",
+    "path": "empty",
+    "risk": "empty",
+    "autonomy": "empty"
+  },
+  "checksum": ""
+}

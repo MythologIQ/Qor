@@ -1,0 +1,60 @@
+{
+  "version": "1.0",
+  "generatedAt": "2026-03-20T16:39:48.054Z",
+  "files": [
+    {
+      "file": "checksums.json",
+      "hash": "a4752589ff586272b634f87a788a9e12b5b4dd987a80d3154df140d84e7fedc1",
+      "size": 1199,
+      "lastModified": 1773643426412
+    },
+    {
+      "file": "constellation/map.json",
+      "hash": "8867baa8b05b210afd1fef4221985a18ef326ac8fe794bb704b0c2b7597051a0",
+      "size": 3273,
+      "lastModified": 1774024788028
+    },
+    {
+      "file": "ledger.jsonl",
+      "hash": "0055799a2cbb49cf60b38af244ab2c7a7fea0f7bd1d36bb211475a40d151aa25",
+      "size": 610826,
+      "lastModified": 1774015377741
+    },
+    {
+      "file": "path/phases.json",
+      "hash": "6939c944371dd540d4a87c381fde759195b79063337c71035c735ee278fc702b",
+      "size": 138999,
+      "lastModified": 1774024788031
+    },
+    {
+      "file": "project.json",
+      "hash": "5856f8f0f37924a1c8d96264dbe7b48a6ac154b698a8a0c50ee6c53688735fdb",
+      "size": 479,
+      "lastModified": 1774024788032
+    },
+    {
+      "file": "reveal/clusters.json",
+      "hash": "f719c2bc880deab53766e13d46a47328cbcd8ab8593a28b74fac312b74bc0a67",
+      "size": 3648,
+      "lastModified": 1774024788027
+    },
+    {
+      "file": "verification/2026-03-16-heartbeat-shell-slice-1.md",
+      "hash": "da7f1a1e91448d9d0b5124a9f549a625af4857813d05ba4404b38ac5f9a660a3",
+      "size": 3267,
+      "lastModified": 1773646337663
+    },
+    {
+      "file": "void/index.json",
+      "hash": "c597ddf28ff821360d2e35584578ec1d12c7b2d009d62ac25ee9be74a9b7fe0e",
+      "size": 169,
+      "lastModified": 1773582123815
+    },
+    {
+      "file": "void/thoughts.jsonl",
+      "hash": "9f4ac9ee5524c82574c1eaebbbc83e96ee46f42273883b0c5a7b1e2eeb48ddc9",
+      "size": 1665,
+      "lastModified": 1773582123815
+    }
+  ]
+}

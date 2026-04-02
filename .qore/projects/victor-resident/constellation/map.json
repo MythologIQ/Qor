@@ -1,0 +1,28 @@
+{
+  "constellationId": "const_victor_resident",
+  "projectId": "victor-resident",
+  "nodes": [
+    {
+      "nodeId": "node_victor_foundation",
+      "clusterId": "cluster_victor_foundation",
+      "position": { "x": 0, "y": 0 }
+    },
+    {
+      "nodeId": "node_quarantine_pipeline",
+      "clusterId": "cluster_quarantine",
+      "position": { "x": 220, "y": 80 }
+    }
+  ],
+  "edges": [
+    {
+      "edgeId": "edge_victor_foundation_quarantine",
+      "fromNodeId": "node_victor_foundation",
+      "toNodeId": "node_quarantine_pipeline",
+      "relationship": "supports",
+      "weight": 0.74
+    }
+  ],
+  "createdAt": "2026-03-20T08:20:00.000Z",
+  "updatedAt": "2026-03-20T08:20:00.000Z",
+  "status": "mapped"
+}

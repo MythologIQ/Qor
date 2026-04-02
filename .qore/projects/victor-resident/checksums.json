@@ -1,0 +1,42 @@
+{
+  "version": "1.0",
+  "generatedAt": "2026-03-21T16:36:54.556Z",
+  "files": [
+    {
+      "file": "reveal/clusters.json",
+      "hash": "4f5ce066711af8027e1c438ceaf4a84faf0fb0a9dd4a1ffba2c2ee24d1f978cd",
+      "size": 752,
+      "lastModified": 1774013679946
+    },
+    {
+      "file": "constellation/map.json",
+      "hash": "4d84c7cec50f9849f78d0a6d9ac0c5fa71ca1dab1ad3a1ff2ad68c614597a27d",
+      "size": 716,
+      "lastModified": 1774013679951
+    },
+    {
+      "file": "path/heartbeat-blocker-2026-03-18.md",
+      "hash": "f88293a921b45c59745430480dd4d5a3ab89bb98834943e7f0e80e64bc59c0a6",
+      "size": 4163,
+      "lastModified": 1773836333993
+    },
+    {
+      "file": "path/phases.json",
+      "hash": "f5810bc6c0284fec2a5aaecf47e2776881b0dc661fda6b0c3eb3a2c5ba7965ac",
+      "size": 48411,
+      "lastModified": 1774111014532
+    },
+    {
+      "file": "path/phases_fixed.json",
+      "hash": "93ade09fb02bf10a2f30c681b4bcf14346b27c52a5f96ae7360750503b263a22",
+      "size": 28066,
+      "lastModified": 1773682787329
+    },
+    {
+      "file": "project.json",
+      "hash": "ffbc05994c98e1355c5632c5da1e26a2ed07151d74afb139bc54d788375f56d0",
+      "size": 479,
+      "lastModified": 1774111014552
+    }
+  ]
+}

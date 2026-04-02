@@ -1,0 +1,138 @@
+{
+  "constellationId": "const_builder-console",
+  "projectId": "builder-console",
+  "nodes": [
+    {
+      "nodeId": "node_builder_truth",
+      "clusterId": "cluster_builder_truth",
+      "position": {
+        "x": 0,
+        "y": 0
+      }
+    },
+    {
+      "nodeId": "node_governed_automation",
+      "clusterId": "cluster_governed_automation",
+      "position": {
+        "x": -220,
+        "y": 120
+      }
+    },
+    {
+      "nodeId": "node_packaging_ingress",
+      "clusterId": "cluster_packaging_ingress",
+      "position": {
+        "x": 220,
+        "y": 120
+      }
+    },
+    {
+      "nodeId": "node_packaging_execution",
+      "clusterId": "cluster_packaging_execution",
+      "position": {
+        "x": 420,
+        "y": 260
+      }
+    },
+    {
+      "nodeId": "node_memory_governance",
+      "clusterId": "cluster_memory_governance",
+      "position": {
+        "x": -220,
+        "y": 300
+      }
+    },
+    {
+      "nodeId": "node_memory_temporal",
+      "clusterId": "cluster_memory_temporal",
+      "position": {
+        "x": -20,
+        "y": 470
+      }
+    },
+    {
+      "nodeId": "node_evolveai",
+      "clusterId": "cluster_evolveai",
+      "position": {
+        "x": 260,
+        "y": 500
+      }
+    },
+    {
+      "nodeId": "node_quarantine",
+      "clusterId": "cluster_quarantine_ui",
+      "position": {
+        "x": -420,
+        "y": 260
+      }
+    }
+  ],
+  "edges": [
+    {
+      "edgeId": "edge_truth_automation",
+      "fromNodeId": "node_builder_truth",
+      "toNodeId": "node_governed_automation",
+      "relationship": "governs",
+      "weight": 0.94
+    },
+    {
+      "edgeId": "edge_truth_ingress",
+      "fromNodeId": "node_builder_truth",
+      "toNodeId": "node_packaging_ingress",
+      "relationship": "packages",
+      "weight": 0.9
+    },
+    {
+      "edgeId": "edge_ingress_execution",
+      "fromNodeId": "node_packaging_ingress",
+      "toNodeId": "node_packaging_execution",
+      "relationship": "feeds",
+      "weight": 0.88
+    },
+    {
+      "edgeId": "edge_automation_memory",
+      "fromNodeId": "node_governed_automation",
+      "toNodeId": "node_memory_governance",
+      "relationship": "requires",
+      "weight": 0.91
+    },
+    {
+      "edgeId": "edge_memory_temporal",
+      "fromNodeId": "node_memory_governance",
+      "toNodeId": "node_memory_temporal",
+      "relationship": "expands",
+      "weight": 0.89
+    },
+    {
+      "edgeId": "edge_quarantine_memory",
+      "fromNodeId": "node_quarantine",
+      "toNodeId": "node_memory_governance",
+      "relationship": "stresses",
+      "weight": 0.78
+    },
+    {
+      "edgeId": "edge_temporal_evolve",
+      "fromNodeId": "node_memory_temporal",
+      "toNodeId": "node_evolveai",
+      "relationship": "enables",
+      "weight": 0.86
+    },
+    {
+      "edgeId": "edge_execution_evolve",
+      "fromNodeId": "node_packaging_execution",
+      "toNodeId": "node_evolveai",
+      "relationship": "instrumented-by",
+      "weight": 0.74
+    },
+    {
+      "edgeId": "edge_truth_memory",
+      "fromNodeId": "node_builder_truth",
+      "toNodeId": "node_memory_governance",
+      "relationship": "visualizes",
+      "weight": 0.83
+    }
+  ],
+  "createdAt": "2026-03-20T16:39:48.025Z",
+  "updatedAt": "2026-03-20T16:39:48.025Z",
+  "status": "mapped"
+}
