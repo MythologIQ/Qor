@@ -1,0 +1,922 @@
+Updated task task_victor_memory_ingestion_surface to done
+Phase phase_victor_memory_surface: 3/4 tasks done
+{
+  "phases": [
+    {
+      "phaseId": "phase_victor_lifecycle",
+      "projectId": "victor-resident",
+      "ordinal": 1,
+      "name": "Victor Lifecycle and Forecast Foundation",
+      "objective": "Model Victor as a separate governed project inside Builder and define the forecasting signals for remaining autonomy work.",
+      "sourceClusterIds": [
+        "cluster_victor_foundation"
+      ],
+      "tasks": [
+        {
+          "taskId": "task_victor_lifecycle_model",
+          "phaseId": "phase_victor_lifecycle",
+          "title": "Model Victor project lifecycle from concept to completion",
+          "description": "Define the stages Builder should use to track Victor work without collapsing it into Builder infrastructure work.",
+          "acceptance": [
+            "Victor lifecycle stages are explicit and separate from Builder Console infrastructure stages."
+          ],
+          "status": "done"
+        },
+        {
+          "taskId": "task_victor_forecast_signals",
+          "phaseId": "phase_victor_lifecycle",
+          "title": "Define Victor remaining-effort forecast signals",
+          "description": "Specify confidence, blockers, dependencies, and effort-band inputs for forecasting Victor progress.",
+          "acceptance": [
+            "Victor forecast inputs are evidence-backed and separate from generic automation activity."
+          ],
+          "status": "done"
+        },
+        {
+          "taskId": "task_victor_builder_dependencies",
+          "phaseId": "phase_victor_lifecycle",
+          "title": "Record Builder dependencies that gate Victor autonomy promotion",
+          "description": "Capture which Builder capabilities must mature before Victor can safely escalate autonomy.",
+          "acceptance": [
+            "Victor dependencies on Builder infrastructure are explicit and governable."
+          ],
+          "status": "done"
+        }
+      ],
+      "status": "complete",
+      "createdAt": "2026-03-15T20:00:05.911Z",
+      "updatedAt": "2026-03-15T20:50:58.402Z"
+    },
+    {
+      "phaseId": "phase_wfatnb2o",
+      "projectId": "victor-resident",
+      "ordinal": 2,
+      "name": "Unattended Execute Promotion Review",
+      "objective": "Define the execute-mode promotion bar for Victor and tie unattended operation to explicit evidence, fallback, and revocation rules.",
+      "sourceClusterIds": [
+        "cluster_victor_foundation"
+      ],
+      "tasks": [
+        {
+          "taskId": "task_nh3uccrf",
+          "phaseId": "phase_wfatnb2o",
+          "title": "Define Victor unattended execute-mode promotion criteria",
+          "description": "Turn the current dry-run soak and dependency gates into explicit promotion criteria for unattended write-capable heartbeat operation.",
+          "acceptance": [
+            "Execute-mode promotion criteria are explicit, governed, and stricter than dry-run soak success alone."
+          ],
+          "status": "done"
+        },
+        {
+          "taskId": "task_w0bcrdpz",
+          "phaseId": "phase_wfatnb2o",
+          "title": "Review 30m dry-run soak evidence against promotion gate",
+          "description": "Compare the unattended 30m dry-run audit trail against the execute-mode promotion criteria before any autonomy increase.",
+          "acceptance": [
+            "Dry-run soak evidence is reviewed against the gate and any missing proof is explicit."
+          ],
+          "status": "done"
+        },
+        {
+          "taskId": "task_4enp5awq",
+          "phaseId": "phase_wfatnb2o",
+          "title": "Record unattended execute fallback and revocation triggers",
+          "description": "Capture the kill conditions, fallback rules, and revocation criteria that should force Victor out of unattended execute mode.",
+          "acceptance": [
+            "Execute-mode fallback and revocation triggers are explicit and Builder-visible."
+          ],
+          "status": "done"
+        }
+      ],
+      "status": "complete",
+      "createdAt": "2026-03-15T20:53:44.501Z",
+      "updatedAt": "2026-03-15T23:18:00.000Z"
+    },
+    {
+      "phaseId": "phase_victor_execute_pilot",
+      "projectId": "victor-resident",
+      "ordinal": 3,
+      "name": "Bounded Unattended Execute Pilot",
+      "objective": "Run the first bounded unattended execute window, review its evidence, and decide whether Victor has earned any wider autonomy.",
+      "sourceClusterIds": [
+        "cluster_victor_foundation"
+      ],
+      "tasks": [
+        {
+          "taskId": "task_victor_execute_pilot_run",
+          "phaseId": "phase_victor_execute_pilot",
+          "title": "Run bounded unattended 30m execute pilot",
+          "description": "Run Victor in unattended execute mode at the 30-minute baseline with explicit kill-switch, tick, and runtime limits.",
+          "acceptance": [
+            "Unattended execute pilot runs within the bounded action budget and leaves a reviewable verification packet."
+          ],
+          "status": "done"
+        },
+        {
+          "taskId": "task_victor_execute_pilot_review",
+          "phaseId": "phase_victor_execute_pilot",
+          "title": "Review unattended execute verification packet",
+          "description": "Inspect the verification-grade report after the unattended execute pilot and classify any drift, block, or revocation signals.",
+          "acceptance": [
+            "Observed, inferred, and unverified claims are reviewed before any autonomy expansion decision."
+          ],
+          "status": "done"
+        },
+        {
+          "taskId": "task_victor_execute_expand",
+          "phaseId": "phase_victor_execute_pilot",
+          "title": "Define post-pilot autonomy expansion rule",
+          "description": "Decide what evidence would be required before Victor gains broader unattended scope, faster cadence, or wider project coverage.",
+          "acceptance": [
+            "Autonomy expansion remains evidence-gated and does not self-authorize from a single successful pilot."
+          ],
+          "status": "done"
+        }
+      ],
+      "status": "complete",
+      "createdAt": "2026-03-15T23:18:00.000Z",
+      "updatedAt": "2026-03-18T10:05:00.000Z"
+    },
+    {
+      "phaseId": "phase_victor_unified_governance",
+      "projectId": "victor-resident",
+      "ordinal": 4,
+      "name": "Unified Governance Bridge",
+      "objective": "Bridge Victor's quarantine pipeline and execute-pilot infrastructure into a unified governance layer that governs all automated actions under a single consistent policy framework.",
+      "sourceClusterIds": [
+        "cluster_victor_foundation"
+      ],
+      "tasks": [
+        {
+          "taskId": "task_unified_policy_framework",
+          "phaseId": "phase_victor_unified_governance",
+          "title": "Unified Governance Policy Framework",
+          "description": "Define a single policy schema that can govern both content admission and action execution with trust tiers, confidence thresholds, and required verification steps.",
+          "acceptance": [
+            "Policy schema supports both content trust tiers and action risk levels",
+            "Policy defines confidence thresholds per tier/level combination",
+            "Policy defines required scan categories for content vs required verification steps for actions",
+            "Policy is versioned and auditable"
+          ],
+          "status": "done"
+        },
+        {
+          "taskId": "task_governance_decision_engine",
+          "phaseId": "phase_victor_unified_governance",
+          "title": "Governance Decision Engine",
+          "description": "Build a unified decision engine that evaluates both content admission requests and action execution requests against the policy framework.",
+          "acceptance": [
+            "Single evaluate() method handles both ContentAdmissionRequest and ActionExecutionRequest",
+            "Returns consistent GovernanceDecision type with verdict, confidence, and reasoning",
+            "Integrates with existing quarantine-gate.ts for content and execute-pilot.ts for actions",
+            "Decision audit trail written to unified ledger"
+          ],
+          "status": "done"
+        },
+        {
+          "taskId": "task_unified_audit_ledger",
+          "phaseId": "phase_victor_unified_governance",
+          "title": "Unified Audit Ledger",
+          "description": "Extend the quarantine audit ledger to record all governance decisions\u2014content and actions\u2014in a single queryable history.",
+          "acceptance": [
+            "Ledger entries support both content events and action events",
+            "Query API filters by event type, verdict, project, timestamp range",
+            "Unified export produces coherent timeline of all governed activity",
+            "Retention policies apply consistently across event types"
+          ],
+          "status": "done"
+        },
+        {
+          "taskId": "task_cross_domain_policy",
+          "phaseId": "phase_victor_unified_governance",
+          "title": "Cross-Domain Policy Enforcement",
+          "description": "Ensure policy constraints flow correctly between content and action domains\u2014e.g., external-untrusted content triggers higher scrutiny on derived actions.",
+          "acceptance": [
+            "Content trust tier influences action risk assessment",
+            "Action audit records reference source content IDs where applicable",
+            "Policy violations in one domain can trigger review requirements in the other",
+            "No circular dependencies between content and action evaluation"
+          ],
+          "status": "done"
+        },
+        {
+          "taskId": "task_unified_governance_cli",
+          "phaseId": "phase_victor_unified_governance",
+          "title": "Unified Governance CLI",
+          "description": "Create a command-line interface for governance operations: policy inspection, manual ledger queries, emergency revocation, and audit export.",
+          "acceptance": [
+            "CLI supports inspect-policy, query-ledger, revoke-run, export-audit commands",
+            "Commands accept project-id and time range filters",
+            "Output formats: human-readable, JSON, JSONL",
+            "Exit codes indicate success (0), policy violation found (2), or error (1)"
+          ],
+          "status": "done"
+        }
+      ],
+      "status": "complete",
+      "createdAt": "2026-03-18T10:15:00.000Z",
+      "updatedAt": "2026-03-18T11:15:00.000Z"
+    },
+    {
+      "phaseId": "phase_victor_execute_governance",
+      "projectId": "victor-resident",
+      "ordinal": 5,
+      "name": "Execute Mode Governance",
+      "objective": "Establish tiered governance, monitoring, and oversight systems for Victor execute-mode operation across all autonomy levels.",
+      "sourceClusterIds": [
+        "cluster_victor_foundation"
+      ],
+      "tasks": [
+        {
+          "taskId": "task_victor_tiered_governance",
+          "phaseId": "phase_victor_execute_governance",
+          "title": "Tiered Governance Structure",
+          "description": "Define governance rules for Tier 1/2/3 execute modes. Create authorization flows (user explicit, evidence-gated, automated). Document escalation procedures for each tier. Define tier promotion/demotion criteria.",
+          "acceptance": [
+            "Each tier has explicit authorization requirements",
+            "Governance flows are documented and testable",
+            "Escalation procedures are defined for each tier"
+          ],
+          "status": "done"
+        },
+        {
+          "taskId": "task_victor_monitoring_dashboard",
+          "phaseId": "phase_victor_execute_governance",
+          "title": "Monitoring Dashboard",
+          "description": "Build real-time execute-mode status display with revocation trigger visibility, tier progress tracking, governance violation alerts, and observation window countdown.",
+          "acceptance": [
+            "Dashboard shows live execute-mode status",
+            "Revocation triggers visible in real-time",
+            "Tier progress tracked and displayed"
+          ],
+          "status": "done"
+        },
+        {
+          "taskId": "task_victor_audit_trail_system",
+          "phaseId": "phase_victor_execute_governance",
+          "title": "Audit Trail System",
+          "description": "Create searchable, exportable audit trail with evidence linking for all actions, verification packet generation, and historical query interface.",
+          "acceptance": [
+            "All actions logged with evidence links",
+            "Audit trail searchable and exportable",
+            "Verification packet generation automated"
+          ],
+          "status": "done"
+        }
+      ],
+      "status": "complete",
+      "createdAt": "2026-03-18T11:20:00.000Z",
+      "updatedAt": "2026-03-18T12:05:00.000Z"
+    },
+    {
+      "phaseId": "phase_victor_quarantine_pipeline",
+      "projectId": "victor-resident",
+      "ordinal": 7,
+      "name": "Moltbook Quarantine Pipeline",
+      "objective": "Implement quarantine-first pipeline for external content ingestion (Moltbook), with sanitization, adversarial scanning, governance gating, and audit logging to safely explore external agent discourse during heartbeat idle periods.",
+      "sourceClusterIds": [
+        "cluster_quarantine"
+      ],
+      "tasks": [
+        {
+          "taskId": "task_quarantine_governance_types",
+          "phaseId": "phase_victor_quarantine_pipeline",
+          "title": "Add quarantine governance types",
+          "description": "Add 'quarantined' GovernanceState, SourceTrustTier, SourceTrustMetadata, ScanVerdict, ScanDetail, ScanCategory types. Update policy JSON with source trust tiers and quarantine settings.",
+          "acceptance": [
+            "New types compile",
+            "Policy loads with quarantine config",
+            "Existing tests unbroken"
+          ],
+          "status": "done"
+        },
+        {
+          "taskId": "task_quarantine_sanitizer",
+          "phaseId": "phase_victor_quarantine_pipeline",
+          "title": "Build quarantine sanitizer",
+          "description": "Implement quarantine-sanitize.ts: HTML/script tag stripping, base64 block decoding, unicode normalization, control character removal, length truncation, encoded segment flagging.",
+          "acceptance": [
+            "Sanitizer strips all known encoding vectors",
+            "Unit tests cover each sanitization category",
+            "Raw and sanitized content both preserved"
+          ],
+          "status": "done"
+        },
+        {
+          "taskId": "task_quarantine_scan_engine",
+          "phaseId": "phase_victor_quarantine_pipeline",
+          "title": "Build adversarial scan engine",
+          "description": "Implement quarantine-scan.ts with 4-layer scanner: literal patterns (50+), structural heuristics, encoding detection, similarity/flood detection. Produces ScanVerdict and ScanDetail[].",
+          "acceptance": [
+            "Scanner detects all categories",
+            "Unit tests cover clean, suspicious, hostile paths",
+            "False positive rate acceptable on benign content"
+          ],
+          "status": "done"
+        },
+        {
+          "taskId": "task_quarantine_governance_gate",
+          "phaseId": "phase_victor_quarantine_pipeline",
+          "title": "Build quarantine governance gate",
+          "description": "Implement quarantine-governance.ts: route scan verdicts to auto-reject (hostile), quarantine (suspicious), or quarantine-with-auto-promote (clean). Apply source trust tier confidence caps.",
+          "acceptance": [
+            "Hostile auto-rejects",
+            "Suspicious quarantines for review",
+            "Clean quarantines with cooldown promotion",
+            "Confidence never exceeds tier cap"
+          ],
+          "status": "done"
+        },
+        {
+          "taskId": "task_quarantine_store",
+          "phaseId": "phase_victor_quarantine_pipeline",
+          "title": "Build quarantine store",
+          "description": "Implement quarantine-store.ts with SQLite backend. CRUD operations, promotion/rejection, stats, pruning, max-items enforcement.",
+          "acceptance": [
+            "Store persists across restarts",
+            "FIFO eviction works",
+            "Promotion and rejection state transitions correct"
+          ],
+          "status": "done"
+        },
+        {
+          "taskId": "task_quarantine_audit_ledger",
+          "phaseId": "phase_victor_quarantine_pipeline",
+          "title": "Build quarantine audit ledger",
+          "description": "Implement quarantine-ledger.ts: append-only JSONL, queryable by event type and date range. Every pipeline stage logs to ledger.",
+          "acceptance": [
+            "Every pipeline stage logs to ledger",
+            "Ledger is append-only and survives restarts"
+          ],
+          "status": "done"
+        },
+        {
+          "taskId": "task_moltbook_fetch_client",
+          "phaseId": "phase_victor_quarantine_pipeline",
+          "title": "Build Moltbook fetch client",
+          "description": "Implement moltbook-fetch.ts: read-only GET client with rate limiting (1 batch/tick, max 10 posts), content truncation (4000 chars), batch size limits. No write endpoints.",
+          "acceptance": [
+            "Client fetches posts",
+            "No write endpoints called",
+            "Rate limits enforced",
+            "Content truncated"
+          ],
+          "status": "done"
+        },
+        {
+          "taskId": "task_heartbeat_idle_exploration",
+          "phaseId": "phase_victor_quarantine_pipeline",
+          "title": "Wire heartbeat idle exploration",
+          "description": "Add explore mode to heartbeat: when build queue empty, run Moltbook quarantine pipeline instead of parking. Respect maxConsecutiveExplore and cooldown.",
+          "acceptance": [
+            "Exploration runs only when build queue empty",
+            "Heartbeat parks after maxConsecutiveExplore",
+            "Exploration ticks are audited"
+          ],
+          "status": "done"
+        }
+      ],
+      "status": "complete",
+      "createdAt": "2026-03-18T03:00:00.000Z",
+      "updatedAt": "2026-03-18T13:00:00.000Z"
+    },
+    {
+      "phaseId": "phase_victor_memory_governance_core",
+      "projectId": "victor-resident",
+      "ordinal": 8,
+      "name": "Memory Governance Core Hardening",
+      "objective": "Formalize the epistemic, policy, and audit primitives that make Victor's memory system inspectable, phase-gated, and safe to promote beyond structural GraphRAG capability.",
+      "sourceClusterIds": [
+        "cluster_victor_foundation"
+      ],
+      "tasks": [
+        {
+          "taskId": "task_memory_governance_primitives",
+          "phaseId": "phase_victor_memory_governance_core",
+          "title": "Add artifact-level governance primitives to memory records",
+          "description": "Extend Victor memory records with governance state, epistemic type, confidence profile, policy version, and provenance completeness so stored memory distinguishes observation, inference, synthesis, and contested material.",
+          "acceptance": [
+            "Memory records carry explicit governance state and epistemic typing.",
+            "Confidence and provenance-completeness metadata are inspectable at the artifact level.",
+            "Stored memory can distinguish source-grounded observation from derived synthesis."
+          ],
+          "status": "done"
+        },
+        {
+          "taskId": "task_memory_policy_externalization",
+          "phaseId": "phase_victor_memory_governance_core",
+          "title": "Externalize declarative memory promotion and recall policy",
+          "description": "Create a dedicated memory policy artifact that defines promotion thresholds, recall modes, contradiction rules, and stale-cache handling instead of leaving those semantics embedded in code paths.",
+          "acceptance": [
+            "Memory promotion and recall thresholds live in a declarative policy file.",
+            "Contradiction and stale-cache rules are inspectable without reading implementation code.",
+            "Policy versioning is wired into memory governance decisions."
+          ],
+          "status": "done"
+        },
+        {
+          "taskId": "task_memory_policy_interceptors",
+          "phaseId": "phase_victor_memory_governance_core",
+          "title": "Add deterministic policy interception across memory lifecycle phases",
+          "description": "Introduce deterministic triage and per-phase policy checkpoints for encode, recall, persistence, and crystallization so memory operations are governed at every phase instead of only at write time.",
+          "acceptance": [
+            "Memory lifecycle phases expose policy checkpoints with phase-specific context.",
+            "Policy interception remains deterministic and auditable instead of LLM-classified.",
+            "Rejected or audit-only decisions are surfaced before state mutation."
+          ],
+          "status": "done"
+        },
+        {
+          "taskId": "task_memory_policy_modes",
+          "phaseId": "phase_victor_memory_governance_core",
+          "title": "Implement strict, audit, and permissive memory policy modes",
+          "description": "Support enforcement modes for memory governance so operators can run fail-closed in production, audit in tuning windows, and permissive in controlled development without drifting policy semantics.",
+          "acceptance": [
+            "Memory policy supports strict, audit, and permissive modes.",
+            "Audit mode logs what would have been blocked without mutating behavior.",
+            "Mode selection is configurable globally and per phase."
+          ],
+          "status": "done"
+        },
+        {
+          "taskId": "task_memory_governance_ledger",
+          "phaseId": "phase_victor_memory_governance_core",
+          "title": "Add dedicated memory governance ledger events",
+          "description": "Record promotion approvals, rejections, contested writes, recall downgrades, and stale-memory blocks as first-class governance events so Victor can substantiate memory behavior, not just execution behavior.",
+          "acceptance": [
+            "Memory-governance decisions emit dedicated ledger events.",
+            "Ledger entries distinguish promotions, demotions, contested writes, and stale recall blocks.",
+            "Memory-governance history is queryable alongside existing audit trails."
+          ],
+          "status": "done"
+        },
+        {
+          "taskId": "task_memory_retrieval_orchestrator_split",
+          "phaseId": "phase_victor_memory_governance_core",
+          "title": "Split retrieval orchestration into explicit governed modules",
+          "description": "Refactor retrieval into legible stages for query intent, candidate gathering, graph expansion, arbitration, and bundle assembly so governance and evidence handling are traceable instead of buried in one module.",
+          "acceptance": [
+            "Retrieval orchestration stages are separated into explicit modules.",
+            "Each retrieval stage exposes its contribution to the final grounded bundle.",
+            "Governance can inspect where recall was strengthened, downgraded, or blocked."
+          ],
+          "status": "done"
+        },
+        {
+          "taskId": "task_7ggbhglk",
+          "phaseId": "phase_victor_memory_governance_core",
+          "title": "Implement memory-governance decisions emit dedicated ledger events",
+          "description": "Derived from grounded reflection on active task \"Add dedicated memory governance ledger events\" in phase \"Memory Governance Core Hardening\". Recommended next action: Implement memory-governance decisions emit dedicated ledger events",
+          "acceptance": [
+            "Follow-on work remains grounded in \"Add dedicated memory governance ledger events\" and governed through Builder Console."
+          ],
+          "status": "done"
+        }
+      ],
+      "status": "complete",
+      "createdAt": "2026-03-20T08:10:00.000Z",
+      "updatedAt": "2026-03-20T21:00:23.223Z"
+    },
+    {
+      "phaseId": "phase_victor_uor_identity_migration",
+      "projectId": "victor-resident",
+      "ordinal": 9,
+      "name": "UOR Content-Addressed Identity Migration",
+      "objective": "Replace ad hoc Victor memory identity with deterministic UOR addressing so memory writes, lookups, deduplication, and supersession lineage are cryptographically and semantically stable.",
+      "sourceClusterIds": [
+        "cluster_victor_foundation"
+      ],
+      "tasks": [
+        {
+          "taskId": "task_victor_uor_address_type",
+          "phaseId": "phase_victor_uor_identity_migration",
+          "title": "Introduce canonical UOR address type and BLAKE3 content addressing",
+          "description": "Add deterministic content-addressed identity primitives so Victor memory artifacts can derive stable UOR addresses from canonical bytes instead of relying on UUIDs and duplicate hash pipelines.",
+          "acceptance": [
+            "Victor memory supports a canonical UOR address type.",
+            "Content-addressed identity uses the designated BLAKE3 pipeline.",
+            "Existing SHA-based integrity paths remain backward-compatible during migration."
+          ],
+          "status": "done"
+        },
+        {
+          "taskId": "task_victor_uor_identity_rewire",
+          "phaseId": "phase_victor_uor_identity_migration",
+          "title": "Rewire memory, tier, and graph structures onto UOR identity",
+          "description": "Apply UOR identity across documents, chunks, semantic nodes, edges, tier maps, and processor snapshots so the memory stack uses one stable identity model instead of parallel keys.",
+          "acceptance": [
+            "Core memory and tier structures key on UOR identity.",
+            "Graph and snapshot layers preserve referential integrity under the new address model.",
+            "Identity collisions fail closed instead of silently overwriting artifacts."
+          ],
+          "status": "done"
+        },
+        {
+          "taskId": "task_victor_uor_l3_lookup",
+          "phaseId": "phase_victor_uor_identity_migration",
+          "title": "Add exact-address lookup for crystallized memory",
+          "description": "Introduce O(1) address lookup for stable L3 memory so saturated artifacts can exit the expensive similarity-search path when exact identity is known.",
+          "acceptance": [
+            "Crystallized memory supports direct address lookup.",
+            "Retrieval can short-circuit on exact L3 address matches.",
+            "Exact-match recall remains auditable and backward-compatible."
+          ],
+          "status": "done"
+        },
+        {
+          "taskId": "task_victor_uor_migration_batch",
+          "phaseId": "phase_victor_uor_identity_migration",
+          "title": "Run governed migration from current provenance to UOR-backed identity",
+          "description": "Upgrade existing memory artifacts into the UOR identity model with explicit audits, rollback affordances, and conflict reporting so the migration itself is governed and reversible.",
+          "acceptance": [
+            "Existing memory artifacts can be migrated into the UOR identity model.",
+            "Migration writes an auditable report of converted, skipped, and contested artifacts.",
+            "Rollback path exists if identity conflicts or provenance gaps are discovered."
+          ],
+          "status": "done"
+        }
+      ],
+      "status": "complete",
+      "createdAt": "2026-03-20T08:11:00.000Z",
+      "updatedAt": "2026-03-20T23:12:00.193Z"
+    },
+    {
+      "phaseId": "phase_victor_thermodynamic_decay_foundation",
+      "projectId": "victor-resident",
+      "ordinal": 10,
+      "name": "Thermodynamic Decay Foundation",
+      "objective": "Replace fixed memory decay heuristics with the designed saturation and temperature model so decay, promotion, and retrieval weight are grounded in resolvedness instead of age alone.",
+      "sourceClusterIds": [
+        "cluster_victor_foundation"
+      ],
+      "tasks": [
+        {
+          "taskId": "task_victor_saturation_model",
+          "phaseId": "phase_victor_thermodynamic_decay_foundation",
+          "title": "Replace fixed decay factor with saturation and temperature state",
+          "description": "Refactor memory records so unresolvedness is represented through saturation and derived context temperature instead of a single opaque decay factor.",
+          "acceptance": [
+            "Memory records store saturation instead of a fixed decay factor.",
+            "Context temperature and effective lambda are derived from saturation.",
+            "Existing callers can inspect thermodynamic state without reconstructuting it externally."
+          ],
+          "status": "done"
+        },
+        {
+          "taskId": "task_victor_thermodynamic_decay_engine",
+          "phaseId": "phase_victor_thermodynamic_decay_foundation",
+          "title": "Implement thermodynamic decay and saturation boost functions",
+          "description": "Add temperature, effective lambda, decay, and saturation-boost primitives so memory cooling and reheating are deterministic and testable.",
+          "acceptance": [
+            "Decay functions use effective lambda derived from saturation.",
+            "Saturated memories can reach zero-decay ground state.",
+            "Access-driven saturation boosts are deterministic and bounded."
+          ],
+          "status": "done"
+        },
+        {
+          "taskId": "task_victor_thermodynamic_routing",
+          "phaseId": "phase_victor_thermodynamic_decay_foundation",
+          "title": "Route crystallized memory by saturation threshold",
+          "description": "Bind tier routing to saturation so highly resolved memories can crystallize into the permanent layer based on explicit thermodynamic criteria instead of only score heuristics.",
+          "acceptance": [
+            "Tier routing can promote highly saturated memory to crystallized storage.",
+            "Thermodynamic thresholds are explicit and inspectable.",
+            "Routing remains compatible with existing score-based heuristics during transition."
+          ],
+          "status": "done"
+        },
+        {
+          "taskId": "task_victor_thermodynamic_validation",
+          "phaseId": "phase_victor_thermodynamic_decay_foundation",
+          "title": "Substantiate self-optimization behavior with governed tests",
+          "description": "Add explicit tests and benchmarks proving that access can cool memory, reduce decay, and improve routing so thermodynamic behavior is queryable in test output and audit evidence.",
+          "acceptance": [
+            "Validation covers zero-decay saturation, partial-saturation decay, and routing thresholds.",
+            "Evidence shows repeated access can improve retention characteristics.",
+            "Thermodynamic behavior is queryable in test output and audit evidence."
+          ],
+          "status": "done"
+        }
+      ],
+      "status": "complete",
+      "createdAt": "2026-03-20T08:12:00.000Z",
+      "updatedAt": "2026-03-22T23:00:00.000Z"
+    },
+    {
+      "phaseId": "phase_victor_pinning_and_promotion",
+      "projectId": "victor-resident",
+      "ordinal": 11,
+      "name": "Weighted Pinning and Associative Promotion",
+      "objective": "Implement the designed reinforcement loop where verified use, cross-reference, conflict, and session co-capture can pin or unpin memory and drive legitimate crystallization.",
+      "sourceClusterIds": [
+        "cluster_victor_foundation"
+      ],
+      "tasks": [
+        {
+          "taskId": "task_victor_weighted_pinning",
+          "phaseId": "phase_victor_pinning_and_promotion",
+          "title": "Add weighted pinning hierarchy for access, corroboration, and verification",
+          "description": "Implement differentiated pinning events so cryptographic verification, corroboration, cross-reference, and ordinary access do not all distort saturation equally.",
+          "acceptance": [
+            "Pinning events carry differentiated weights.",
+            "Verification pins memory faster than ordinary access.",
+            "Weighting remains bounded and testable."
+          ],
+          "status": "done"
+        },
+        {
+          "taskId": "task_victor_entropy_injection",
+          "phaseId": "phase_victor_pinning_and_promotion",
+          "title": "Implement entropy injection for contested or conflicting memory",
+          "description": "Allow disputes and contradictions to unpin memory so contested material heats up, decays faster, and stops masquerading as stable knowledge.",
+          "acceptance": [
+            "Conflict paths can reduce saturation deterministically.",
+            "Entropy injection is bounded and auditable.",
+            "Contested memory loses stability without destructive deletion."
+          ],
+          "status": "done"
+        },
+        {
+          "taskId": "task_victor_cocapture_linking",
+          "phaseId": "phase_victor_pinning_and_promotion",
+          "title": "Add session co-capture linking and peer pinning",
+          "description": "Link memories encoded within the same governed session and let those relationships contribute medium-strength pinning so coherent memory clusters can form without manual authoring.",
+          "acceptance": [
+            "New session memories create associative links to valid peers.",
+            "Cross-reference pinning affects linked memories deterministically.",
+            "Session boundaries remain explicit so unrelated runs do not smear together."
+          ],
+          "status": "done"
+        },
+        {
+          "taskId": "task_victor_saturation_promotion",
+          "phaseId": "phase_victor_pinning_and_promotion",
+          "title": "Promote L2 memory to crystallized storage on saturation threshold",
+          "description": "Turn saturation crossing into a real L2 to L3 promotion path so the memory system can earn O(1) lookup and permanence through repeated grounded evidence.",
+          "acceptance": [
+            "Saturation-driven promotion moves eligible memory from L2 to L3.",
+            "Promotion is explicit and testable instead of implicit routing drift.",
+            "Promoted memory becomes available to exact-address lookup."
+          ],
+          "status": "done"
+        }
+      ],
+      "status": "complete",
+      "createdAt": "2026-03-20T08:13:00.000Z",
+      "updatedAt": "2026-03-20T13:51:00.000Z"
+    },
+    {
+      "phaseId": "phase_victor_zero_trust_crystallization",
+      "projectId": "victor-resident",
+      "ordinal": 12,
+      "name": "Zero-Trust Crystallization and Provenance",
+      "objective": "Move crystallization from optimistic auto-promotion to explicit approval and provenance-aware trust so Victor only hardens memory that has earned it.",
+      "sourceClusterIds": [
+        "cluster_victor_foundation"
+      ],
+      "tasks": [
+        {
+          "taskId": "task_victor_crystallization_policy",
+          "phaseId": "phase_victor_zero_trust_crystallization",
+          "title": "Make approval-required crystallization the default policy",
+          "description": "Add explicit crystallization policy controls so Victor can require approval before promoting high-saturation memory into permanent storage.",
+          "acceptance": [
+            "Crystallization policy supports approval-required and auto modes.",
+            "Default behavior is zero-trust rather than auto-promote.",
+            "Policy choice is inspectable in processor configuration and governance output."
+          ],
+          "status": "done"
+        },
+        {
+          "taskId": "task_victor_crystallization_approval",
+          "phaseId": "phase_victor_zero_trust_crystallization",
+          "title": "Implement explicit approval flow for pending crystallization",
+          "description": "Require an explicit approval path for high-saturation memories so promotion to L3 can be reviewed and substantiated instead of silently inferred.",
+          "acceptance": [
+            "High-saturation L2 memory can remain pending until approved.",
+            "Approval promotes only eligible memory above the crystallization threshold.",
+            "Rejected or missing approval leaves memory in a non-crystallized state."
+          ],
+          "status": "done"
+        },
+        {
+          "taskId": "task_victor_source_trust_levels",
+          "phaseId": "phase_victor_zero_trust_crystallization",
+          "title": "Add source trust levels to initial saturation and provenance",
+          "description": "Map source provenance into trust levels so unverified, user-reviewed, and verified inputs do not all enter the system with identical initial epistemic weight.",
+          "acceptance": [
+            "Input metadata captures explicit source trust level.",
+            "Initial saturation derives from provenance trust instead of a flat default.",
+            "Trust level is carried through governance and audit surfaces."
+          ],
+          "status": "done"
+        },
+        {
+          "taskId": "task_victor_cross_model_verification",
+          "phaseId": "phase_victor_zero_trust_crystallization",
+          "title": "Add cross-model verification as pre-crystallization fiber pinning",
+          "description": "Introduce multi-model verification as a stronger corroboration primitive so claims can be pinned or reheated before they harden into durable memory.",
+          "acceptance": [
+            "Cross-model verification can strengthen or weaken crystallization candidates.",
+            "Verification outcomes map to explicit pinning or entropy events.",
+            "Unavailable verification degrades gracefully without forging confidence."
+          ],
+          "status": "done"
+        }
+      ],
+      "status": "complete",
+      "createdAt": "2026-03-20T13:52:00.000Z",
+      "updatedAt": "2026-03-20T13:52:00.000Z"
+    },
+    {
+      "phaseId": "phase_victor_cache_and_temporal_memory",
+      "projectId": "victor-resident",
+      "ordinal": 13,
+      "name": "Cache Validation and Temporal Memory",
+      "objective": "Bind UOR identity, cache validation, decay profiles, and temporal chaining into one governed memory freshness model so stale or superseded memory fails closed instead of drifting forward.",
+      "sourceClusterIds": [
+        "cluster_victor_foundation"
+      ],
+      "tasks": [
+        {
+          "taskId": "task_victor_uor_cache_validation",
+          "phaseId": "phase_victor_cache_and_temporal_memory",
+          "title": "Implement deterministic UOR cache validation contract",
+          "description": "Validate cached documents, chunks, semantic nodes, and retrieval bundles against current UOR fingerprints so cache entries are treated as claims about graph state rather than trusted snapshots.",
+          "acceptance": [
+            "Cache validation compares stored UOR fingerprints to current graph state.",
+            "Validation covers source documents, chunks, semantic nodes, and retrieval bundles.",
+            "Failed validation marks cache entries stale instead of trusting advisory timestamps."
+          ],
+          "status": "done"
+        },
+        {
+          "taskId": "task_victor_uor_cache_shadow_mode",
+          "phaseId": "phase_victor_cache_and_temporal_memory",
+          "title": "Run cache validation in shadow mode and measure drift",
+          "description": "Quantify invalidation rates, false positives, and migration gaps before cache validation becomes an enforcing gate on live retrieval paths.",
+          "acceptance": [
+            "Shadow-mode validation produces measurable invalidation telemetry.",
+            "False positives and migration gaps are surfaced before fail-closed activation.",
+            "Shadow-mode results are written to a reviewable audit trail."
+          ],
+          "status": "done"
+        },
+        {
+          "taskId": "task_victor_uor_cache_fail_closed",
+          "phaseId": "phase_victor_cache_and_temporal_memory",
+          "title": "Promote cache validation to fail-closed enforcement",
+          "description": "Block stale durable reuse, rehydrate invalid bundles from live state, and demote questionable summaries instead of letting stale memory propagate silently.",
+          "acceptance": [
+            "Stale cache entries are blocked from durable reuse.",
+            "Invalid retrieval bundles are rehydrated from live graph state.",
+            "Failure paths are explicit and auditable rather than silent."
+          ],
+          "status": "done"
+        },
+        {
+          "taskId": "task_victor_temporal_profiles",
+          "phaseId": "phase_victor_cache_and_temporal_memory",
+          "title": "Assign temporal decay profiles and lazy retrieval weighting",
+          "description": "Apply decay profiles at ingestion and use lazy temporal weighting during retrieval so memory can cool or fade without expensive global recomputation.",
+          "acceptance": [
+            "Artifacts receive deterministic temporal profiles at ingestion.",
+            "Retrieval traces show when temporal weighting affects candidate rank.",
+            "Temporal weighting remains compatible with governance review."
+          ],
+          "status": "done"
+        },
+        {
+          "taskId": "task_victor_temporal_chaining_restaking",
+          "phaseId": "phase_victor_cache_and_temporal_memory",
+          "title": "Add temporal chaining and restaking for superseding memory",
+          "description": "Create verifiable temporal lineage and a governed restaking path so superseded or operationally critical memories can be justified, revived, or downgraded without narrative handwaving.",
+          "acceptance": [
+            "Superseding memories are linked through temporal chain metadata.",
+            "Critical decayed memories can be restaked with audit evidence.",
+            "Chain breaks or unjustified restakes surface as governance blockers."
+          ],
+          "status": "done"
+        }
+      ],
+      "status": "complete",
+      "createdAt": "2026-03-20T13:53:00.000Z",
+      "updatedAt": "2026-03-20T13:53:00.000Z"
+    },
+    {
+      "phaseId": "phase_victor_memory_reliability",
+      "projectId": "victor-resident",
+      "ordinal": 14,
+      "name": "Memory Reliability and Pressure Control",
+      "objective": "Give Victor a measurable reliability model so memory quality, pressure, and decay behavior are supervised by explicit SLOs instead of inferred from intuition.",
+      "sourceClusterIds": [
+        "cluster_victor_foundation"
+      ],
+      "tasks": [
+        {
+          "taskId": "task_victor_slo_tracker",
+          "phaseId": "phase_victor_memory_reliability",
+          "title": "Add memory SLO tracking and error budgets",
+          "description": "Define recall, integrity, decay, and latency targets so Victor can detect when the memory system is degrading before bad memory reaches action selection.",
+          "acceptance": [
+            "Memory SLOs are explicit and measurable.",
+            "Error budgets can be computed from current performance.",
+            "Reliability degradation can surface as an actionable governance signal."
+          ],
+          "status": "done"
+        },
+        {
+          "taskId": "task_victor_pressure_aware_decay",
+          "phaseId": "phase_victor_memory_reliability",
+          "title": "Implement pressure-aware decay and adjusted half-life reporting",
+          "description": "Compute memory pressure from tier utilization and expose the adjusted half-life so the system can quantify when pressure should accelerate forgetting.",
+          "acceptance": [
+            "Pressure is computed from memory tier utilization.",
+            "Adjusted half-life is reported through the SLO surface.",
+            "Pressure-aware behavior remains a deterministic value function."
+          ],
+          "status": "done"
+        },
+        {
+          "taskId": "task_victor_reliability_circuit_breakers",
+          "phaseId": "phase_victor_memory_reliability",
+          "title": "Add circuit breakers for exhausted reliability budgets",
+          "description": "Pause crystallization, tighten decay, or force audit mode when reliability budgets are exhausted so degraded memory quality cannot silently self-authorize.",
+          "acceptance": [
+            "Reliability failures can trigger explicit protective interventions.",
+            "Circuit-breaker actions are auditable and reversible.",
+            "Protective interventions integrate with existing memory governance policy."
+          ],
+          "status": "done"
+        }
+      ],
+      "status": "complete",
+      "createdAt": "2026-03-20T13:54:00.000Z",
+      "updatedAt": "2026-03-20T13:54:00.000Z"
+    },
+    {
+      "phaseId": "phase_victor_memory_surface",
+      "projectId": "victor-resident",
+      "ordinal": 15,
+      "name": "Memory Operator Surface and Ergonomic API",
+      "objective": "Expose the completed memory system through usable operator and developer surfaces so the design is not trapped in low-level internals.",
+      "sourceClusterIds": [
+        "cluster_victor_foundation"
+      ],
+      "tasks": [
+        {
+          "taskId": "task_victor_simple_memory_facade",
+          "phaseId": "phase_victor_memory_surface",
+          "title": "Add simplified facade for common memory operations",
+          "description": "Wrap the full processor in an ergonomic API for add, search, feedback, dispute, and session control so the memory system is practical to consume without understanding every subsystem.",
+          "acceptance": [
+            "A simplified facade supports the core memory workflow.",
+            "The facade preserves an escape hatch to the full processor.",
+            "Facade behavior remains aligned with governed memory semantics."
+          ],
+          "status": "done"
+        },
+        {
+          "taskId": "task_victor_memory_traversal_forget",
+          "phaseId": "phase_victor_memory_surface",
+          "title": "Add governed traversal and forgetting operations",
+          "description": "Support association traversal and deliberate forgetting so the operator surface can inspect or remove memory with explicit graph semantics instead of brittle data surgery.",
+          "acceptance": [
+            "Operators can inspect related memory through graph traversal.",
+            "Forgetting removes memory cleanly from governed tiers and edges.",
+            "Delete and traversal actions are visible in audit output."
+          ],
+          "status": "done"
+        },
+        {
+          "taskId": "task_victor_memory_ingestion_surface",
+          "phaseId": "phase_victor_memory_surface",
+          "title": "Add file and document ingestion surface",
+          "description": "Expose file and document ingestion so external materials can enter the governed memory pipeline with preserved provenance instead of bypassing the memory system.",
+          "acceptance": [
+            "File ingestion supports the intended document classes.",
+            "Chunking, encoding, and routing preserve source provenance.",
+            "Ingestion remains policy-checked instead of bypassing governance."
+          ],
+          "status": "done"
+        },
+        {
+          "taskId": "task_victor_memory_operator_views",
+          "phaseId": "phase_victor_memory_surface",
+          "title": "Add operator views for chain, decay, and governance inspection",
+          "description": "Expose the memory ledger, chain state, decay status, and governance decisions through operator-facing views so Victor's memory system is legible during review and debugging.",
+          "acceptance": [
+            "Operators can inspect chain state, decay state, and governance state.",
+            "Views distinguish grounded memory evidence from inferred summaries.",
+            "Inspection surfaces support review without requiring code-level tracing."
+          ],
+          "status": "pending"
+        }
+      ],
+      "status": "active",
+      "createdAt": "2026-03-20T13:55:00.000Z",
+      "updatedAt": "2026-03-20T13:55:00.000Z"
+    }
+  ]
+}

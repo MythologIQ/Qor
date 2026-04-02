@@ -1,0 +1,24 @@
+{
+  "clusters": [
+    {
+      "clusterId": "cluster_victor_foundation",
+      "projectId": "victor-resident",
+      "label": "Victor Foundation",
+      "thoughtIds": [],
+      "notes": "Core Victor governance, memory, and execution architecture backlog.",
+      "createdAt": "2026-03-20T08:20:00.000Z",
+      "updatedAt": "2026-03-20T08:20:00.000Z",
+      "status": "formed"
+    },
+    {
+      "clusterId": "cluster_quarantine",
+      "projectId": "victor-resident",
+      "label": "Quarantine Pipeline",
+      "thoughtIds": [],
+      "notes": "External-content quarantine and Moltbook exploration controls for Victor.",
+      "createdAt": "2026-03-20T08:20:00.000Z",
+      "updatedAt": "2026-03-20T08:20:00.000Z",
+      "status": "formed"
+    }
+  ]
+}

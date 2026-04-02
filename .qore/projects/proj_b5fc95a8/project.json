@@ -1,0 +1,17 @@
+{
+  "projectId": "proj_b5fc95a8",
+  "name": "Void Test",
+  "description": "",
+  "createdAt": "2026-02-24T11:14:51.921Z",
+  "updatedAt": "2026-02-24T11:14:51.921Z",
+  "createdBy": "actor",
+  "pipelineState": {
+    "void": "empty",
+    "reveal": "empty",
+    "constellation": "empty",
+    "path": "empty",
+    "risk": "empty",
+    "autonomy": "empty"
+  },
+  "checksum": ""
+}

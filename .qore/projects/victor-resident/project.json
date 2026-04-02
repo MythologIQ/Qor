@@ -1,0 +1,17 @@
+{
+  "projectId": "victor-resident",
+  "name": "Victor",
+  "description": "Resident architect/operator track for memory, heartbeat, automation, reflection, and autonomy promotion.",
+  "createdAt": "2026-03-15T20:00:05.905Z",
+  "updatedAt": "2026-03-21T16:36:54.552Z",
+  "createdBy": "victor",
+  "pipelineState": {
+    "void": "empty",
+    "reveal": "active",
+    "constellation": "active",
+    "path": "active",
+    "risk": "empty",
+    "autonomy": "empty"
+  },
+  "checksum": ""
+}

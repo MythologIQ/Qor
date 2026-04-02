@@ -1,0 +1,17 @@
+{
+  "projectId": "proj_4b30579e",
+  "name": "Delete Test",
+  "description": "",
+  "createdAt": "2026-02-24T11:27:33.944Z",
+  "updatedAt": "2026-02-24T11:27:33.944Z",
+  "createdBy": "actor",
+  "pipelineState": {
+    "void": "empty",
+    "reveal": "empty",
+    "constellation": "empty",
+    "path": "empty",
+    "risk": "empty",
+    "autonomy": "empty"
+  },
+  "checksum": ""
+}
