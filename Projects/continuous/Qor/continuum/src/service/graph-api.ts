@@ -1,8 +1,10 @@
 import neo4j, { type Driver, type Session } from "neo4j-driver";
+import { join } from "path";
 
 const NEO4J_URI = process.env.NEO4J_URI ?? "bolt://localhost:7687";
 const NEO4J_USER = process.env.NEO4J_USER ?? "neo4j";
 const NEO4J_PASS = process.env.NEO4J_PASS ?? "victor-memory-dev";
+const EMBED_SCRIPT = join(import.meta.dir, "../embed/embed.py");
 
 let driver: Driver | null = null;
 
@@ -91,4 +93,67 @@ export async function getGraphStats(): Promise<Record<string, unknown>> {
     `MATCH ()-[r]->() RETURN type(r) AS rel, count(r) AS cnt ORDER BY cnt DESC`
   );
   return { nodes, edges };
+}
+
+export async function embedText(text: string): Promise<number[]> {
+  const proc = Bun.spawn(["python3", EMBED_SCRIPT], {
+    stdin: "pipe",
+    stdout: "pipe",
+    stderr: "pipe",
+  });
+  proc.stdin.write(text.slice(0, 1000));
+  proc.stdin.end();
+  const output = await new Response(proc.stdout).text();
+  await proc.exited;
+  return JSON.parse(output.trim());
+}
+
+export async function ensureVectorIndexes(): Promise<void> {
+  const session = getDriver().session();
+  try {
+    await session.run(
+      `CREATE VECTOR INDEX memory_embedding_observation IF NOT EXISTS
+       FOR (n:Observation) ON n.embedding
+       OPTIONS { indexConfig: {
+         \`vector.dimensions\`: 384,
+         \`vector.similarity_function\`: 'cosine'
+       }}`
+    );
+    await session.run(
+      `CREATE VECTOR INDEX memory_embedding_interaction IF NOT EXISTS
+       FOR (n:Interaction) ON n.embedding
+       OPTIONS { indexConfig: {
+         \`vector.dimensions\`: 384,
+         \`vector.similarity_function\`: 'cosine'
+       }}`
+    );
+  } finally {
+    await session.close();
+  }
+}
+
+export async function recallSimilar(
+  text: string,
+  topK = 10
+): Promise<Record<string, unknown>[]> {
+  const embedding = await embedText(text);
+  const observations = await queryGraph(
+    `CALL db.index.vector.queryNodes('memory_embedding_observation', $k, $embedding)
+     YIELD node, score
+     RETURN node.id AS id, node.content AS content, node.agent AS agent,
+            node.timestamp AS ts, score, 'Observation' AS label
+     ORDER BY score DESC`,
+    { k: topK, embedding }
+  );
+  const interactions = await queryGraph(
+    `CALL db.index.vector.queryNodes('memory_embedding_interaction', $k, $embedding)
+     YIELD node, score
+     RETURN node.id AS id, node.content AS content, node.agent AS agent,
+            node.timestamp AS ts, score, 'Interaction' AS label
+     ORDER BY score DESC`,
+    { k: topK, embedding }
+  );
+  return [...observations, ...interactions]
+    .sort((a, b) => (b.score as number) - (a.score as number))
+    .slice(0, topK);
 }
