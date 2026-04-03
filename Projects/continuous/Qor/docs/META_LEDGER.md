@@ -407,3 +407,73 @@ SHA256(src/heartbeat/mod.ts + tests/heartbeat.test.ts)
 
 `impl-neo4j-continuum-realization-v1`
 
+---
+
+## 2026-04-03T12:00:00Z — GATE TRIBUNAL (Continuum Live Recall)
+
+| Field | Value |
+|-------|-------|
+| Phase | GATE |
+| Verdict | **PASS** |
+| Risk Grade | L1 |
+| Blueprint | docs/plans/2026-04-03-continuum-live-recall.md |
+| Audit Report | docs/audits/2026-04-03-continuum-live-recall-audit.md |
+| Content Hash | sha256:continuum-live-recall-v1 |
+| Chain Hash | sha256:continuum-live-recall-v1-audit-v1 |
+| Auditor | QoreLogic Judge |
+| Notes | All passes PASS. 2 non-blocking flags (F1: syncCycle reentrancy guard, F2: embed.py cold-start latency). |
+
+---
+
+## 2026-04-03T12:30:00Z — IMPLEMENTATION (Continuum Live Recall)
+
+| Field | Value |
+|-------|-------|
+| Phase | IMPLEMENT |
+| Blueprint | docs/plans/2026-04-03-continuum-live-recall.md |
+| Risk Grade | L1 |
+| Gate | PASS (audited 2026-04-03) |
+
+### Phase 1: Auto-Ingestion Loop
+
+| Action | Status |
+|--------|--------|
+| Replaced `fs.watch` with `setInterval` (5 min) + `syncCycle()` | ✅ |
+| Added `/api/continuum/sync` POST endpoint | ✅ |
+| Deleted `ingest-listener.ts` | ✅ |
+| Reentrancy guard (`syncing` flag) | ✅ |
+
+### Phase 2: Heartbeat Path Updates
+
+| Action | Status |
+|--------|--------|
+| Victor heartbeat agent → `.continuum` paths | ✅ |
+| Qora heartbeat agent → `.continuum` paths | ✅ |
+| victor-kernel service workdir updated | ✅ |
+
+### Phase 3: Semantic Recall
+
+| File | Lines | Purpose |
+|------|-------|---------|
+| `continuum/src/embed/embed.py` | 36 | Local MiniLM-L6-v2 embeddings (384-dim) |
+| `continuum/src/service/graph-api.ts` | ~140 | Added `embedText()`, `recallSimilar()`, `ensureVectorIndexes()` |
+| `continuum/src/service/server.ts` | ~107 | Added `/api/continuum/recall` endpoint, auto-sync loop |
+
+- Neo4j vector indexes created (Observation + Interaction, cosine, 384-dim)
+- Mean pooling + L2 normalization for sentence embeddings
+- Dual-index recall merges Observation + Interaction results by score
+
+### Test Summary
+
+| Suite | Tests | Status |
+|-------|-------|--------|
+| `continuum/tests/auto-ingest.test.ts` | 2 | ✅ ALL PASS |
+| `continuum/tests/embed.test.ts` | 2 | ✅ ALL PASS |
+| `continuum/tests/recall.test.ts` | 2 | ✅ ALL PASS |
+| **Total (new)** | **6** | **✅ ALL PASS** |
+| **Total (all continuum)** | **16** | **✅ ALL PASS** |
+
+### Content Hash
+
+`impl-continuum-live-recall-v1`
+
