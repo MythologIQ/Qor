@@ -1,0 +1,18 @@
+{
+  "entity": "forge",
+  "version": "1.0.0",
+  "lastUpdated": "2026-04-04T08:30:00Z",
+  "status": "active",
+  "dataSources": {
+    "phases": ".qore/projects/builder-console/path/phases.json",
+    "ledger": ".qore/projects/builder-console/ledger.jsonl",
+    "governance": "forge/docs/GOVERNANCE.md"
+  },
+  "apiEndpoints": [
+    "/api/forge/status",
+    "/api/forge/update-task",
+    "/api/forge/create-phase",
+    "/api/forge/record-evidence",
+    "/api/forge/update-risk"
+  ]
+}
