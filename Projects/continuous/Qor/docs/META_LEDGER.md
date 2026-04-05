@@ -812,3 +812,164 @@ Chain Hash: sha256(forge-realization-v1-audit-v2 + impl-forge-realization-v1 + s
 
 `impl-qora-transaction-detail-v1`
 
+---
+
+## 2026-04-05T00:50:00Z — SUBSTANTIATION (Qora Transaction Detail)
+
+| Field | Value |
+|-------|-------|
+| Phase | SUBSTANTIATE |
+| Blueprint | docs/plans/2026-04-04-qora-transaction-detail.md |
+| Verdict | **PASS** |
+| Risk Grade | L1 |
+| Seal Hash | `7c37afde4f5d001b0f3e369916409bfb34bf9a451f77e925c9361e56f66d8b61` |
+
+### Reality = Promise
+
+| Planned | Delivered | Verdict |
+|---------|-----------|---------|
+| `/api/qora/entries` (paginated, reverse-chrono) | ✅ Route live, HTTP 200, pagination correct | PASS |
+| `/api/qora/entry/:seq` (full detail + chain) | ✅ Route live, HTTP 200, payload + provenance + chain nav | PASS |
+| 404 on missing seq | ✅ `/api/qora/entry/99999` → 404 | PASS |
+| Moltbook Ledger section on `/qor/qora` | ✅ Rendered, clickable rows | PASS |
+| Modal overlay with payload, provenance, chain | ✅ Verified via screenshot | PASS |
+| `qora/tests/ledger-api.test.ts` | ✅ 7/7 pass (42ms) | PASS |
+
+### Razor Final
+
+| Check | Limit | Actual | Status |
+|-------|-------|--------|--------|
+| Function lines | 40 | 15 | ✅ |
+| File lines | 250 | 65 | ✅ |
+| Nesting depth | 3 | 2 | ✅ |
+| Nested ternaries | 0 | 0 | ✅ |
+| console.log | 0 | 0 | ✅ |
+| Runtime errors | 0 | 0 | ✅ |
+
+### Session Seal
+
+`substantiate-qora-transaction-detail-v1`
+
+---
+
+## 2026-04-05T01:15:00Z — GATE TRIBUNAL (Forge Build Transparency)
+
+| Field | Value |
+|-------|-------|
+| Phase | GATE |
+| Verdict | **PASS** |
+| Risk Grade | L1 |
+| Blueprint | docs/plans/2026-04-05-forge-build-transparency.md |
+| Blueprint Hash | `sha256:forge-build-transparency-v1` |
+| Chain Hash | `sha256:forge-build-transparency-v1-audit-v1` |
+| Auditor | QoreLogic Judge |
+| Notes | Read-only projections of existing data; zero new auth/deps; all 6 passes clean |
+
+---
+
+## 2026-04-05T01:45:00Z — IMPLEMENTATION (Forge Build Transparency)
+
+| Field | Value |
+|-------|-------|
+| Phase | IMPLEMENT |
+| Blueprint | docs/plans/2026-04-05-forge-build-transparency.md |
+| Risk Grade | L1 |
+| Gate | PASS (audited 2026-04-05T01:15:00Z) |
+
+### Phase 1: Build Evidence Trail
+
+| Route | Type | Change |
+|-------|------|--------|
+| `/api/forge/status` | API | Added `deriveSummary()`, `deriveEntryStatus()`, `buildBuildLog()`, `derivePhaseStatus()` — 4 new functions. Response now includes `buildLog` field with paginated entries (15/page, reverse chrono) and structured summaries |
+| `/qor/forge` | Page | Added Build Log section with action pills (green=complete-task, blue=create, amber=claim, gray=update), status dots, timestamps, and Load more/Back to latest pagination |
+
+### Phase 2: Phase Lifecycle Accuracy
+
+| Route | Type | Change |
+|-------|------|--------|
+| `/api/forge/status` | API | Added `derivePhaseStatus()` — corrects phases with all tasks done from "active" to "complete". `activePhase` now skips completed phases. Added `nextPhase` field |
+| `/qor/forge` | Page | Current Phase sidebar card now uses `data.forge.activePhase` with fallback to `nextPhase` (amber "Next Up") or "All phases complete" (green) |
+
+### Filesystem Files
+
+| File | Lines | Purpose |
+|------|-------|---------|
+| `forge/tests/build-log.test.ts` | 115 | 10 TDD tests: ledger integrity, summary derivation, phase lifecycle, pagination math |
+
+### Razor Compliance
+
+| Check | Status |
+|-------|--------|
+| Max function lines ≤ 40 | ✅ PASS (max ~25: buildBuildLog) |
+| Max file lines ≤ 250 | ✅ PASS (test: 115) |
+| Nesting depth ≤ 3 | ✅ PASS |
+| Nested ternaries = 0 | ✅ PASS |
+
+### Verification
+
+| Check | Result |
+|-------|--------|
+| `buildLog.total` | ✅ 683 entries |
+| `buildLog.pagination.totalPages` | ✅ 46 (ceil(683/15)) |
+| `activePhase` | ✅ null (4/4 done phase correctly derived as complete) |
+| `nextPhase` | ✅ "Packaging Plane: Unified Ingress" (3 tasks) |
+| `get_space_errors()` | ✅ 0 errors |
+| `forge/tests/build-log.test.ts` | ✅ 10/10 PASS (48ms) |
+
+### Content Hash
+
+`impl-forge-build-transparency-v1`
+
+---
+
+## 2026-04-05T02:00:00Z — SUBSTANTIATION (Forge Build Transparency)
+
+| Field | Value |
+|-------|-------|
+| Phase | SUBSTANTIATE |
+| Blueprint | docs/plans/2026-04-05-forge-build-transparency.md |
+| Verdict | **PASS** |
+| Risk Grade | L1 |
+| Seal Hash | `561ed5ba7ae2ecb5fc1dff3a58139e85dd0e1a92b54d8d55262d79cfdd4295de` |
+
+### Reality = Promise
+
+| Planned | Delivered | Verdict |
+|---------|-----------|---------|
+| 1a. `buildLog` field on `/api/forge/status` (paginated, structured, status-derived) | ✅ 4 new functions, `buildLog` with entries + pagination | PASS |
+| 1b. Build Log section on `/qor/forge` (action pills, status dots, Load more) | ✅ Color-coded pills, status dots, pagination buttons | PASS |
+| 2a. Phase status derivation (`_derivedStatus`) | ✅ `derivePhaseStatus()` corrects all-done phases | PASS |
+| 2b. `nextPhase` field in API response | ✅ Returns first planned/pending phase | PASS |
+| 2c. Phase transition display on `/qor/forge` | ✅ 3-state sidebar: active, next-up (amber), all-complete (green) | PASS |
+| `forge/tests/build-log.test.ts` | ✅ 10 tests, 4 describe blocks, 115 lines | PASS |
+
+**6/6 planned deliverables exist. 0 missing. 0 unplanned.**
+
+### Test Verification
+
+| Suite | Tests | Status |
+|-------|-------|--------|
+| forge/tests/build-log.test.ts | 10 | ✅ ALL PASS (49ms) |
+
+### Section 4 Final
+
+| Check | Limit | Actual | Status |
+|-------|-------|--------|--------|
+| Function lines | 40 | 25 | ✅ |
+| File lines | 250 | 115 | ✅ |
+| Nesting depth | 3 | 2 | ✅ |
+| Nested ternaries | 0 | 0 | ✅ |
+| console.log | 0 | 0 | ✅ |
+| Runtime errors | 0 | 0 | ✅ |
+
+### Session Seal
+
+```
+Merkle Hash: 561ed5ba7ae2ecb5fc1dff3a58139e85dd0e1a92b54d8d55262d79cfdd4295de
+Chain: sha256(forge-build-transparency-v1-audit-v1 + impl-forge-build-transparency-v1 + substantiate-forge-build-transparency-v1)
+```
+
+### Verdict
+
+**SEALED** — Reality matches Promise. Forge now surfaces 683 build entries as a paginated, structured log with color-coded action pills and status indicators. Phase lifecycle correctly derives completion from task data. `nextPhase` field prevents stale "current work" display.
+

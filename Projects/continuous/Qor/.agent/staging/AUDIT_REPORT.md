@@ -1,10 +1,10 @@
-# AUDIT REPORT: Qora Transaction Detail View
+# AUDIT REPORT: Forge Build Evidence Trail & Phase Lifecycle Accuracy
 
 **Verdict**: PASS  
 **Risk Grade**: L1  
-**Blueprint**: `docs/plans/2026-04-04-qora-transaction-detail.md`  
-**Blueprint Hash**: `sha256:qora-transaction-detail-v1`  
-**Chain Hash**: `sha256:qora-transaction-detail-v1-audit-v1`  
+**Blueprint**: `docs/plans/2026-04-05-forge-build-transparency.md`  
+**Blueprint Hash**: `sha256:forge-build-transparency-v1`  
+**Chain Hash**: `sha256:forge-build-transparency-v1-audit-v1`  
 **Auditor**: QoreLogic Judge  
 **Date**: 2026-04-05
 
@@ -12,7 +12,7 @@
 
 ## Summary
 
-The plan adds two read-only API endpoints and a modal overlay to the existing Qora page. No new dependencies, no auth surfaces, no write operations. Pure data retrieval and display. Risk is minimal — L1.
+The plan adds read-only build log visibility (paginated, structured, color-coded) and fixes phase lifecycle accuracy by deriving completion status from task data. No new auth surfaces, no new dependencies, no write operations. Risk is minimal — pure projection of existing data.
 
 ---
 
@@ -20,20 +20,30 @@ The plan adds two read-only API endpoints and a modal overlay to the existing Qo
 
 | Pass | Result | Notes |
 |------|--------|-------|
-| Security (L3) | ✅ PASS | Read-only endpoints, no auth required (consistent with existing `/api/qora/status`) |
-| Ghost UI | ✅ PASS | Every interactive element (row click, prev/next, pagination, dismiss) maps to real data source |
-| Razor | ✅ PASS | All proposed functions < 40 lines, files < 250 lines, nesting ≤ 3, zero nested ternaries |
+| Security (L3) | ✅ PASS | Read-only; no auth surfaces added |
+| Ghost UI | ✅ PASS | All UI elements map to real API data |
+| Razor | ✅ PASS | All functions < 40 lines; all files < 250 lines |
 | Dependency | ✅ PASS | Zero new dependencies |
-| Macro-Level | ✅ PASS | Clean layering: Page → API → filesystem. No cyclic deps. Single LEDGER_PATH source of truth |
-| Orphan | ✅ PASS | All 4 proposed artifacts connected to build path |
+| Macro-Level | ✅ PASS | Clean layering; no cyclic deps; single source of truth preserved |
+| Orphan | ✅ PASS | All artifacts connected to build path |
 
 ---
 
 ## Flagged Items (Non-Blocking)
 
-### F1: Ledger Parsing Duplication
-**Issue**: `/api/qora/status` already has `parseLedger()`. The two new endpoints will need the same function.
-**Remediation**: Extract shared `parseLedger()` into both new routes (inline copy is acceptable for zo.space routes which are self-contained). Do NOT create a shared module — zo.space routes cannot import from each other.
+None.
+
+---
+
+## Shadow Genome Cross-Check
+
+Verified against veto guard (2026-03-30):
+- No new auth surfaces
+- No UI without traced runtime registration
+- All surfaces backed by executable data
+- Ledger state gated by tribunal evidence
+
+No violations.
 
 ---
 
@@ -41,21 +51,10 @@ The plan adds two read-only API endpoints and a modal overlay to the existing Qo
 
 | Check | Limit | Actual | Status |
 |-------|-------|--------|--------|
-| Function lines | 40 | ~20 max (pagination math, entry lookup) | ✅ |
-| File lines | 250 | ~60 per API route; ~120 added to page | ✅ |
-| Nesting depth | 3 | 3 max (modal + map + conditional) | ✅ |
+| Function lines | 40 | ~20 max | ✅ |
+| File lines | 250 | ~60 max (test) | ✅ |
+| Nesting depth | 3 | 2 | ✅ |
 | Nested ternaries | 0 | 0 | ✅ |
-
----
-
-## Shadow Genome Cross-Check
-
-| Guard (from audit-v2-veto) | Status |
-|----------------------------|--------|
-| Authenticated principal path is real | N/A — read-only, no auth surfaces |
-| UI/API surfaces show traced runtime registration | ✅ zo.space routes self-register |
-| Executable receipts for operator surfaces | ✅ Tests planned in Phase 3 |
-| Ledger state updated after evidence matches | ✅ Phase 3 includes chain integrity validation |
 
 ---
 
