@@ -2,9 +2,9 @@ import neo4j, { type Driver, type Session } from "neo4j-driver";
 import { readdir, readFile } from "fs/promises";
 import { join, extname } from "path";
 
-const NEO4J_URI = "bolt://localhost:7687";
-const NEO4J_USER = "neo4j";
-const NEO4J_PASS = "victor-memory-dev";
+const NEO4J_URI = process.env.NEO4J_URI ?? "bolt://localhost:7687";
+const NEO4J_USER = process.env.NEO4J_USER ?? "neo4j";
+const NEO4J_PASS = process.env.NEO4J_PASS ?? "victor-memory-dev";
 const MEMORY_ROOT = "/home/workspace/.continuum/memory";
 
 interface StructuredRecord {
@@ -87,9 +87,32 @@ function getSessionId(r: MemoryRecord): string {
   return r.metadata?.sessionId ?? "";
 }
 
-function getEntities(r: MemoryRecord): string[] {
-  if (isStructured(r)) return r.content.entities ?? [];
-  return r.metadata?.entities ?? [];
+const ALLOWED_ENTITY_KEYS = new Set(["type", "status", "category"]);
+
+export function flattenEntity(e: unknown): { name: string; meta?: Record<string, string> } {
+  if (typeof e === "string") return { name: e };
+  if (!e || typeof e !== "object") return { name: "" };
+  const obj = e as Record<string, unknown>;
+  const name = String(obj.name ?? obj.entity ?? "");
+  const meta: Record<string, string> = {};
+  let hasMeta = false;
+  for (const k of Object.keys(obj)) {
+    if (k === "name" || k === "entity") continue;
+    if (ALLOWED_ENTITY_KEYS.has(k)) {
+      meta[k] = String(obj[k]);
+      hasMeta = true;
+    }
+  }
+  return hasMeta ? { name, meta } : { name };
+}
+
+export function getEntities(r: MemoryRecord): string[] {
+  const raw: unknown[] = isStructured(r) ? r.content.entities ?? [] : r.metadata?.entities ?? [];
+  return raw.map((e) => flattenEntity(e).name).filter(Boolean);
+}
+
+function getRawEntities(r: MemoryRecord): unknown[] {
+  return isStructured(r) ? r.content.entities ?? [] : r.metadata?.entities ?? [];
 }
 
 function getSentiment(r: MemoryRecord): number {
@@ -154,10 +177,23 @@ async function ensureSession(session: Session, sessionId: string, agent: string)
   );
 }
 
-async function ensureEntity(session: Session, name: string) {
+export async function ensureEntity(session: Session, name: string, meta?: Record<string, string>) {
+  if (!meta || Object.keys(meta).length === 0) {
+    await session.run(
+      "MERGE (e:Entity {name: $name}) ON CREATE SET e.createdAt = $now",
+      { name, now: Date.now() }
+    );
+    return;
+  }
+  const safe: Record<string, string> = {};
+  for (const [k, v] of Object.entries(meta)) {
+    if (ALLOWED_ENTITY_KEYS.has(k)) safe[k] = v;
+  }
+  const setParts = Object.keys(safe).map((k) => `e.${k} = $${k}`);
+  const setClause = setParts.length > 0 ? setParts.join(", ") + ", " : "";
   await session.run(
-    "MERGE (e:Entity {name: $name}) ON CREATE SET e.createdAt = $now",
-    { name, now: Date.now() }
+    `MERGE (e:Entity {name: $name}) ON CREATE SET ${setClause}e.createdAt = $now`,
+    { name, now: Date.now(), ...safe }
   );
 }
 
@@ -171,7 +207,6 @@ async function ingestRecord(
   const content = getContent(record);
   const ts = getTimestamp(record);
   const sessionId = getSessionId(record);
-  const entities = getEntities(record);
   const sentiment = getSentiment(record);
   const nodeLabel = agent === "qora" ? "Interaction" : "Observation";
 
@@ -213,12 +248,15 @@ async function ingestRecord(
     );
   }
 
-  for (const entityName of entities) {
-    await ensureEntity(session, entityName);
+  const rawEntities = getRawEntities(record);
+  for (const entityItem of rawEntities) {
+    const { name: ename, meta } = flattenEntity(entityItem);
+    if (!ename) continue;
+    await ensureEntity(session, ename, meta);
     await session.run(
       `MATCH (n {id: $id}), (e:Entity {name: $ename})
        MERGE (n)-[:MENTIONS]->(e)`,
-      { id, ename: entityName }
+      { id, ename }
     );
   }
 }

@@ -8,6 +8,24 @@ import {
   closeDriver,
 } from "./graph-api";
 import { ingestAll } from "../ingest/memory-to-graph";
+import { readdir } from "fs/promises";
+import { join } from "path";
+
+const TMP_HEARTBEAT = "/tmp/victor-heartbeat";
+const PERSIST_HEARTBEAT = "/home/workspace/Projects/continuous/Qor/victor/.heartbeat";
+
+async function persistHeartbeat() {
+  try {
+    const files = await readdir(TMP_HEARTBEAT);
+    for (const f of files) {
+      if (f.endsWith(".json")) {
+        await Bun.write(join(PERSIST_HEARTBEAT, f), Bun.file(join(TMP_HEARTBEAT, f)));
+      }
+    }
+  } catch (err) {
+    console.error("heartbeat persist failed:", (err as Error).message);
+  }
+}
 
 const PORT = parseInt(process.env.CONTINUUM_PORT ?? "4100");
 const SYNC_INTERVAL = 5 * 60 * 1000;
@@ -24,6 +42,7 @@ async function syncCycle() {
       console.log(`Sync: ${result.total - lastTotal} new records (total: ${result.total})`);
     }
     lastTotal = result.total;
+    await persistHeartbeat();
   } catch (err) {
     console.error(`Sync failed: ${(err as Error).message}`);
   } finally {
