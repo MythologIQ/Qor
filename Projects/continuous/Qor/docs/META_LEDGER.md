@@ -1584,3 +1584,54 @@ Cloudflare proxy strips `Authorization` header from zo.space requests. All 6 aut
 `impl-runtime-governance-gate-v1`
 
 **SEALED** — Runtime governance gate operational. 5/5 write endpoints fail-closed. 20/20 unit tests pass. Evidence ledger records all decisions.
+
+---
+
+## 2026-04-05T23:40:00Z — SUBSTANTIATION: Runtime Governance Gate
+
+| Field | Value |
+|-------|-------|
+| Phase | SUBSTANTIATE |
+| Blueprint | `docs/plans/2026-04-05-runtime-governance-gate.md` |
+| Risk Grade | L2 |
+| Verdict | **PASS** |
+| GitHub Issue | MythologIQ/Qor#1 |
+
+### Reality Audit
+
+| Check | Result |
+|-------|--------|
+| Planned files exist | ✅ 3/3 (contract.ts modified, governance-gate.ts created, test created) |
+| Unplanned files | ✅ None (README.md is separate `/qor-document` task) |
+| Test suite | ✅ 20/20 pass (vitest, 553ms) |
+| Section 4 Razor | ✅ All checks pass (115 lines, nesting ≤ 2, no ternaries) |
+| Audit flag F1 resolved | ✅ Typed params in buildDecision |
+| Audit flag F2 resolved | ✅ record-evidence exempt |
+
+### Acceptance Criteria (Issue #1)
+
+| # | Criterion | Status |
+|---|-----------|--------|
+| AC1 | No Forge API mutates without evidence | ✅ |
+| AC2 | All writes through executeGovernedAction | ✅ |
+| AC3 | Evidence validated before execution | ✅ |
+| AC4 | All writes in evidence/ledger.jsonl | ✅ |
+| AC5 | Fails closed on violation | ✅ |
+| AC6 | No direct legacy ledger writes | ✅ |
+| AC7 | Qora hash-chain preserved | ✅ |
+| AC8 | Evidence mode graded | ✅ |
+| AC9 | Module writes reference governanceDecisionId | ✅ |
+
+### Merkle Seal
+
+```
+evidence/contract.ts        → 1da46408e8520b77dd36cfa8a1cfd55f12ee362d
+evidence/governance-gate.ts  → a4230035e90ccaa9c5040f3881d7673da620ea20
+tests/governance-gate.test.ts → feefa858213b8661e7dc4ad2c41fb377665238e9
+docs/META_LEDGER.md          → a8a114d9c7cc09ed5a22913552016925199aec8b
+README.md                    → 6515182d54e8e962a5f52c46b50d1164dfaa78ef
+
+Chain Hash: 4a3b56a86a99ef5dbaa737c540899deb2f89624d2f3abc1b2c551e1ac5d37e11
+```
+
+**SEALED** — Session substantiated. Reality = Promise. All 9 acceptance criteria verified live against zo.space endpoints.

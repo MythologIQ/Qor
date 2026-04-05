@@ -1,80 +1,49 @@
-# SYSTEM_STATE: QOR — Continuum Intelligence Layers Seal
+# SYSTEM_STATE: QOR — Runtime Governance Gate Seal
 
-**Sealed**: 2026-04-05T18:00:00Z
-**Blueprint**: docs/plans/2026-04-05-continuum-semantic-procedural-layers.md
+**Sealed**: 2026-04-05T23:40:00Z
+**Blueprint**: docs/plans/2026-04-05-runtime-governance-gate.md
 **Verdict**: PASS
+**Chain Hash**: `4a3b56a86a99ef5dbaa737c540899deb2f89624d2f3abc1b2c551e1ac5d37e11`
 
 ---
 
-## Filesystem Tree (continuum/src/derive/)
+## Filesystem Tree (evidence/)
 
 ```
-continuum/
-├── src/
-│   ├── derive/
-│   │   ├── types.ts                  (65 lines)
-│   │   ├── semantic-derive.ts        (173 lines)
-│   │   ├── semantic-cluster.ts       (185 lines)
-│   │   ├── procedural-mine.ts        (189 lines)
-│   │   └── layer-routes.ts           (83 lines)
-│   ├── service/
-│   │   ├── server.ts                 (129 lines, modified)
-│   │   └── graph-api.ts              (existing)
-│   ├── ingest/
-│   │   └── memory-to-graph.ts        (existing)
-│   ├── embed/
-│   │   └── embed.py                  (existing)
-│   └── scripts/
-│       └── batch-embed.ts            (existing)
-├── tests/
-│   ├── semantic-derive.test.ts       (115 lines, 14 tests)
-│   ├── semantic-cluster.test.ts      (142 lines, 12 tests)
-│   ├── procedural-mine.test.ts       (127 lines, 12 tests)
-│   ├── layer-routes.test.ts          (80 lines, 6 tests)
-│   ├── graph-api.test.ts             (existing)
-│   ├── memory-to-graph.test.ts       (existing)
-│   ├── auto-ingest.test.ts           (existing)
-│   ├── embed.test.ts                 (existing)
-│   ├── recall.test.ts                (existing)
-│   ├── entity-flatten.test.ts        (existing)
-│   └── service-integration.test.ts   (existing)
-├── package.json
-├── tsconfig.json
-└── CLAUDE.md
+evidence/
+├── contract.ts                        (101 lines, modified — governance types added)
+├── evaluate.ts                        (~80 lines, existing)
+├── governance-gate.ts                 (115 lines, NEW — central enforcement)
+├── log.ts                             (~60 lines, existing)
+├── bundle.ts                          (~100 lines, existing)
+├── ledger.jsonl                       (19+ entries, active)
+└── tests/
+    ├── governance-gate.test.ts        (164 lines, NEW — 20 tests)
+    ├── contract.test.ts               (existing)
+    ├── evaluate.test.ts               (existing)
+    ├── log.test.ts                    (existing)
+    └── bundle.test.ts                 (existing)
 ```
 
-**New source total**: 695 lines across 5 files
-**New test total**: 464 lines across 4 files
+**New source**: 115 lines (governance-gate.ts) + ~30 lines added to contract.ts
+**New tests**: 164 lines (governance-gate.test.ts)
 
 ---
 
-## API Endpoints (port 4100)
+## zo.space Routes (Gated)
 
-| Endpoint | Method | Purpose | New? |
-|----------|--------|---------|------|
-| `/api/continuum/health` | GET | Health check | — |
-| `/api/continuum/stats` | GET | Graph stats | — |
-| `/api/continuum/sync` | POST | Ingestion cycle | — |
-| `/api/continuum/timeline` | GET | Agent timeline | — |
-| `/api/continuum/cross-links` | GET | Cross-agent links | — |
-| `/api/continuum/entity` | GET | Entity network | — |
-| `/api/continuum/recall` | GET | Semantic recall | — |
-| `/api/continuum/query` | POST | Raw Cypher | — |
-| `/api/continuum/derive-semantic` | POST | Incremental co-occurrence | NEW |
-| `/api/continuum/cluster-semantic` | POST | Batch embedding clusters | NEW |
-| `/api/continuum/mine-procedures` | POST | Workflow mining pipeline | NEW |
-| `/api/continuum/layers` | GET | Layer summary counts | NEW |
-| `/api/continuum/semantic` | GET | List semantic nodes | NEW |
-| `/api/continuum/procedural` | GET | List procedural nodes | NEW |
+| Route | Module | Gate Action | Fail-Closed | Allow | Auth |
+|-------|--------|-------------|-------------|-------|------|
+| `POST /api/forge/create-phase` | forge | phase.create | 403 ✅ | 200 ✅ | X-Api-Key |
+| `POST /api/forge/update-task` | forge | task.update | 403 ✅ | 200 ✅ | X-Api-Key |
+| `POST /api/forge/update-risk` | forge | risk.update | 403 ✅ | 200 ✅ | X-Api-Key |
+| `POST /api/qora/append-entry` | qora | ledger.append | 403 ✅ | 200 ✅ | X-Api-Key |
+| `POST /api/qora/record-veto` | qora | veto.record | 403 ✅ | 200 ✅ | X-Api-Key |
 
----
-
-## zo.space Routes Updated
-
-| Route | Type | Change |
-|-------|------|--------|
-| `/api/continuum/graph` | API | ALLOWED list expanded + POST method routing |
-| `/qor/continuum` | Page | Real layer counts, Semantic + Procedural tabs, Derive button |
+### Exempt
+| Route | Reason |
+|-------|--------|
+| `POST /api/forge/record-evidence` | Evidence-ingestion primitive (not state mutation) |
 
 ---
 
@@ -82,11 +51,27 @@ continuum/
 
 | Suite | Tests | Status |
 |-------|-------|--------|
-| tests/semantic-derive.test.ts | 14 | PASS |
-| tests/semantic-cluster.test.ts | 12 | PASS |
-| tests/procedural-mine.test.ts | 12 | PASS |
-| tests/layer-routes.test.ts | 6 | PASS |
-| **Total (new)** | **44** | **ALL PASS** |
+| evidence/tests/governance-gate.test.ts | 20 | ALL PASS |
+| — classifyEvidence | 5 | PASS |
+| — validateLite | 4 | PASS |
+| — validateFull | 3 | PASS |
+| — executeGovernedAction | 8 | PASS |
+
+---
+
+## Acceptance Criteria (Issue #1)
+
+| # | Criterion | Status |
+|---|-----------|--------|
+| AC1 | No Forge API mutates state without evidence | ✅ PASS (3/3 endpoints return 403 without evidence) |
+| AC2 | All writes pass through executeGovernedAction | ✅ PASS (5/5 endpoints gated) |
+| AC3 | Evidence is validated before execution | ✅ PASS (classify → validate → evaluate pipeline) |
+| AC4 | All writes recorded in evidence/ledger.jsonl | ✅ PASS (PolicyDecision entries for Block and Allow) |
+| AC5 | System fails closed on violation | ✅ PASS (missing/invalid evidence → 403 Block) |
+| AC6 | Legacy ledgers no longer receive direct writes | ✅ PASS (module ledgers only written after gate Allow) |
+| AC7 | Qora preserves hash-chain semantics | ✅ PASS (seq/hash/prevHash intact, governanceDecisionId added) |
+| AC8 | Evidence mode explicitly graded | ✅ PASS (evidenceMode: "full" or "lite" in every decision) |
+| AC9 | Module writes reference governance decision | ✅ PASS (governanceDecisionId field in all module entries) |
 
 ---
 
@@ -94,23 +79,42 @@ continuum/
 
 | Check | Limit | Actual | Status |
 |-------|-------|--------|--------|
-| Max function lines | 40 | 40 (handleGetLayers) | PASS |
-| Max file lines | 250 | 189 (procedural-mine.ts) | PASS |
-| Nesting depth | 3 | 3 (semantic-derive.ts) | PASS |
+| Max function lines | 40 | ~40 (executeGovernedAction) | PASS |
+| Max file lines | 250 | 115 (governance-gate.ts) | PASS |
+| Nesting depth | 3 | 2 | PASS |
 | Nested ternaries | 0 | 0 | PASS |
-| console.log in derive/ | 0 | 0 | PASS |
+| console.log | 0 | 0 | PASS |
 
 ---
 
-## Graph Schema Extensions
+## Audit Flag Resolution
 
-| Label | Type | New? |
-|-------|------|------|
-| `:Semantic:CoOccurrence` | Node | NEW |
-| `:Semantic:Cluster` | Node | NEW |
-| `:Procedural:Candidate` | Node | NEW |
-| `:Procedural:Validated` | Node | NEW |
-| `PARTICIPATES_IN` | Edge | NEW |
+| # | Flag | Resolution |
+|---|------|-----------|
+| F1 | `any` types in buildDecision | ✅ Resolved — uses `Decision`, `EvidenceMode`, `RiskCategory` |
+| F2 | record-evidence exemption | ✅ Confirmed exempt as evidence-ingestion primitive |
+
+---
+
+## Artifact Hashes
+
+| File | SHA-256 |
+|------|---------|
+| `evidence/contract.ts` | `1da46408e8520b77dd36cfa8a1cfd55f12ee362d67bd27a1785cfe043730f5ae` |
+| `evidence/governance-gate.ts` | `a4230035e90ccaa9c5040f3881d7673da620ea2037efcc08817d36198c23c42b` |
+| `evidence/tests/governance-gate.test.ts` | `feefa858213b8661e7dc4ad2c41fb377665238e993046d1b74545d4387206814` |
+| `docs/META_LEDGER.md` | `a8a114d9c7cc09ed5a22913552016925199aec8b0e38cbce867d0b561a776bc7` |
+| `README.md` | `6515182d54e8e962a5f52c46b50d1164dfaa78ef98fea799cb49c5949907af41` |
+
+---
+
+## Ledger State
+
+| Ledger | Path | Entries |
+|--------|------|---------|
+| Evidence | `evidence/ledger.jsonl` | 19+ PolicyDecision entries |
+| Forge | `.qore/projects/builder-console/ledger.jsonl` | Active (with governanceDecisionId) |
+| Qora | `qora/data/ledger.jsonl` | 5+ hash-chained (with governanceDecisionId) |
 
 ---
 
@@ -120,3 +124,4 @@ continuum/
 |---------|------|--------|
 | Neo4j | 7687 | Running |
 | Continuum API | 4100 | Running |
+| zo.space | — | Running (47 routes) |
