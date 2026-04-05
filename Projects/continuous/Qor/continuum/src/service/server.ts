@@ -8,6 +8,14 @@ import {
   closeDriver,
 } from "./graph-api";
 import { ingestAll } from "../ingest/memory-to-graph";
+import {
+  handleDeriveSemantic,
+  handleClusterSemantic,
+  handleMineProcedures,
+  handleGetLayers,
+  handleGetSemantic,
+  handleGetProcedural,
+} from "../derive/layer-routes";
 import { readdir } from "fs/promises";
 import { join } from "path";
 
@@ -50,69 +58,64 @@ async function syncCycle() {
   }
 }
 
+async function handleGraphRoutes(path: string, url: URL, req: Request): Promise<Response | null> {
+  if (path === "/api/continuum/health") {
+    return Response.json({ status: "ok", ts: Date.now(), lastSync: lastTotal });
+  }
+  if (path === "/api/continuum/stats") {
+    return Response.json(await getGraphStats());
+  }
+  if (path === "/api/continuum/sync" && req.method === "POST") {
+    await syncCycle();
+    return Response.json({ total: lastTotal });
+  }
+  if (path === "/api/continuum/timeline") {
+    const agent = url.searchParams.get("agent");
+    if (!agent) return Response.json({ error: "agent param required" }, { status: 400 });
+    const since = url.searchParams.get("since");
+    return Response.json(await getAgentTimeline(agent, since ? parseInt(since) : undefined));
+  }
+  if (path === "/api/continuum/cross-links") {
+    const a1 = url.searchParams.get("a1"), a2 = url.searchParams.get("a2");
+    if (!a1 || !a2) return Response.json({ error: "a1 and a2 params required" }, { status: 400 });
+    return Response.json(await getCrossAgentLinks(a1, a2));
+  }
+  if (path === "/api/continuum/entity") {
+    const name = url.searchParams.get("name");
+    if (!name) return Response.json({ error: "name param required" }, { status: 400 });
+    return Response.json(await getEntityNetwork(name));
+  }
+  if (path === "/api/continuum/recall") {
+    const q = url.searchParams.get("q"), k = parseInt(url.searchParams.get("k") ?? "10");
+    if (!q) return Response.json({ error: "q param required" }, { status: 400 });
+    return Response.json(await recallSimilar(q, k));
+  }
+  if (path === "/api/continuum/query" && req.method === "POST") {
+    const body = await req.json();
+    if (!body.cypher) return Response.json({ error: "cypher field required" }, { status: 400 });
+    return Response.json(await queryGraph(body.cypher, body.params ?? {}));
+  }
+  return null;
+}
+
+async function handleLayerRoutes(path: string, req: Request): Promise<Response | null> {
+  if (path === "/api/continuum/derive-semantic" && req.method === "POST") return handleDeriveSemantic();
+  if (path === "/api/continuum/cluster-semantic" && req.method === "POST") return handleClusterSemantic(req);
+  if (path === "/api/continuum/mine-procedures" && req.method === "POST") return handleMineProcedures();
+  if (path === "/api/continuum/layers") return handleGetLayers();
+  if (path === "/api/continuum/semantic") return handleGetSemantic(req);
+  if (path === "/api/continuum/procedural") return handleGetProcedural(req);
+  return null;
+}
+
 const server = Bun.serve({
   port: PORT,
   async fetch(req) {
     const url = new URL(req.url);
     const path = url.pathname;
-
-    if (path === "/api/continuum/health") {
-      return Response.json({ status: "ok", ts: Date.now(), lastSync: lastTotal });
-    }
-
-    if (path === "/api/continuum/stats") {
-      return Response.json(await getGraphStats());
-    }
-
-    if (path === "/api/continuum/sync" && req.method === "POST") {
-      await syncCycle();
-      return Response.json({ total: lastTotal });
-    }
-
-    if (path === "/api/continuum/timeline") {
-      const agent = url.searchParams.get("agent");
-      if (!agent) {
-        return Response.json({ error: "agent param required" }, { status: 400 });
-      }
-      const since = url.searchParams.get("since");
-      return Response.json(await getAgentTimeline(agent, since ? parseInt(since) : undefined));
-    }
-
-    if (path === "/api/continuum/cross-links") {
-      const a1 = url.searchParams.get("a1");
-      const a2 = url.searchParams.get("a2");
-      if (!a1 || !a2) {
-        return Response.json({ error: "a1 and a2 params required" }, { status: 400 });
-      }
-      return Response.json(await getCrossAgentLinks(a1, a2));
-    }
-
-    if (path === "/api/continuum/entity") {
-      const name = url.searchParams.get("name");
-      if (!name) {
-        return Response.json({ error: "name param required" }, { status: 400 });
-      }
-      return Response.json(await getEntityNetwork(name));
-    }
-
-    if (path === "/api/continuum/recall") {
-      const q = url.searchParams.get("q");
-      const k = parseInt(url.searchParams.get("k") ?? "10");
-      if (!q) {
-        return Response.json({ error: "q param required" }, { status: 400 });
-      }
-      return Response.json(await recallSimilar(q, k));
-    }
-
-    if (path === "/api/continuum/query" && req.method === "POST") {
-      const body = await req.json();
-      if (!body.cypher) {
-        return Response.json({ error: "cypher field required" }, { status: 400 });
-      }
-      return Response.json(await queryGraph(body.cypher, body.params ?? {}));
-    }
-
-    return Response.json({ error: "not found" }, { status: 404 });
+    return (await handleGraphRoutes(path, url, req))
+      ?? (await handleLayerRoutes(path, req))
+      ?? Response.json({ error: "not found" }, { status: 404 });
   },
 });
 

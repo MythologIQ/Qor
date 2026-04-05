@@ -1299,3 +1299,43 @@ Chain: sha256(evidence-layer-integration-v1 + content-hash + parent-commit-7ef19
 | Chain Hash | sha256:continuum-layers-v1-audit-v1 |
 | Auditor | QoreLogic Judge |
 | Notes | All 6 passes PASS. 3 non-blocking flags (F1: O(n²) clustering scalability — tractable at <10k, F2: embedding population dependency — handle empty gracefully, F3: Continuum service registration gap — fallback preserved). Shadow Genome cross-check verified — no new auth surfaces, all 4 mandatory guards satisfied. |
+
+---
+
+## 2026-04-05T17:30:00Z — IMPLEMENTATION (Continuum Semantic + Procedural Layers)
+
+| Field | Value |
+|-------|-------|
+| Phase | IMPLEMENT |
+| Blueprint | docs/plans/2026-04-05-continuum-semantic-procedural-layers.md |
+| Content Hash | sha256:continuum-layers-impl-v1 |
+| Chain Hash | sha256:continuum-layers-v1-audit-v1-impl-v1 |
+| Implementor | QoreLogic Specialist |
+
+### Files Created
+- `continuum/src/derive/types.ts` — shared types (65 lines)
+- `continuum/src/derive/semantic-derive.ts` — Phase 1: incremental co-occurrence (173 lines)
+- `continuum/src/derive/semantic-cluster.ts` — Phase 2: batch embedding clustering (185 lines)
+- `continuum/src/derive/procedural-mine.ts` — Phase 3: workflow discovery + promotion (189 lines)
+- `continuum/src/derive/layer-routes.ts` — Phase 4: 6 API route handlers (83 lines)
+- `continuum/tests/semantic-derive.test.ts` — 14 tests
+- `continuum/tests/semantic-cluster.test.ts` — 12 tests
+- `continuum/tests/procedural-mine.test.ts` — 12 tests
+- `continuum/tests/layer-routes.test.ts` — 6 tests (integration)
+
+### Files Modified
+- `continuum/src/service/server.ts` ��� wired 6 new endpoints, refactored into `handleGraphRoutes` + `handleLayerRoutes` for Razor compliance
+
+### zo.space Routes Updated
+- `/api/continuum/graph` — proxy ALLOWED list expanded, POST method support for mutation endpoints
+- `/qor/continuum` — real layer counts, Semantic + Procedural tabs, Derive button, confidence bars
+
+### Test Results
+- **40/40 pass** across 4 new test files
+- Section 4 Razor: all files compliant (≤250 lines, ≤40 line functions, ≤3 nesting, 0 nested ternaries)
+
+### Notes
+- Adjusted blueprint file paths: plan referenced `qora/src/continuum/` but actual Continuum source lives at `continuum/src/`. All files placed in correct build path.
+- Fixed Neo4j LIMIT type error (JS float → `neo4j.int()`)
+- Fixed Cypher aggregation scoping (`ORDER BY` after `WITH collect()`)
+- F2 flag addressed: empty embedding set returns zero clusters, no error
