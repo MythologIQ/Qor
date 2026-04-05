@@ -1,18 +1,18 @@
-# AUDIT REPORT: Continuum Semantic + Procedural Layers
+# AUDIT REPORT: QOR Dashboard Data Flow Fix
 
-**Verdict**: PASS  
-**Risk Grade**: L2  
-**Blueprint**: `docs/plans/2026-04-05-continuum-semantic-procedural-layers.md`  
-**Blueprint Hash**: `sha256:continuum-layers-v1`  
-**Chain Hash**: `sha256:continuum-layers-v1-audit-v1`  
-**Auditor**: QoreLogic Judge  
+**Verdict**: PASS
+**Risk Grade**: L1
+**Blueprint**: `docs/plans/2026-04-05-qor-dashboard-data-flow.md`
+**Blueprint Hash**: `sha256:dashboard-data-flow-v1`
+**Chain Hash**: `sha256:dashboard-data-flow-v1-audit-v1`
+**Auditor**: QoreLogic Judge
 **Date**: 2026-04-05
 
 ---
 
 ## Summary
 
-The plan adds Semantic and Procedural intelligence layers to Continuum's existing episodic graph. Hybrid derivation strategy (incremental co-occurrence + batch embedding clusters for semantic; temporal chain discovery + outcome-anchored promotion for procedural). All logic in filesystem modules, exposed via 6 new API endpoints on the existing Continuum service. No new dependencies, no new auth surfaces, no new server processes.
+The plan fixes data path mismatches in the `/qor` dashboard page where all 4 entity cards read API responses at the wrong nesting level, showing fallback defaults instead of live data. Pure page-side corrections with one defensive `mkdirSync` in the API handler. No new surfaces, no auth changes, no new dependencies.
 
 ---
 
@@ -20,28 +20,20 @@ The plan adds Semantic and Procedural intelligence layers to Continuum's existin
 
 | Pass | Result | Notes |
 |------|--------|-------|
-| Security (L3) | ✅ PASS | No new auth surfaces; internal service endpoints only; Shadow Genome guards satisfied |
-| Ghost UI | ✅ PASS | All proposed UI elements (tabs, derive button, layer cards) have specified data sources and handlers |
-| Razor | ✅ PASS | All functions estimable under 40 lines; files under 250; no nested ternaries |
-| Dependency | ✅ PASS | Zero new packages; all math is vanilla TypeScript |
-| Macro-Level | ✅ PASS | Clean 4-file separation by concern; one-directional data flow; no cycles |
-| Orphan | ✅ PASS | All 4 source files + 4 test files traced to entry points |
+| Security (L3) | ✅ PASS | No auth code touched; page-only data path changes |
+| Ghost UI | ✅ PASS | All stats map to verified API fields; 1 non-blocking flag (F1) |
+| Razor | ✅ PASS | No new functions; nullish coalescing only; no nesting increase |
+| Dependency | ✅ PASS | No new packages; `fs.mkdirSync` is Node built-in |
+| Macro-Level | ✅ PASS | Clean UI→API layering; each entity reads from its own endpoint |
+| Orphan | ✅ PASS | All changes connected to live routes |
 
 ---
 
 ## Flagged Items (Non-Blocking)
 
-### F1: O(n²) Clustering Scalability
-**Issue**: Agglomerative clustering is O(n²). Currently tractable at <10k records.
-**Remediation**: Document the ceiling. If episodic count exceeds 10k, switch to approximate nearest neighbors or mini-batch clustering.
-
-### F2: Embedding Population Dependency
-**Issue**: Phase 2 (batch clustering) requires episodic records to have vector embeddings. Embeddings infrastructure exists but may not be populated.
-**Remediation**: Phase 2 implementation must handle empty embeddings gracefully (return zero clusters, not error). Run embedding population before first batch clustering.
-
-### F3: Continuum Service Registration
-**Issue**: Continuum service on port 4100 is not registered as a persistent zo service. If not running, new endpoints are unreachable.
-**Remediation**: Phase 5 preserves fallback behavior on the page. Service registration is a separate concern (not in scope for this plan).
+### F1: Hardcoded Forge Governance Status
+**Issue**: Forge card stat `{ k: "Governance", v: "Active" }` is a string literal, not derived from API data.
+**Remediation**: Future phase should derive governance status from `/api/forge/status` response. Acceptable for now since Forge governance is always active and the plan's scope is data path repair, not feature addition.
 
 ---
 
@@ -49,9 +41,9 @@ The plan adds Semantic and Procedural intelligence layers to Continuum's existin
 
 | Check | Limit | Actual | Status |
 |-------|-------|--------|--------|
-| Function lines | 40 | ~30 max (pipeline functions) | ✅ |
-| File lines | 250 | ~180 max (semantic-cluster.ts) | ✅ |
-| Nesting depth | 3 | 3 max (for...if...map) | ✅ |
+| Function lines | 40 | ~5 per derivation block | ✅ |
+| File lines | 250 | Edits to existing route | ✅ |
+| Nesting depth | 3 | 1 (optional chaining) | ✅ |
 | Nested ternaries | 0 | 0 | ✅ |
 
 ---

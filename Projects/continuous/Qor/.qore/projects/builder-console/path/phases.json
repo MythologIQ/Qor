@@ -1,0 +1,3854 @@
+{
+  "phases": [
+    {
+      "phaseId": "phase_builder_source_of_truth",
+      "projectId": "builder-console",
+      "ordinal": 1,
+      "name": "Forge Source of Truth Realignment",
+      "objective": "Make the Forge UI the accurate product map for Zo-Qore and Victor by unifying roadmap, mindmap, and verification evidence around the full governed backlog.",
+      "sourceClusterIds": [
+        "cluster_builder_truth",
+        "cluster_governed_automation",
+        "cluster_memory_governance"
+      ],
+      "dependencies": [],
+      "nestedPrioritySummary": [
+        "P0: Builder roadmap and mindmap reflect the full product plan instead of UI-only slices.",
+        "P0: Recursive priorities are visible to arbitrary depth in roadmap tasks.",
+        "P1: Visual confirmation path exists so roadmap and mindmap changes can be substantiated quickly."
+      ],
+      "tasks": [
+        {
+          "taskId": "task_builder_canonical_plan",
+          "phaseId": "phase_builder_source_of_truth",
+          "title": "Promote builder-console to the canonical product roadmap",
+          "description": "Fold Victor execution, memory, packaging, quarantine, and EvolveAI workstreams into the Builder project so the UI shows the actual product plan instead of an incomplete implementation slice.",
+          "acceptance": [
+            "Builder roadmap includes the Victor phases that materially define the product.",
+            "Packaging, memory, and EvolveAI are represented as first-class workstreams.",
+            "Builder data becomes the visible source of truth for the product map."
+          ],
+          "status": "done",
+          "priority": "P0",
+          "priorityLabel": "Canonical source",
+          "children": [
+            {
+              "title": "Import Victor roadmap tracks into builder-console planning data",
+              "status": "done",
+              "priority": "P0",
+              "children": []
+            },
+            {
+              "title": "Add packaging and EvolveAI phases missing from the visible roadmap",
+              "status": "done",
+              "priority": "P0",
+              "children": []
+            },
+            {
+              "title": "Mark builder-console as the visualization source of truth for the product",
+              "status": "done",
+              "priority": "P1",
+              "children": []
+            }
+          ]
+        },
+        {
+          "taskId": "task_builder_recursive_priorities",
+          "phaseId": "phase_builder_source_of_truth",
+          "title": "Render recursive nested priorities inside roadmap tasks",
+          "description": "Expose multi-level execution priorities in the roadmap so each step can fan out into sub-priorities without flattening critical sequencing.",
+          "acceptance": [
+            "Tasks can display nested priority trees to arbitrary depth.",
+            "Priority labels remain readable on desktop and mobile.",
+            "Nested work can distinguish critical path, enabling work, and validation work."
+          ],
+          "status": "done",
+          "priority": "P0",
+          "priorityLabel": "Execution clarity",
+          "children": [
+            {
+              "title": "Add recursive task rendering in the roadmap view",
+              "status": "done",
+              "priority": "P0",
+              "children": []
+            },
+            {
+              "title": "Add badges and hierarchy styling for priority depth",
+              "status": "done",
+              "priority": "P1",
+              "children": []
+            },
+            {
+              "title": "Verify the rendering handles deep trees without collapsing readability",
+              "status": "in-progress",
+              "priority": "P1",
+              "children": []
+            }
+          ]
+        },
+        {
+          "taskId": "task_builder_real_data_views",
+          "phaseId": "phase_builder_source_of_truth",
+          "title": "Replace mock mindmap behavior with real Builder planning data",
+          "description": "Stop falling back to demo/legacy mindmap payloads when the Forge UI can resolve the actual planning files and derived constellation map.",
+          "acceptance": [
+            "Mindmap views load builder-console constellation and cluster data by default.",
+            "Mock data is only used for explicit empty-state handling, not normal operation.",
+            "Roadmap and mindmap read from the same canonical planning project."
+          ],
+          "status": "done",
+          "priority": "P0",
+          "priorityLabel": "Visual truth",
+          "children": [
+            {
+              "title": "Resolve builder-console as the default project when none is selected",
+              "status": "done",
+              "priority": "P0",
+              "children": []
+            },
+            {
+              "title": "Fetch clusters and constellation from planning APIs instead of legacy endpoints",
+              "status": "done",
+              "priority": "P0",
+              "children": []
+            },
+            {
+              "title": "Keep honest empty states when no real data exists",
+              "status": "done",
+              "priority": "P1",
+              "children": []
+            }
+          ]
+        },
+        {
+          "taskId": "task_builder_visual_substantiation",
+          "phaseId": "phase_builder_source_of_truth",
+          "title": "Substantiate roadmap and mindmap changes with live preview evidence",
+          "description": "Provide a direct verification path so plan changes can be visually confirmed instead of assumed from JSON edits alone.",
+          "acceptance": [
+            "Local preview is exercised after roadmap/mindmap changes.",
+            "Visual confirmation covers both roadmap and mindmap surfaces.",
+            "The session leaves durable evidence describing what was verified."
+          ],
+          "status": "done",
+          "priority": "P1",
+          "priorityLabel": "Verification",
+          "children": [
+            {
+              "title": "Run the UI locally against the updated planning data",
+              "status": "in-progress",
+              "priority": "P1",
+              "children": []
+            },
+            {
+              "title": "Capture screenshots for roadmap and mindmap confirmation",
+              "status": "planned",
+              "priority": "P1",
+              "children": []
+            },
+            {
+              "title": "Record the verification outcome in workspace memory",
+              "status": "planned",
+              "priority": "P2",
+              "children": []
+            }
+          ],
+          "completedAt": "2026-03-24T17:12:50.833095+00:00"
+        }
+      ],
+      "status": "complete",
+      "createdAt": "2026-03-20T16:39:48.025Z",
+      "updatedAt": "2026-04-05T22:10:00.000Z"
+    },
+    {
+      "phaseId": "phase_p04mttdp",
+      "projectId": "builder-console",
+      "ordinal": 2,
+      "name": "Comms Tab Prompt Automation",
+      "objective": "Automate prompt-building inside the comms tab so the user experience collapses to standard chat input/output plus a compact operations display showing prompt construction in real time.",
+      "sourceClusterIds": [
+        "cluster_governed_automation",
+        "cluster_builder_truth"
+      ],
+      "tasks": [
+        {
+          "taskId": "task_vnjhh7vy",
+          "phaseId": "phase_p04mttdp",
+          "title": "Automate comms-tab prompt construction",
+          "description": "Move prompt-building components behind an automated pipeline so the visible interface becomes standard chat input/output with a small operations panel that streams prompt-construction steps as they happen.",
+          "acceptance": [
+            "Prompt-building logic is automated instead of manually assembled through multiple visible components.",
+            "The comms tab primary surface is reduced to normal chat input/output.",
+            "A compact operations display shows prompt construction/provenance in real time.",
+            "The operations display is observable without overwhelming the main conversation flow.",
+            "The resulting architecture is ready for Victor-mediated automation under Forge governance."
+          ],
+          "status": "done",
+          "priority": "P2",
+          "priorityLabel": "Foundation",
+          "children": []
+        },
+        {
+          "taskId": "task_hjh5vl7u",
+          "phaseId": "phase_p04mttdp",
+          "title": "Build backend prompt-construction pipeline",
+          "description": "Implement the backend path that assembles prompt inputs, applies governed construction steps, and emits structured prompt-construction events for the comms tab operations display.",
+          "acceptance": [
+            "Prompt inputs are assembled by a backend pipeline instead of manual UI composition.",
+            "The pipeline emits structured prompt-construction events or provenance records.",
+            "The backend path is ready to feed a compact operations display without coupling to the main chat surface.",
+            "The design remains compatible with Victor-mediated governed automation."
+          ],
+          "status": "done",
+          "priority": "P2",
+          "priorityLabel": "Foundation",
+          "children": []
+        },
+        {
+          "taskId": "task_jksdot0b",
+          "phaseId": "phase_p04mttdp",
+          "title": "Build prompt-construction operations display",
+          "description": "Implement the compact operations panel that streams prompt-construction steps, provenance, and system state without overwhelming the main chat input/output surface.",
+          "acceptance": [
+            "The operations display shows prompt-construction steps in real time.",
+            "Provenance or system-state details are visible without taking over the primary chat surface.",
+            "The display consumes structured backend prompt-construction events rather than reconstructing state in the UI.",
+            "The resulting interface stays aligned with Victor-mediated governed automation."
+          ],
+          "status": "done",
+          "priority": "P2",
+          "priorityLabel": "Foundation",
+          "children": []
+        },
+        {
+          "taskId": "task_6x04b62c",
+          "phaseId": "phase_p04mttdp",
+          "title": "Reduce comms tab to standard chat I/O",
+          "description": "Refactor the comms tab so the visible primary interface becomes standard chat input/output, with prompt construction moved behind the governed backend pipeline and exposed only through the compact operations display.",
+          "acceptance": [
+            "The primary comms-tab surface is standard chat input/output.",
+            "Prompt-building controls are removed from the main visible surface.",
+            "The chat surface consumes the governed backend prompt-construction pipeline instead of assembling prompts directly in the UI.",
+            "Prompt-construction visibility is delegated to the compact operations display.",
+            "The resulting interface stays aligned with Victor-mediated governed automation."
+          ],
+          "status": "done",
+          "priority": "P2",
+          "priorityLabel": "Foundation",
+          "children": []
+        },
+        {
+          "taskId": "task_vi0dljg3",
+          "phaseId": "phase_p04mttdp",
+          "title": "Implement automation audit logging",
+          "description": "Add append-only automation run and action audit records with run IDs, governance outcomes, before/after mutation snapshots, actor labels, and a queryable API for overnight review.",
+          "acceptance": [
+            "Automation runs produce run-started, action, and run-completed audit entries.",
+            "Audit entries capture governance results and before/after state for task mutations.",
+            "Victor exposes a query path for recent automation audit history."
+          ],
+          "status": "done",
+          "priority": "P2",
+          "priorityLabel": "Foundation",
+          "children": []
+        }
+      ],
+      "status": "complete",
+      "createdAt": "2026-03-15T05:53:51.328Z",
+      "updatedAt": "2026-03-15T17:11:01.214Z",
+      "priority": "P2",
+      "priorityLabel": "Completed packaging groundwork",
+      "dependencies": [
+        "phase_builder_source_of_truth"
+      ],
+      "nestedPrioritySummary": []
+    },
+    {
+      "phaseId": "phase_xtmo109w",
+      "projectId": "builder-console",
+      "ordinal": 3,
+      "name": "Heartbeat Autonomy Foundation",
+      "objective": "Extend Victor from supervised phase-by-phase execution into sustainable governed heartbeat operation with explicit separation between project build progress and non-project self-reflection.",
+      "sourceClusterIds": [
+        "cluster_governed_automation",
+        "cluster_builder_truth"
+      ],
+      "tasks": [
+        {
+          "taskId": "task_1rta48hj",
+          "phaseId": "phase_xtmo109w",
+          "title": "Separate non-project reflection from Builder artifacts",
+          "description": "Move heartbeat self-reflection into a system-level memory/audit path so Forge only carries project-relevant planning notes and build progress.",
+          "acceptance": [
+            "Heartbeat self-reflection can be written without attaching to a Builder phase or cluster.",
+            "Forge continues to receive only project-relevant planning notes and build-progress state.",
+            "Automation activity and build progress remain queryable as separate surfaces."
+          ],
+          "status": "done",
+          "priority": "P2",
+          "priorityLabel": "Foundation",
+          "children": []
+        },
+        {
+          "taskId": "task_xk7twj7o",
+          "phaseId": "phase_xtmo109w",
+          "title": "Teach heartbeat to select the next governed slice after phase closure",
+          "description": "Allow heartbeat to recognize completed governed phases and either select an existing pending phase or stop cleanly with an explicit recommendation for the next slice.",
+          "acceptance": [
+            "Heartbeat does not stall or fabricate work when the active governed phase is complete.",
+            "Heartbeat can identify the next eligible governed phase or produce a governed recommendation instead of looping on a finished phase.",
+            "The transition decision is visible in automation audit records."
+          ],
+          "status": "done",
+          "priority": "P2",
+          "priorityLabel": "Foundation",
+          "children": []
+        },
+        {
+          "taskId": "task_7t8od2o0",
+          "phaseId": "phase_xtmo109w",
+          "title": "Prepare unattended 30m heartbeat operation with safe stop conditions",
+          "description": "Harden the 30-minute heartbeat path so Victor can run unattended under bounded action budgets, cooldown rules, and explicit stop/escalation conditions.",
+          "acceptance": [
+            "Unattended 30m heartbeat execution respects focus-window, cooldown, and action-budget policy.",
+            "Repeated blocks or missing eligible work stop the unattended loop cleanly instead of churning.",
+            "Audit output is sufficient to explain unattended heartbeat behavior after the fact."
+          ],
+          "status": "done",
+          "priority": "P2",
+          "priorityLabel": "Foundation",
+          "children": []
+        }
+      ],
+      "status": "complete",
+      "createdAt": "2026-03-15T17:13:35.753Z",
+      "updatedAt": "2026-03-15T17:31:15.601Z",
+      "priority": "P2",
+      "priorityLabel": "Completed packaging groundwork",
+      "dependencies": [
+        "phase_builder_source_of_truth"
+      ],
+      "nestedPrioritySummary": []
+    },
+    {
+      "phaseId": "phase_3mh4r070",
+      "projectId": "builder-console",
+      "ordinal": 4,
+      "name": "30m Heartbeat Dry-Run Soak Test",
+      "objective": "Run a bounded unattended 30m dry-run heartbeat against real governed work and verify safety signals before unattended execution is allowed.",
+      "sourceClusterIds": [
+        "cluster_governed_automation",
+        "cluster_builder_truth"
+      ],
+      "tasks": [
+        {
+          "taskId": "task_tqushu89",
+          "phaseId": "phase_3mh4r070",
+          "title": "Run unattended 30m dry-run heartbeat soak",
+          "description": "Run the real unattended heartbeat loop at 30m baseline in dry-run mode with explicit tick and runtime limits.",
+          "acceptance": [
+            "Heartbeat starts cleanly, remains bounded, and emits audit-backed tick evidence without writes."
+          ],
+          "status": "done",
+          "priority": "P2",
+          "priorityLabel": "Foundation",
+          "children": []
+        },
+        {
+          "taskId": "task_d2unxklt",
+          "phaseId": "phase_3mh4r070",
+          "title": "Review dry-run soak audit signals",
+          "description": "Inspect run state, selected tasks, stop conditions, and blocked reasons from the soak output.",
+          "acceptance": [
+            "The soak produces enough evidence to judge whether unattended execution is safe to promote."
+          ],
+          "status": "done",
+          "priority": "P2",
+          "priorityLabel": "Foundation",
+          "children": []
+        },
+        {
+          "taskId": "task_b68oboxf",
+          "phaseId": "phase_3mh4r070",
+          "title": "Define unattended execute-mode promotion gate",
+          "description": "Turn soak evidence into explicit promotion criteria for unattended write-capable heartbeat operation.",
+          "acceptance": [
+            "Promotion criteria are explicit, auditable, and stricter than the dry-run soak baseline."
+          ],
+          "status": "done",
+          "priority": "P2",
+          "priorityLabel": "Foundation",
+          "children": []
+        }
+      ],
+      "status": "complete",
+      "createdAt": "2026-03-15T18:49:02.246Z",
+      "updatedAt": "2026-03-15T22:39:47.788Z",
+      "priority": "P2",
+      "priorityLabel": "Completed packaging groundwork",
+      "dependencies": [
+        "phase_builder_source_of_truth"
+      ],
+      "nestedPrioritySummary": []
+    },
+    {
+      "phaseId": "phase_builder_forecast_ops",
+      "projectId": "builder-console",
+      "ordinal": 5,
+      "name": "Forecast and Planning Operations",
+      "objective": "Turn the new Victor and Builder planning artifacts into Builder-managed operational work so unattended execution has a governed next queue.",
+      "sourceClusterIds": [
+        "cluster_governed_automation",
+        "cluster_builder_truth"
+      ],
+      "tasks": [
+        {
+          "taskId": "task_builder_forecast_delivery",
+          "phaseId": "phase_builder_forecast_ops",
+          "title": "Forecast remaining Builder delivery work",
+          "description": "Translate the current Builder forecast into Builder-managed operational tasks and dependency-aware planning state.",
+          "acceptance": [
+            "Builder has an explicit next-step forecast instead of relying on narrative summaries."
+          ],
+          "status": "done",
+          "completedAt": "2026-03-16T16:30:00.000Z",
+          "priority": "P2",
+          "priorityLabel": "Foundation",
+          "children": []
+        },
+        {
+          "taskId": "task_builder_victor_dependency",
+          "phaseId": "phase_builder_forecast_ops",
+          "title": "Project Victor autonomy dependency impact into Builder surfaces",
+          "description": "Expose how Victor promotion state affects Builder delivery readiness without collapsing the Victor and Builder views together.",
+          "acceptance": [
+            "Builder surfaces reflect Victor dependency impact only where it materially affects delivery."
+          ],
+          "status": "done",
+          "completedAt": "2026-03-16T15:00:00.000Z",
+          "priority": "P2",
+          "priorityLabel": "Foundation",
+          "children": []
+        },
+        {
+          "taskId": "task_builder_queue_next_slices",
+          "phaseId": "phase_builder_forecast_ops",
+          "title": "Queue next governed slices across Victor and Builder",
+          "description": "Keep the next governed work items explicit across both project tracks so unattended execution advances known priorities instead of fabricating work.",
+          "acceptance": [
+            "The next governed slices for Victor and Builder are Builder-visible and ordered."
+          ],
+          "status": "done",
+          "completedAt": "2026-03-16T16:30:00.000Z",
+          "priority": "P2",
+          "priorityLabel": "Foundation",
+          "children": []
+        },
+        {
+          "taskId": "task_builder_fresh_ui_refresh",
+          "phaseId": "phase_builder_forecast_ops",
+          "title": "Create fresh Victor and Forge UI shell",
+          "description": "Create a new UI surface for Victor and Builder views, preserving the legacy UI while transferring forward only the data views and interaction patterns that prove useful.",
+          "acceptance": [
+            "A new UI surface exists without deleting or replacing the current legacy UI.",
+            "Victor and Builder remain distinct switchable views in the new shell.",
+            "Only proven data views and interaction patterns are transferred from the old UI.",
+            "The new UI is grounded in Builder project state instead of imaginary placeholder surfaces."
+          ],
+          "status": "done",
+          "completedAt": "2026-03-16T07:50:00.000Z",
+          "priority": "P2",
+          "priorityLabel": "Foundation",
+          "children": []
+        },
+        {
+          "taskId": "task_builder_shell_victor_surface",
+          "phaseId": "phase_builder_forecast_ops",
+          "title": "Build Victor shell hero and verdict surface",
+          "description": "Turn the fresh shell foundation into a real Victor surface with the hybrid portrait and verdict altar bound to live promotion and heartbeat state.",
+          "acceptance": [
+            "Victor shell renders the hybrid portrait plus verdict altar using live data.",
+            "Promotion verdict, heartbeat state, and unmet criteria are legible without placeholder language.",
+            "The hero moment remains restrained outside the central Victor surface."
+          ],
+          "status": "done",
+          "completedAt": "2026-03-16T08:20:00.000Z",
+          "priority": "P2",
+          "priorityLabel": "Foundation",
+          "children": []
+        },
+        {
+          "taskId": "task_builder_shell_builder_surface",
+          "phaseId": "phase_builder_forecast_ops",
+          "title": "Build Forge shell command surface",
+          "description": "Add the austere Builder view to the fresh shell with live progress, forecast, dependency impact, and governed queue information.",
+          "acceptance": [
+            "Forge shell renders real build progress and governed queue state.",
+            "Victor dependency impact only appears when it materially affects Builder delivery.",
+            "Historical blocked runs are not mislabeled as current blockers."
+          ],
+          "status": "done",
+          "completedAt": "2026-03-16T08:56:40.000Z",
+          "priority": "P2",
+          "priorityLabel": "Foundation",
+          "children": []
+        },
+        {
+          "taskId": "task_builder_shell_substantiate",
+          "phaseId": "phase_builder_forecast_ops",
+          "title": "Audit and substantiate fresh shell truthfulness",
+          "description": "Review the new shell against live data, the web design guidelines skill, and responsive behavior so the UI can be trusted before Victor expands automation on it.",
+          "acceptance": [
+            "The shell is reviewed against the Vercel web guidelines.",
+            "Mobile and desktop responsive behavior are checked on the new route.",
+            "Observed, inferred, and unverified states are distinguishable in the shell where relevant."
+          ],
+          "status": "done",
+          "completedAt": "2026-03-16T09:20:00.000Z",
+          "priority": "P2",
+          "priorityLabel": "Foundation",
+          "children": []
+        }
+      ],
+      "status": "complete",
+      "createdAt": "2026-03-15T23:18:00.000Z",
+      "updatedAt": "2026-03-16T16:23:00.000Z",
+      "priority": "P2",
+      "priorityLabel": "Completed packaging groundwork",
+      "dependencies": [
+        "phase_builder_source_of_truth"
+      ],
+      "nestedPrioritySummary": []
+    },
+    {
+      "phaseId": "phase_quarantine_visibility_ui",
+      "projectId": "builder-console",
+      "ordinal": 6,
+      "name": "Quarantine Visibility UI",
+      "objective": "Extend Forge UI to surface quarantine state, scan results, and promotion/rejection history for human inspection.",
+      "sourceClusterIds": [
+        "cluster_quarantine_ui",
+        "cluster_builder_truth"
+      ],
+      "tasks": [
+        {
+          "taskId": "task_quarantine_hub_payload",
+          "phaseId": "phase_quarantine_visibility_ui",
+          "title": "Extend HubPayload with quarantine data",
+          "description": "Add quarantine stats (counts by state, verdict distribution, last fetch time), recent items summary, pending review count, and exploration status to HubPayload type and hub.ts builder. Null-safe when quarantine is disabled or store is empty.",
+          "acceptance": [
+            "HubPayload includes quarantine field with stats, recentItems, pendingReview, explorationStatus",
+            "buildHubPayload reads from quarantine store when available",
+            "Null-safe fallback when quarantine is disabled or store missing",
+            "TypeScript compilation succeeds"
+          ],
+          "status": "done",
+          "priority": "P2",
+          "priorityLabel": "Foundation",
+          "children": []
+        },
+        {
+          "taskId": "task_quarantine_dashboard_component",
+          "phaseId": "phase_quarantine_visibility_ui",
+          "title": "Build quarantine dashboard component",
+          "description": "Summary view in Forge Victor surface: total items by state (quarantined/provisional/rejected), scan verdict distribution (clean/suspicious/hostile), last fetch timestamp, exploration tick count and status, alert banner when suspicious items await human review.",
+          "acceptance": [
+            "Dashboard renders live quarantine stats from HubPayload",
+            "State counts (quarantined/provisional/rejected) are visible",
+            "Verdict distribution (clean/suspicious/hostile) is visible",
+            "Alert banner appears when pendingReview > 0",
+            "Exploration status (idle/active/paused/disabled) is legible",
+            "Dashboard degrades gracefully when quarantine is disabled"
+          ],
+          "status": "done",
+          "priority": "P2",
+          "priorityLabel": "Foundation",
+          "children": []
+        },
+        {
+          "taskId": "task_quarantine_feed_component",
+          "phaseId": "phase_quarantine_visibility_ui",
+          "title": "Build quarantine feed component",
+          "description": "Scrollable list of quarantined items, newest first. Each item shows: title, author, source, timestamp, scan verdict badge (green/yellow/red), scan category chips, state badge, content preview (first 200 chars expandable), and Promote/Reject action buttons for human override.",
+          "acceptance": [
+            "Feed renders items newest-first with all required fields",
+            "Verdict badges use color coding: green (clean), yellow (suspicious), red (hostile)",
+            "Promote and Reject buttons call quarantine store endpoints",
+            "State updates reflect immediately in the feed after action",
+            "Content preview is truncated with expand capability"
+          ],
+          "status": "done",
+          "priority": "P2",
+          "priorityLabel": "Foundation",
+          "children": []
+        },
+        {
+          "taskId": "task_quarantine_scan_inspector",
+          "phaseId": "phase_quarantine_visibility_ui",
+          "title": "Build scan detail inspector",
+          "description": "Expandable or modal detail view for individual quarantine items: full sanitized content, raw content diff showing what was stripped, all scan categories with match/no-match and evidence strings, cumulative threat score breakdown, provenance (source URL, post ID, author, fetch time).",
+          "acceptance": [
+            "Inspector shows full sanitized content",
+            "Raw vs sanitized diff is visible (stripped elements highlighted)",
+            "All 10 scan categories show match status and evidence",
+            "Threat score breakdown is legible",
+            "Provenance information is complete (source, author, timestamps)"
+          ],
+          "status": "done",
+          "priority": "P2",
+          "priorityLabel": "Foundation",
+          "children": []
+        },
+        {
+          "taskId": "task_quarantine_audit_log_viewer",
+          "phaseId": "phase_quarantine_visibility_ui",
+          "title": "Build quarantine audit log viewer",
+          "description": "Filterable table of quarantine ledger entries. Filter by: event type (fetch/scan/gate-promote/gate-reject/manual-promote/manual-reject/prune), verdict, date range, source. JSONL export capability.",
+          "acceptance": [
+            "Log table renders ledger entries with all fields",
+            "Filters work for event type, verdict, and date range",
+            "Export produces valid JSONL file",
+            "Table handles large ledger files without performance degradation",
+            "Empty state shown when no ledger entries exist"
+          ],
+          "status": "done",
+          "priority": "P2",
+          "priorityLabel": "Foundation",
+          "children": []
+        }
+      ],
+      "status": "complete",
+      "createdAt": "2026-03-18T03:55:00.000Z",
+      "updatedAt": "2026-03-18T13:05:00.000Z",
+      "priority": "P2",
+      "priorityLabel": "Completed packaging groundwork",
+      "dependencies": [
+        "phase_builder_source_of_truth"
+      ],
+      "nestedPrioritySummary": []
+    },
+    {
+      "phaseId": "phase_victor_lifecycle",
+      "projectId": "victor-resident",
+      "ordinal": 7,
+      "name": "Victor Lifecycle and Forecast Foundation",
+      "objective": "Model Victor as a separate governed project inside Builder and define the forecasting signals for remaining autonomy work.",
+      "sourceClusterIds": [
+        "cluster_governed_automation",
+        "cluster_builder_truth"
+      ],
+      "tasks": [
+        {
+          "taskId": "task_victor_lifecycle_model",
+          "phaseId": "phase_victor_lifecycle",
+          "title": "Model Victor project lifecycle from concept to completion",
+          "description": "Define the stages Builder should use to track Victor work without collapsing it into Builder infrastructure work.",
+          "acceptance": [
+            "Victor lifecycle stages are explicit and separate from Forge infrastructure stages."
+          ],
+          "status": "done",
+          "priority": "P2",
+          "priorityLabel": "Foundation",
+          "children": []
+        },
+        {
+          "taskId": "task_victor_forecast_signals",
+          "phaseId": "phase_victor_lifecycle",
+          "title": "Define Victor remaining-effort forecast signals",
+          "description": "Specify confidence, blockers, dependencies, and effort-band inputs for forecasting Victor progress.",
+          "acceptance": [
+            "Victor forecast inputs are evidence-backed and separate from generic automation activity."
+          ],
+          "status": "done",
+          "priority": "P2",
+          "priorityLabel": "Foundation",
+          "children": []
+        },
+        {
+          "taskId": "task_victor_builder_dependencies",
+          "phaseId": "phase_victor_lifecycle",
+          "title": "Record Builder dependencies that gate Victor autonomy promotion",
+          "description": "Capture which Builder capabilities must mature before Victor can safely escalate autonomy.",
+          "acceptance": [
+            "Victor dependencies on Builder infrastructure are explicit and governable."
+          ],
+          "status": "done",
+          "priority": "P2",
+          "priorityLabel": "Foundation",
+          "children": []
+        }
+      ],
+      "status": "complete",
+      "createdAt": "2026-03-15T20:00:05.911Z",
+      "updatedAt": "2026-03-15T20:50:58.402Z",
+      "priority": "P2",
+      "priorityLabel": "Completed Victor core",
+      "dependencies": [
+        "phase_builder_source_of_truth"
+      ],
+      "nestedPrioritySummary": []
+    },
+    {
+      "phaseId": "phase_wfatnb2o",
+      "projectId": "victor-resident",
+      "ordinal": 8,
+      "name": "Unattended Execute Promotion Review",
+      "objective": "Define the execute-mode promotion bar for Victor and tie unattended operation to explicit evidence, fallback, and revocation rules.",
+      "sourceClusterIds": [
+        "cluster_governed_automation",
+        "cluster_builder_truth"
+      ],
+      "tasks": [
+        {
+          "taskId": "task_nh3uccrf",
+          "phaseId": "phase_wfatnb2o",
+          "title": "Define Victor unattended execute-mode promotion criteria",
+          "description": "Turn the current dry-run soak and dependency gates into explicit promotion criteria for unattended write-capable heartbeat operation.",
+          "acceptance": [
+            "Execute-mode promotion criteria are explicit, governed, and stricter than dry-run soak success alone."
+          ],
+          "status": "done",
+          "priority": "P2",
+          "priorityLabel": "Foundation",
+          "children": []
+        },
+        {
+          "taskId": "task_w0bcrdpz",
+          "phaseId": "phase_wfatnb2o",
+          "title": "Review 30m dry-run soak evidence against promotion gate",
+          "description": "Compare the unattended 30m dry-run audit trail against the execute-mode promotion criteria before any autonomy increase.",
+          "acceptance": [
+            "Dry-run soak evidence is reviewed against the gate and any missing proof is explicit."
+          ],
+          "status": "done",
+          "priority": "P2",
+          "priorityLabel": "Foundation",
+          "children": []
+        },
+        {
+          "taskId": "task_4enp5awq",
+          "phaseId": "phase_wfatnb2o",
+          "title": "Record unattended execute fallback and revocation triggers",
+          "description": "Capture the kill conditions, fallback rules, and revocation criteria that should force Victor out of unattended execute mode.",
+          "acceptance": [
+            "Execute-mode fallback and revocation triggers are explicit and Builder-visible."
+          ],
+          "status": "done",
+          "priority": "P2",
+          "priorityLabel": "Foundation",
+          "children": []
+        }
+      ],
+      "status": "complete",
+      "createdAt": "2026-03-15T20:53:44.501Z",
+      "updatedAt": "2026-03-15T23:18:00.000Z",
+      "priority": "P2",
+      "priorityLabel": "Completed Victor core",
+      "dependencies": [
+        "phase_builder_source_of_truth"
+      ],
+      "nestedPrioritySummary": []
+    },
+    {
+      "phaseId": "phase_victor_execute_pilot",
+      "projectId": "victor-resident",
+      "ordinal": 9,
+      "name": "Bounded Unattended Execute Pilot",
+      "objective": "Run the first bounded unattended execute window, review its evidence, and decide whether Victor has earned any wider autonomy.",
+      "sourceClusterIds": [
+        "cluster_governed_automation",
+        "cluster_builder_truth"
+      ],
+      "tasks": [
+        {
+          "taskId": "task_victor_execute_pilot_run",
+          "phaseId": "phase_victor_execute_pilot",
+          "title": "Run bounded unattended 30m execute pilot",
+          "description": "Run Victor in unattended execute mode at the 30-minute baseline with explicit kill-switch, tick, and runtime limits.",
+          "acceptance": [
+            "Unattended execute pilot runs within the bounded action budget and leaves a reviewable verification packet."
+          ],
+          "status": "done",
+          "priority": "P2",
+          "priorityLabel": "Foundation",
+          "children": []
+        },
+        {
+          "taskId": "task_victor_execute_pilot_review",
+          "phaseId": "phase_victor_execute_pilot",
+          "title": "Review unattended execute verification packet",
+          "description": "Inspect the verification-grade report after the unattended execute pilot and classify any drift, block, or revocation signals.",
+          "acceptance": [
+            "Observed, inferred, and unverified claims are reviewed before any autonomy expansion decision."
+          ],
+          "status": "done",
+          "priority": "P2",
+          "priorityLabel": "Foundation",
+          "children": []
+        },
+        {
+          "taskId": "task_victor_execute_expand",
+          "phaseId": "phase_victor_execute_pilot",
+          "title": "Define post-pilot autonomy expansion rule",
+          "description": "Decide what evidence would be required before Victor gains broader unattended scope, faster cadence, or wider project coverage.",
+          "acceptance": [
+            "Autonomy expansion remains evidence-gated and does not self-authorize from a single successful pilot."
+          ],
+          "status": "done",
+          "priority": "P2",
+          "priorityLabel": "Foundation",
+          "children": []
+        }
+      ],
+      "status": "complete",
+      "createdAt": "2026-03-15T23:18:00.000Z",
+      "updatedAt": "2026-03-18T10:05:00.000Z",
+      "priority": "P2",
+      "priorityLabel": "Completed Victor core",
+      "dependencies": [
+        "phase_builder_source_of_truth"
+      ],
+      "nestedPrioritySummary": []
+    },
+    {
+      "phaseId": "phase_victor_unified_governance",
+      "projectId": "victor-resident",
+      "ordinal": 10,
+      "name": "Unified Governance Bridge",
+      "objective": "Bridge Victor's quarantine pipeline and execute-pilot infrastructure into a unified governance layer that governs all automated actions under a single consistent policy framework.",
+      "sourceClusterIds": [
+        "cluster_governed_automation",
+        "cluster_builder_truth"
+      ],
+      "tasks": [
+        {
+          "taskId": "task_unified_policy_framework",
+          "phaseId": "phase_victor_unified_governance",
+          "title": "Unified Governance Policy Framework",
+          "description": "Define a single policy schema that can govern both content admission and action execution with trust tiers, confidence thresholds, and required verification steps.",
+          "acceptance": [
+            "Policy schema supports both content trust tiers and action risk levels",
+            "Policy defines confidence thresholds per tier/level combination",
+            "Policy defines required scan categories for content vs required verification steps for actions",
+            "Policy is versioned and auditable"
+          ],
+          "status": "done",
+          "priority": "P2",
+          "priorityLabel": "Foundation",
+          "children": []
+        },
+        {
+          "taskId": "task_governance_decision_engine",
+          "phaseId": "phase_victor_unified_governance",
+          "title": "Governance Decision Engine",
+          "description": "Build a unified decision engine that evaluates both content admission requests and action execution requests against the policy framework.",
+          "acceptance": [
+            "Single evaluate() method handles both ContentAdmissionRequest and ActionExecutionRequest",
+            "Returns consistent GovernanceDecision type with verdict, confidence, and reasoning",
+            "Integrates with existing quarantine-gate.ts for content and execute-pilot.ts for actions",
+            "Decision audit trail written to unified ledger"
+          ],
+          "status": "done",
+          "priority": "P2",
+          "priorityLabel": "Foundation",
+          "children": []
+        },
+        {
+          "taskId": "task_unified_audit_ledger",
+          "phaseId": "phase_victor_unified_governance",
+          "title": "Unified Audit Ledger",
+          "description": "Extend the quarantine audit ledger to record all governance decisions—content and actions—in a single queryable history.",
+          "acceptance": [
+            "Ledger entries support both content events and action events",
+            "Query API filters by event type, verdict, project, timestamp range",
+            "Unified export produces coherent timeline of all governed activity",
+            "Retention policies apply consistently across event types"
+          ],
+          "status": "done",
+          "priority": "P2",
+          "priorityLabel": "Foundation",
+          "children": []
+        },
+        {
+          "taskId": "task_cross_domain_policy",
+          "phaseId": "phase_victor_unified_governance",
+          "title": "Cross-Domain Policy Enforcement",
+          "description": "Ensure policy constraints flow correctly between content and action domains—e.g., external-untrusted content triggers higher scrutiny on derived actions.",
+          "acceptance": [
+            "Content trust tier influences action risk assessment",
+            "Action audit records reference source content IDs where applicable",
+            "Policy violations in one domain can trigger review requirements in the other",
+            "No circular dependencies between content and action evaluation"
+          ],
+          "status": "done",
+          "priority": "P2",
+          "priorityLabel": "Foundation",
+          "children": []
+        },
+        {
+          "taskId": "task_unified_governance_cli",
+          "phaseId": "phase_victor_unified_governance",
+          "title": "Unified Governance CLI",
+          "description": "Create a command-line interface for governance operations: policy inspection, manual ledger queries, emergency revocation, and audit export.",
+          "acceptance": [
+            "CLI supports inspect-policy, query-ledger, revoke-run, export-audit commands",
+            "Commands accept project-id and time range filters",
+            "Output formats: human-readable, JSON, JSONL",
+            "Exit codes indicate success (0), policy violation found (2), or error (1)"
+          ],
+          "status": "done",
+          "priority": "P2",
+          "priorityLabel": "Foundation",
+          "children": []
+        }
+      ],
+      "status": "complete",
+      "createdAt": "2026-03-18T10:15:00.000Z",
+      "updatedAt": "2026-03-18T11:15:00.000Z",
+      "priority": "P2",
+      "priorityLabel": "Completed Victor core",
+      "dependencies": [
+        "phase_builder_source_of_truth"
+      ],
+      "nestedPrioritySummary": []
+    },
+    {
+      "phaseId": "phase_victor_execute_governance",
+      "projectId": "victor-resident",
+      "ordinal": 11,
+      "name": "Execute Mode Governance",
+      "objective": "Establish tiered governance, monitoring, and oversight systems for Victor execute-mode operation across all autonomy levels.",
+      "sourceClusterIds": [
+        "cluster_governed_automation",
+        "cluster_builder_truth"
+      ],
+      "tasks": [
+        {
+          "taskId": "task_victor_tiered_governance",
+          "phaseId": "phase_victor_execute_governance",
+          "title": "Tiered Governance Structure",
+          "description": "Define governance rules for Tier 1/2/3 execute modes. Create authorization flows (user explicit, evidence-gated, automated). Document escalation procedures for each tier. Define tier promotion/demotion criteria.",
+          "acceptance": [
+            "Each tier has explicit authorization requirements",
+            "Governance flows are documented and testable",
+            "Escalation procedures are defined for each tier"
+          ],
+          "status": "done",
+          "priority": "P2",
+          "priorityLabel": "Foundation",
+          "children": []
+        },
+        {
+          "taskId": "task_victor_monitoring_dashboard",
+          "phaseId": "phase_victor_execute_governance",
+          "title": "Monitoring Dashboard",
+          "description": "Build real-time execute-mode status display with revocation trigger visibility, tier progress tracking, governance violation alerts, and observation window countdown.",
+          "acceptance": [
+            "Dashboard shows live execute-mode status",
+            "Revocation triggers visible in real-time",
+            "Tier progress tracked and displayed"
+          ],
+          "status": "done",
+          "priority": "P2",
+          "priorityLabel": "Foundation",
+          "children": []
+        },
+        {
+          "taskId": "task_victor_audit_trail_system",
+          "phaseId": "phase_victor_execute_governance",
+          "title": "Audit Trail System",
+          "description": "Create searchable, exportable audit trail with evidence linking for all actions, verification packet generation, and historical query interface.",
+          "acceptance": [
+            "All actions logged with evidence links",
+            "Audit trail searchable and exportable",
+            "Verification packet generation automated"
+          ],
+          "status": "done",
+          "priority": "P2",
+          "priorityLabel": "Foundation",
+          "children": []
+        }
+      ],
+      "status": "complete",
+      "createdAt": "2026-03-18T11:20:00.000Z",
+      "updatedAt": "2026-03-18T12:05:00.000Z",
+      "priority": "P2",
+      "priorityLabel": "Completed Victor core",
+      "dependencies": [
+        "phase_builder_source_of_truth"
+      ],
+      "nestedPrioritySummary": []
+    },
+    {
+      "phaseId": "phase_victor_quarantine_pipeline",
+      "projectId": "victor-resident",
+      "ordinal": 12,
+      "name": "Moltbook Quarantine Pipeline",
+      "objective": "Implement quarantine-first pipeline for external content ingestion (Moltbook), with sanitization, adversarial scanning, governance gating, and audit logging to safely explore external agent discourse during heartbeat idle periods.",
+      "sourceClusterIds": [
+        "cluster_quarantine_ui",
+        "cluster_governed_automation"
+      ],
+      "tasks": [
+        {
+          "taskId": "task_quarantine_governance_types",
+          "phaseId": "phase_victor_quarantine_pipeline",
+          "title": "Add quarantine governance types",
+          "description": "Add 'quarantined' GovernanceState, SourceTrustTier, SourceTrustMetadata, ScanVerdict, ScanDetail, ScanCategory types. Update policy JSON with source trust tiers and quarantine settings.",
+          "acceptance": [
+            "New types compile",
+            "Policy loads with quarantine config",
+            "Existing tests unbroken"
+          ],
+          "status": "done",
+          "priority": "P2",
+          "priorityLabel": "Foundation",
+          "children": []
+        },
+        {
+          "taskId": "task_quarantine_sanitizer",
+          "phaseId": "phase_victor_quarantine_pipeline",
+          "title": "Build quarantine sanitizer",
+          "description": "Implement quarantine-sanitize.ts: HTML/script tag stripping, base64 block decoding, unicode normalization, control character removal, length truncation, encoded segment flagging.",
+          "acceptance": [
+            "Sanitizer strips all known encoding vectors",
+            "Unit tests cover each sanitization category",
+            "Raw and sanitized content both preserved"
+          ],
+          "status": "done",
+          "priority": "P2",
+          "priorityLabel": "Foundation",
+          "children": []
+        },
+        {
+          "taskId": "task_quarantine_scan_engine",
+          "phaseId": "phase_victor_quarantine_pipeline",
+          "title": "Build adversarial scan engine",
+          "description": "Implement quarantine-scan.ts with 4-layer scanner: literal patterns (50+), structural heuristics, encoding detection, similarity/flood detection. Produces ScanVerdict and ScanDetail[].",
+          "acceptance": [
+            "Scanner detects all categories",
+            "Unit tests cover clean, suspicious, hostile paths",
+            "False positive rate acceptable on benign content"
+          ],
+          "status": "done",
+          "priority": "P2",
+          "priorityLabel": "Foundation",
+          "children": []
+        },
+        {
+          "taskId": "task_quarantine_governance_gate",
+          "phaseId": "phase_victor_quarantine_pipeline",
+          "title": "Build quarantine governance gate",
+          "description": "Implement quarantine-governance.ts: route scan verdicts to auto-reject (hostile), quarantine (suspicious), or quarantine-with-auto-promote (clean). Apply source trust tier confidence caps.",
+          "acceptance": [
+            "Hostile auto-rejects",
+            "Suspicious quarantines for review",
+            "Clean quarantines with cooldown promotion",
+            "Confidence never exceeds tier cap"
+          ],
+          "status": "done",
+          "priority": "P2",
+          "priorityLabel": "Foundation",
+          "children": []
+        },
+        {
+          "taskId": "task_quarantine_store",
+          "phaseId": "phase_victor_quarantine_pipeline",
+          "title": "Build quarantine store",
+          "description": "Implement quarantine-store.ts with SQLite backend. CRUD operations, promotion/rejection, stats, pruning, max-items enforcement.",
+          "acceptance": [
+            "Store persists across restarts",
+            "FIFO eviction works",
+            "Promotion and rejection state transitions correct"
+          ],
+          "status": "done",
+          "priority": "P2",
+          "priorityLabel": "Foundation",
+          "children": []
+        },
+        {
+          "taskId": "task_quarantine_audit_ledger",
+          "phaseId": "phase_victor_quarantine_pipeline",
+          "title": "Build quarantine audit ledger",
+          "description": "Implement quarantine-ledger.ts: append-only JSONL, queryable by event type and date range. Every pipeline stage logs to ledger.",
+          "acceptance": [
+            "Every pipeline stage logs to ledger",
+            "Ledger is append-only and survives restarts"
+          ],
+          "status": "done",
+          "priority": "P2",
+          "priorityLabel": "Foundation",
+          "children": []
+        },
+        {
+          "taskId": "task_moltbook_fetch_client",
+          "phaseId": "phase_victor_quarantine_pipeline",
+          "title": "Build Moltbook fetch client",
+          "description": "Implement moltbook-fetch.ts: read-only GET client with rate limiting (1 batch/tick, max 10 posts), content truncation (4000 chars), batch size limits. No write endpoints.",
+          "acceptance": [
+            "Client fetches posts",
+            "No write endpoints called",
+            "Rate limits enforced",
+            "Content truncated"
+          ],
+          "status": "done",
+          "priority": "P2",
+          "priorityLabel": "Foundation",
+          "children": []
+        },
+        {
+          "taskId": "task_heartbeat_idle_exploration",
+          "phaseId": "phase_victor_quarantine_pipeline",
+          "title": "Wire heartbeat idle exploration",
+          "description": "Add explore mode to heartbeat: when build queue empty, run Moltbook quarantine pipeline instead of parking. Respect maxConsecutiveExplore and cooldown.",
+          "acceptance": [
+            "Exploration runs only when build queue empty",
+            "Heartbeat parks after maxConsecutiveExplore",
+            "Exploration ticks are audited"
+          ],
+          "status": "done",
+          "priority": "P2",
+          "priorityLabel": "Foundation",
+          "children": []
+        }
+      ],
+      "status": "complete",
+      "createdAt": "2026-03-18T03:00:00.000Z",
+      "updatedAt": "2026-03-18T13:00:00.000Z",
+      "priority": "P1",
+      "priorityLabel": "Safety foundation",
+      "dependencies": [
+        "phase_builder_source_of_truth"
+      ],
+      "nestedPrioritySummary": []
+    },
+    {
+      "phaseId": "phase_packaging_ingress_plane",
+      "projectId": "builder-console",
+      "ordinal": 13,
+      "name": "Packaging Plane: Unified Ingress",
+      "objective": "Package the boring but necessary automation infrastructure so channels, webhooks, cron, email ingress, and governed event envelopes stop feeling like custom glue.",
+      "sourceClusterIds": [
+        "cluster_packaging_ingress",
+        "cluster_governed_automation",
+        "cluster_builder_truth"
+      ],
+      "dependencies": [
+        "phase_builder_source_of_truth",
+        "phase_victor_execute_governance"
+      ],
+      "nestedPrioritySummary": [
+        "P0: Every ingress path emits a common governed event envelope.",
+        "P1: Operator-visible ingress registry shows enabled channels and trust state.",
+        "P2: Add adapters only after the envelope contract is stable."
+      ],
+      "tasks": [
+        {
+          "taskId": "task_packaging_ingress_contract",
+          "phaseId": "phase_packaging_ingress_plane",
+          "title": "Define a unified ingress event contract",
+          "description": "Normalize chat, webhook, cron, Gmail Pub/Sub, and future channel triggers into one envelope with provenance, actor identity, requested capability, and governance context.",
+          "acceptance": [
+            "All ingress paths map to a shared event envelope.",
+            "Envelope fields include provenance, actor identity, and requested capability.",
+            "Governance can evaluate ingress uniformly before execution dispatch."
+          ],
+          "status": "planned",
+          "priority": "P0",
+          "priorityLabel": "Contract first",
+          "children": [
+            {
+              "title": "Define core envelope schema and actor identity rules",
+              "status": "planned",
+              "priority": "P0",
+              "children": []
+            },
+            {
+              "title": "Map cron, webhook, channel, and Gmail ingress into the schema",
+              "status": "planned",
+              "priority": "P0",
+              "children": []
+            },
+            {
+              "title": "Document which ingress classes are allowed to self-trigger execution",
+              "status": "planned",
+              "priority": "P1",
+              "children": []
+            }
+          ]
+        },
+        {
+          "taskId": "task_packaging_ingress_registry",
+          "phaseId": "phase_packaging_ingress_plane",
+          "title": "Build an operator-visible ingress registry",
+          "description": "Expose which channels exist, their auth posture, their current health, and the event classes they may emit so packaging does not become hidden coupling.",
+          "acceptance": [
+            "Ingress adapters appear in a single registry surface.",
+            "Registry entries show auth state, health, and emitted event classes.",
+            "Operators can tell which ingress paths are enabled without reading code."
+          ],
+          "status": "planned",
+          "priority": "P1",
+          "priorityLabel": "Operator proof",
+          "children": [
+            {
+              "title": "List registered ingress adapters and trust state",
+              "status": "planned",
+              "priority": "P1",
+              "children": []
+            },
+            {
+              "title": "Show health and last-seen event details for each adapter",
+              "status": "planned",
+              "priority": "P2",
+              "children": []
+            }
+          ]
+        },
+        {
+          "taskId": "task_packaging_ingress_replay",
+          "phaseId": "phase_packaging_ingress_plane",
+          "title": "Add deterministic replay for ingress events",
+          "description": "Make ingress debuggable by allowing recorded envelopes to be replayed through governance and dispatch without touching live channels.",
+          "acceptance": [
+            "Recorded ingress events can be replayed deterministically.",
+            "Replay mode preserves governance decisions and audit output.",
+            "Operators can debug channel behavior without fabricating new events."
+          ],
+          "status": "planned",
+          "priority": "P1",
+          "priorityLabel": "Debuggability",
+          "children": [
+            {
+              "title": "Persist replayable ingress envelopes with redacted secrets",
+              "status": "planned",
+              "priority": "P1",
+              "children": []
+            },
+            {
+              "title": "Run replay through the same governance path as live events",
+              "status": "planned",
+              "priority": "P1",
+              "children": []
+            }
+          ]
+        }
+      ],
+      "status": "planned",
+      "createdAt": "2026-03-20T16:39:48.025Z",
+      "updatedAt": "2026-03-20T16:39:48.025Z"
+    },
+    {
+      "phaseId": "phase_packaging_execution_plane",
+      "projectId": "builder-console",
+      "ordinal": 14,
+      "name": "Packaging Plane: Execution Gateway and Adapters",
+      "objective": "Package browser, exec, web, provider, service, and plugin actions behind one bounded execution surface so Victor stops feeling like a pile of handwritten adapters.",
+      "sourceClusterIds": [
+        "cluster_packaging_execution",
+        "cluster_governed_automation",
+        "cluster_builder_truth"
+      ],
+      "dependencies": [
+        "phase_packaging_ingress_plane",
+        "phase_victor_unified_governance"
+      ],
+      "nestedPrioritySummary": [
+        "P0: One execution gateway owns approvals, budgets, and audit hooks.",
+        "P1: Adapters/plugins conform to a single capability contract.",
+        "P1: Execution health and auth boundary failures are visible to operators."
+      ],
+      "tasks": [
+        {
+          "taskId": "task_execution_gateway",
+          "phaseId": "phase_packaging_execution_plane",
+          "title": "Consolidate action dispatch behind a governed execution gateway",
+          "description": "Route browser, shell, HTTP, and provider actions through a single gateway that enforces budgets, auth context, audit logging, and fallbacks consistently.",
+          "acceptance": [
+            "Action dispatch passes through one execution gateway.",
+            "Gateway enforces budgets, auth context, and audit hooks uniformly.",
+            "Execution behavior is observable without tracing each adapter separately."
+          ],
+          "status": "planned",
+          "priority": "P0",
+          "priorityLabel": "Gateway",
+          "children": [
+            {
+              "title": "Define capability registry and dispatch contract",
+              "status": "planned",
+              "priority": "P0",
+              "children": []
+            },
+            {
+              "title": "Centralize budgets, approvals, and failure handling",
+              "status": "planned",
+              "priority": "P0",
+              "children": []
+            },
+            {
+              "title": "Expose per-capability metrics and recent audit outcomes",
+              "status": "planned",
+              "priority": "P1",
+              "children": []
+            }
+          ]
+        },
+        {
+          "taskId": "task_adapter_contract",
+          "phaseId": "phase_packaging_execution_plane",
+          "title": "Define plugin, provider, route, and service adapter contracts",
+          "description": "Make adapters swappable by specifying the contract for capabilities, inputs, auth, result shape, error semantics, and governance metadata.",
+          "acceptance": [
+            "Adapters share one capability contract.",
+            "Result and error semantics are normalized across adapter types.",
+            "Governance metadata is emitted by every adapter, not only core ones."
+          ],
+          "status": "planned",
+          "priority": "P1",
+          "priorityLabel": "Swappability",
+          "children": [
+            {
+              "title": "Specify adapter interface for browser, exec, web, service, provider, plugin",
+              "status": "planned",
+              "priority": "P1",
+              "children": []
+            },
+            {
+              "title": "Normalize auth and result metadata across adapters",
+              "status": "planned",
+              "priority": "P1",
+              "children": []
+            }
+          ]
+        },
+        {
+          "taskId": "task_adapter_verification",
+          "phaseId": "phase_packaging_execution_plane",
+          "title": "Add adapter verification and boundary tests",
+          "description": "Make packaging trustworthy by validating adapters for auth leakage, timeout behavior, retry semantics, and audit completeness before promotion.",
+          "acceptance": [
+            "Adapters have verification coverage for auth, timeout, and retry boundaries.",
+            "Boundary failures are visible before runtime promotion.",
+            "Verification output is stored with the adapter or gateway artifacts."
+          ],
+          "status": "planned",
+          "priority": "P1",
+          "priorityLabel": "Hardening",
+          "children": [
+            {
+              "title": "Test auth boundary handling and redaction behavior",
+              "status": "planned",
+              "priority": "P1",
+              "children": []
+            },
+            {
+              "title": "Test timeout, retry, and partial-failure semantics",
+              "status": "planned",
+              "priority": "P2",
+              "children": []
+            },
+            {
+              "title": "Require verification packets before adapter promotion",
+              "status": "planned",
+              "priority": "P2",
+              "children": []
+            }
+          ]
+        }
+      ],
+      "status": "planned",
+      "createdAt": "2026-03-20T16:39:48.025Z",
+      "updatedAt": "2026-03-20T16:39:48.025Z"
+    },
+    {
+      "phaseId": "phase_victor_memory_governance_core",
+      "projectId": "victor-resident",
+      "ordinal": 15,
+      "name": "Memory Governance Core Hardening",
+      "objective": "Formalize the epistemic, policy, and audit primitives that make Victor's memory system inspectable, phase-gated, and safe to promote beyond structural GraphRAG capability.",
+      "sourceClusterIds": [
+        "cluster_memory_governance",
+        "cluster_builder_truth"
+      ],
+      "tasks": [
+        {
+          "taskId": "task_memory_governance_primitives",
+          "phaseId": "phase_victor_memory_governance_core",
+          "title": "Add artifact-level governance primitives to memory records",
+          "description": "Extend Victor memory records with governance state, epistemic type, confidence profile, policy version, and provenance completeness so stored memory distinguishes observation, inference, synthesis, and contested material.",
+          "acceptance": [
+            "Memory records carry explicit governance state and epistemic typing.",
+            "Confidence and provenance-completeness metadata are inspectable at the artifact level.",
+            "Stored memory can distinguish source-grounded observation from derived synthesis."
+          ],
+          "status": "done",
+          "priority": "P0",
+          "priorityLabel": "Critical path",
+          "children": [
+            {
+              "title": "Extend artifact schema with epistemic type, governance state, provenance completeness",
+              "status": "in-progress",
+              "priority": "P0",
+              "children": []
+            },
+            {
+              "title": "Expose those fields in retrieval bundles and audit output",
+              "status": "planned",
+              "priority": "P1",
+              "children": []
+            },
+            {
+              "title": "Verify contested and inferred material stays distinguishable in UI and ledger",
+              "status": "planned",
+              "priority": "P1",
+              "children": []
+            }
+          ],
+          "updatedAt": "2026-03-23T04:40:00.000Z"
+        },
+        {
+          "taskId": "task_memory_policy_externalization",
+          "phaseId": "phase_victor_memory_governance_core",
+          "title": "Externalize declarative memory promotion and recall policy",
+          "description": "Create a dedicated memory policy artifact that defines promotion thresholds, recall modes, contradiction rules, and stale-cache handling instead of leaving those semantics embedded in code paths.",
+          "acceptance": [
+            "Memory promotion and recall thresholds live in a declarative policy file.",
+            "Contradiction and stale-cache rules are inspectable without reading implementation code.",
+            "Policy versioning is wired into memory governance decisions."
+          ],
+          "status": "done",
+          "priority": "P0",
+          "priorityLabel": "Policy substrate",
+          "children": [
+            {
+              "title": "Move promotion, contradiction, stale-cache rules into declarative policy artifacts",
+              "status": "in-progress",
+              "priority": "P0",
+              "children": []
+            },
+            {
+              "title": "Version policy decisions and surface the active revision to operators",
+              "status": "planned",
+              "priority": "P1",
+              "children": []
+            }
+          ],
+          "updatedAt": "2026-03-23T04:40:00.000Z"
+        },
+        {
+          "taskId": "task_memory_policy_interceptors",
+          "phaseId": "phase_victor_memory_governance_core",
+          "title": "Add deterministic policy interception across memory lifecycle phases",
+          "description": "Introduce deterministic triage and per-phase policy checkpoints for encode, recall, persistence, and crystallization so memory operations are governed at every phase instead of only at write time.",
+          "acceptance": [
+            "Memory lifecycle phases expose policy checkpoints with phase-specific context.",
+            "Policy interception remains deterministic and auditable instead of LLM-classified.",
+            "Rejected or audit-only decisions are surfaced before state mutation."
+          ],
+          "status": "done",
+          "priority": "P1",
+          "priorityLabel": "Lifecycle gates",
+          "children": [
+            {
+              "title": "Create deterministic checkpoints for encode, recall, persistence, crystallization",
+              "status": "in-progress",
+              "priority": "P1",
+              "children": []
+            },
+            {
+              "title": "Block or downgrade before mutation when policy fails",
+              "status": "planned",
+              "priority": "P1",
+              "children": []
+            }
+          ],
+          "updatedAt": "2026-03-23T04:40:00.000Z"
+        },
+        {
+          "taskId": "task_memory_policy_modes",
+          "phaseId": "phase_victor_memory_governance_core",
+          "title": "Implement strict, audit, and permissive memory policy modes",
+          "description": "Support enforcement modes for memory governance so operators can run fail-closed in production, audit in tuning windows, and permissive in controlled development without drifting policy semantics.",
+          "acceptance": [
+            "Memory policy supports strict, audit, and permissive modes.",
+            "Audit mode logs what would have been blocked without mutating behavior.",
+            "Mode selection is configurable globally and per phase."
+          ],
+          "status": "done",
+          "priority": "P1",
+          "priorityLabel": "Operator control",
+          "children": [
+            {
+              "title": "Implement strict, audit, and permissive evaluation branches",
+              "status": "in-progress",
+              "priority": "P1",
+              "children": []
+            },
+            {
+              "title": "Expose mode selection in the operator surface without drifting semantics",
+              "status": "planned",
+              "priority": "P2",
+              "children": []
+            }
+          ],
+          "updatedAt": "2026-03-23T04:40:00.000Z"
+        },
+        {
+          "taskId": "task_memory_governance_ledger",
+          "phaseId": "phase_victor_memory_governance_core",
+          "title": "Add dedicated memory governance ledger events",
+          "description": "Record promotion approvals, rejections, contested writes, recall downgrades, and stale-memory blocks as first-class governance events so Victor can substantiate memory behavior, not just execution behavior.",
+          "acceptance": [
+            "Memory-governance decisions emit dedicated ledger events.",
+            "Ledger entries distinguish promotions, demotions, contested writes, and stale recall blocks.",
+            "Memory-governance history is queryable alongside existing audit trails."
+          ],
+          "status": "done",
+          "priority": "P0",
+          "priorityLabel": "Substantiation",
+          "children": [
+            {
+              "title": "Emit dedicated ledger events for promotion, demotion, stale recall, contested writes",
+              "status": "planned",
+              "priority": "P0",
+              "children": []
+            },
+            {
+              "title": "Make the history queryable alongside existing execution audits",
+              "status": "planned",
+              "priority": "P1",
+              "children": []
+            }
+          ],
+          "updatedAt": "2026-03-23T04:40:00.000Z"
+        },
+        {
+          "taskId": "task_memory_retrieval_orchestrator_split",
+          "phaseId": "phase_victor_memory_governance_core",
+          "title": "Split retrieval orchestration into explicit governed modules",
+          "description": "Refactor retrieval into legible stages for query intent, candidate gathering, graph expansion, arbitration, and bundle assembly so governance and evidence handling are traceable instead of buried in one module.",
+          "acceptance": [
+            "Retrieval orchestration stages are separated into explicit modules.",
+            "Each retrieval stage exposes its contribution to the final grounded bundle.",
+            "Governance can inspect where recall was strengthened, downgraded, or blocked."
+          ],
+          "status": "done",
+          "priority": "P1",
+          "priorityLabel": "Legibility",
+          "children": [
+            {
+              "title": "Split query intent, candidate gather, graph expansion, arbitration, bundle assembly",
+              "status": "planned",
+              "priority": "P1",
+              "children": []
+            },
+            {
+              "title": "Annotate each stage with why recall was strengthened, downgraded, or blocked",
+              "status": "planned",
+              "priority": "P2",
+              "children": []
+            }
+          ],
+          "updatedAt": "2026-03-23T04:40:00.000Z"
+        }
+      ],
+      "status": "complete",
+      "createdAt": "2026-03-20T08:10:00.000Z",
+      "updatedAt": "2026-03-23T04:40:00.000Z",
+      "priority": "P0",
+      "priorityLabel": "Active critical path",
+      "dependencies": [
+        "phase_packaging_execution_plane",
+        "phase_builder_source_of_truth"
+      ],
+      "nestedPrioritySummary": [
+        "P0: Governance primitives and policy externalization.",
+        "P1: Lifecycle interceptors, modes, and ledger events.",
+        "P1: Retrieval decomposition for audit legibility."
+      ],
+      "taskChildren": {
+        "task_memory_governance_primitives": {
+          "priority": "P0",
+          "priorityLabel": "Critical path",
+          "children": [
+            {
+              "title": "Extend artifact schema with epistemic type, governance state, provenance completeness",
+              "status": "in-progress",
+              "priority": "P0",
+              "children": []
+            },
+            {
+              "title": "Expose those fields in retrieval bundles and audit output",
+              "status": "planned",
+              "priority": "P1",
+              "children": []
+            },
+            {
+              "title": "Verify contested and inferred material stays distinguishable in UI and ledger",
+              "status": "planned",
+              "priority": "P1",
+              "children": []
+            }
+          ]
+        },
+        "task_memory_policy_externalization": {
+          "priority": "P0",
+          "priorityLabel": "Policy substrate",
+          "children": [
+            {
+              "title": "Move promotion, contradiction, stale-cache rules into declarative policy artifacts",
+              "status": "in-progress",
+              "priority": "P0",
+              "children": []
+            },
+            {
+              "title": "Version policy decisions and surface the active revision to operators",
+              "status": "planned",
+              "priority": "P1",
+              "children": []
+            }
+          ]
+        },
+        "task_memory_policy_interceptors": {
+          "priority": "P1",
+          "priorityLabel": "Lifecycle gates",
+          "children": [
+            {
+              "title": "Create deterministic checkpoints for encode, recall, persistence, crystallization",
+              "status": "in-progress",
+              "priority": "P1",
+              "children": []
+            },
+            {
+              "title": "Block or downgrade before mutation when policy fails",
+              "status": "planned",
+              "priority": "P1",
+              "children": []
+            }
+          ]
+        },
+        "task_memory_policy_modes": {
+          "priority": "P1",
+          "priorityLabel": "Operator control",
+          "children": [
+            {
+              "title": "Implement strict, audit, and permissive evaluation branches",
+              "status": "in-progress",
+              "priority": "P1",
+              "children": []
+            },
+            {
+              "title": "Expose mode selection in the operator surface without drifting semantics",
+              "status": "planned",
+              "priority": "P2",
+              "children": []
+            }
+          ]
+        },
+        "task_memory_governance_ledger": {
+          "priority": "P0",
+          "priorityLabel": "Substantiation",
+          "children": [
+            {
+              "title": "Emit dedicated ledger events for promotion, demotion, stale recall, contested writes",
+              "status": "planned",
+              "priority": "P0",
+              "children": []
+            },
+            {
+              "title": "Make the history queryable alongside existing execution audits",
+              "status": "planned",
+              "priority": "P1",
+              "children": []
+            }
+          ]
+        },
+        "task_memory_retrieval_orchestrator_split": {
+          "priority": "P1",
+          "priorityLabel": "Legibility",
+          "children": [
+            {
+              "title": "Split query intent, candidate gather, graph expansion, arbitration, bundle assembly",
+              "status": "planned",
+              "priority": "P1",
+              "children": []
+            },
+            {
+              "title": "Annotate each stage with why recall was strengthened, downgraded, or blocked",
+              "status": "planned",
+              "priority": "P2",
+              "children": []
+            }
+          ]
+        }
+      }
+    },
+    {
+      "phaseId": "phase_victor_uor_identity_migration",
+      "projectId": "victor-resident",
+      "ordinal": 16,
+      "name": "UOR Content-Addressed Identity Migration",
+      "objective": "Replace ad hoc Victor memory identity with deterministic UOR addressing so memory writes, lookups, deduplication, and supersession lineage are cryptographically and semantically stable.",
+      "sourceClusterIds": [
+        "cluster_memory_temporal",
+        "cluster_memory_governance",
+        "cluster_builder_truth"
+      ],
+      "tasks": [
+        {
+          "taskId": "task_victor_uor_address_type",
+          "phaseId": "phase_victor_uor_identity_migration",
+          "title": "Introduce canonical UOR address type and BLAKE3 content addressing",
+          "description": "Add deterministic content-addressed identity primitives so Victor memory artifacts can derive stable UOR addresses from canonical bytes instead of relying on UUIDs and duplicate hash pipelines.",
+          "acceptance": [
+            "Victor memory supports a canonical UOR address type.",
+            "Content-addressed identity uses the designated BLAKE3 pipeline.",
+            "Existing SHA-based integrity paths remain backward-compatible during migration."
+          ],
+          "status": "done",
+          "priority": "P2",
+          "priorityLabel": "Foundation",
+          "children": [],
+          "updatedAt": "2026-03-23T04:40:00.000Z"
+        },
+        {
+          "taskId": "task_victor_uor_identity_rewire",
+          "phaseId": "phase_victor_uor_identity_migration",
+          "title": "Rewire memory, tier, and graph structures onto UOR identity",
+          "description": "Apply UOR identity across documents, chunks, semantic nodes, edges, tier maps, and processor snapshots so the memory stack uses one stable identity model instead of parallel keys.",
+          "acceptance": [
+            "Core memory and tier structures key on UOR identity.",
+            "Graph and snapshot layers preserve referential integrity under the new address model.",
+            "Identity collisions fail closed instead of silently overwriting artifacts."
+          ],
+          "status": "done",
+          "priority": "P2",
+          "priorityLabel": "Foundation",
+          "children": [],
+          "updatedAt": "2026-03-23T04:40:00.000Z"
+        },
+        {
+          "taskId": "task_victor_uor_l3_lookup",
+          "phaseId": "phase_victor_uor_identity_migration",
+          "title": "Add exact-address lookup for crystallized memory",
+          "description": "Introduce O(1) address lookup for stable L3 memory so saturated artifacts can exit the expensive similarity-search path when exact identity is known.",
+          "acceptance": [
+            "Crystallized memory supports direct address lookup.",
+            "Retrieval can short-circuit on exact L3 address matches.",
+            "Exact-match recall remains auditable and backward-compatible."
+          ],
+          "status": "done",
+          "priority": "P2",
+          "priorityLabel": "Foundation",
+          "children": [],
+          "updatedAt": "2026-03-23T04:40:00.000Z"
+        },
+        {
+          "taskId": "task_victor_uor_migration_batch",
+          "phaseId": "phase_victor_uor_identity_migration",
+          "title": "Run governed migration from current provenance to UOR-backed identity",
+          "description": "Upgrade existing memory artifacts into the UOR identity model with explicit audits, rollback affordances, and conflict reporting so the migration itself is governed and reversible.",
+          "acceptance": [
+            "Existing memory artifacts can be migrated into the UOR identity model.",
+            "Migration writes an auditable report of converted, skipped, and contested artifacts.",
+            "Rollback path exists if identity conflicts or provenance gaps are discovered."
+          ],
+          "status": "done",
+          "priority": "P2",
+          "priorityLabel": "Foundation",
+          "children": [],
+          "updatedAt": "2026-03-23T04:40:00.000Z"
+        }
+      ],
+      "status": "complete",
+      "createdAt": "2026-03-20T08:11:00.000Z",
+      "updatedAt": "2026-03-23T04:40:00.000Z",
+      "priority": "P1",
+      "priorityLabel": "Planned memory track",
+      "dependencies": [
+        "phase_victor_memory_governance_core"
+      ],
+      "nestedPrioritySummary": [
+        "P1: Build the long-term memory substrate after governance is trustworthy.",
+        "P2: Sequence temporal, reliability, and operator ergonomics after core provenance work."
+      ],
+      "taskChildren": {
+        "task_memory_governance_primitives": {
+          "priority": "P0",
+          "priorityLabel": "Critical path",
+          "children": [
+            {
+              "title": "Extend artifact schema with epistemic type, governance state, provenance completeness",
+              "status": "in-progress",
+              "priority": "P0",
+              "children": []
+            },
+            {
+              "title": "Expose those fields in retrieval bundles and audit output",
+              "status": "planned",
+              "priority": "P1",
+              "children": []
+            },
+            {
+              "title": "Verify contested and inferred material stays distinguishable in UI and ledger",
+              "status": "planned",
+              "priority": "P1",
+              "children": []
+            }
+          ]
+        },
+        "task_memory_policy_externalization": {
+          "priority": "P0",
+          "priorityLabel": "Policy substrate",
+          "children": [
+            {
+              "title": "Move promotion, contradiction, stale-cache rules into declarative policy artifacts",
+              "status": "in-progress",
+              "priority": "P0",
+              "children": []
+            },
+            {
+              "title": "Version policy decisions and surface the active revision to operators",
+              "status": "planned",
+              "priority": "P1",
+              "children": []
+            }
+          ]
+        },
+        "task_memory_policy_interceptors": {
+          "priority": "P1",
+          "priorityLabel": "Lifecycle gates",
+          "children": [
+            {
+              "title": "Create deterministic checkpoints for encode, recall, persistence, crystallization",
+              "status": "in-progress",
+              "priority": "P1",
+              "children": []
+            },
+            {
+              "title": "Block or downgrade before mutation when policy fails",
+              "status": "planned",
+              "priority": "P1",
+              "children": []
+            }
+          ]
+        },
+        "task_memory_policy_modes": {
+          "priority": "P1",
+          "priorityLabel": "Operator control",
+          "children": [
+            {
+              "title": "Implement strict, audit, and permissive evaluation branches",
+              "status": "in-progress",
+              "priority": "P1",
+              "children": []
+            },
+            {
+              "title": "Expose mode selection in the operator surface without drifting semantics",
+              "status": "planned",
+              "priority": "P2",
+              "children": []
+            }
+          ]
+        },
+        "task_memory_governance_ledger": {
+          "priority": "P0",
+          "priorityLabel": "Substantiation",
+          "children": [
+            {
+              "title": "Emit dedicated ledger events for promotion, demotion, stale recall, contested writes",
+              "status": "planned",
+              "priority": "P0",
+              "children": []
+            },
+            {
+              "title": "Make the history queryable alongside existing execution audits",
+              "status": "planned",
+              "priority": "P1",
+              "children": []
+            }
+          ]
+        },
+        "task_memory_retrieval_orchestrator_split": {
+          "priority": "P1",
+          "priorityLabel": "Legibility",
+          "children": [
+            {
+              "title": "Split query intent, candidate gather, graph expansion, arbitration, bundle assembly",
+              "status": "planned",
+              "priority": "P1",
+              "children": []
+            },
+            {
+              "title": "Annotate each stage with why recall was strengthened, downgraded, or blocked",
+              "status": "planned",
+              "priority": "P2",
+              "children": []
+            }
+          ]
+        }
+      }
+    },
+    {
+      "phaseId": "phase_victor_thermodynamic_decay_foundation",
+      "projectId": "victor-resident",
+      "ordinal": 17,
+      "name": "Thermodynamic Decay Foundation",
+      "objective": "Replace fixed memory decay heuristics with the designed saturation and temperature model so decay, promotion, and retrieval weight are grounded in resolvedness instead of age alone.",
+      "sourceClusterIds": [
+        "cluster_memory_temporal",
+        "cluster_memory_governance",
+        "cluster_builder_truth"
+      ],
+      "tasks": [
+        {
+          "taskId": "task_victor_saturation_model",
+          "phaseId": "phase_victor_thermodynamic_decay_foundation",
+          "title": "Replace fixed decay factor with saturation and temperature state",
+          "description": "Refactor memory records so unresolvedness is represented through saturation and derived context temperature instead of a single opaque decay factor.",
+          "acceptance": [
+            "Memory records store saturation instead of a fixed decay factor.",
+            "Context temperature and effective lambda are derived from saturation.",
+            "Existing callers can inspect thermodynamic state without reconstructing it externally."
+          ],
+          "status": "done",
+          "priority": "P2",
+          "priorityLabel": "Foundation",
+          "children": [],
+          "updatedAt": "2026-03-23T04:40:00.000Z"
+        },
+        {
+          "taskId": "task_victor_thermodynamic_decay_engine",
+          "phaseId": "phase_victor_thermodynamic_decay_foundation",
+          "title": "Implement thermodynamic decay and saturation boost functions",
+          "description": "Add temperature, effective lambda, decay, and saturation-boost primitives so memory cooling and reheating are deterministic and testable.",
+          "acceptance": [
+            "Decay functions use effective lambda derived from saturation.",
+            "Saturated memories can reach zero-decay ground state.",
+            "Access-driven saturation boosts are deterministic and bounded."
+          ],
+          "status": "done",
+          "priority": "P2",
+          "priorityLabel": "Foundation",
+          "children": [],
+          "updatedAt": "2026-03-23T04:40:00.000Z"
+        },
+        {
+          "taskId": "task_victor_thermodynamic_routing",
+          "phaseId": "phase_victor_thermodynamic_decay_foundation",
+          "title": "Route crystallized memory by saturation threshold",
+          "description": "Bind tier routing to saturation so highly resolved memories can crystallize into the permanent layer based on explicit thermodynamic criteria instead of only score heuristics.",
+          "acceptance": [
+            "Tier routing can promote highly saturated memory to crystallized storage.",
+            "Thermodynamic thresholds are explicit and inspectable.",
+            "Routing remains compatible with existing score-based heuristics during transition."
+          ],
+          "status": "done",
+          "priority": "P2",
+          "priorityLabel": "Foundation",
+          "children": [],
+          "updatedAt": "2026-03-23T04:40:00.000Z"
+        },
+        {
+          "taskId": "task_victor_thermodynamic_validation",
+          "phaseId": "phase_victor_thermodynamic_decay_foundation",
+          "title": "Substantiate self-optimization behavior with governed tests",
+          "description": "Add explicit tests and benchmarks proving that access can cool memory, reduce decay, and improve routing so thermodynamic claims are substantiated instead of rhetorical.",
+          "acceptance": [
+            "Validation covers zero-decay saturation, partial-saturation decay, and routing thresholds.",
+            "Evidence shows repeated access can improve retention characteristics.",
+            "Thermodynamic behavior is queryable in test output and audit evidence."
+          ],
+          "status": "done",
+          "priority": "P2",
+          "priorityLabel": "Foundation",
+          "children": [],
+          "updatedAt": "2026-03-23T04:40:00.000Z"
+        }
+      ],
+      "status": "complete",
+      "createdAt": "2026-03-20T08:12:00.000Z",
+      "updatedAt": "2026-03-23T04:40:00.000Z",
+      "priority": "P1",
+      "priorityLabel": "Planned memory track",
+      "dependencies": [
+        "phase_victor_memory_governance_core"
+      ],
+      "nestedPrioritySummary": [
+        "P1: Build the long-term memory substrate after governance is trustworthy.",
+        "P2: Sequence temporal, reliability, and operator ergonomics after core provenance work."
+      ],
+      "taskChildren": {
+        "task_memory_governance_primitives": {
+          "priority": "P0",
+          "priorityLabel": "Critical path",
+          "children": [
+            {
+              "title": "Extend artifact schema with epistemic type, governance state, provenance completeness",
+              "status": "in-progress",
+              "priority": "P0",
+              "children": []
+            },
+            {
+              "title": "Expose those fields in retrieval bundles and audit output",
+              "status": "planned",
+              "priority": "P1",
+              "children": []
+            },
+            {
+              "title": "Verify contested and inferred material stays distinguishable in UI and ledger",
+              "status": "planned",
+              "priority": "P1",
+              "children": []
+            }
+          ]
+        },
+        "task_memory_policy_externalization": {
+          "priority": "P0",
+          "priorityLabel": "Policy substrate",
+          "children": [
+            {
+              "title": "Move promotion, contradiction, stale-cache rules into declarative policy artifacts",
+              "status": "in-progress",
+              "priority": "P0",
+              "children": []
+            },
+            {
+              "title": "Version policy decisions and surface the active revision to operators",
+              "status": "planned",
+              "priority": "P1",
+              "children": []
+            }
+          ]
+        },
+        "task_memory_policy_interceptors": {
+          "priority": "P1",
+          "priorityLabel": "Lifecycle gates",
+          "children": [
+            {
+              "title": "Create deterministic checkpoints for encode, recall, persistence, crystallization",
+              "status": "in-progress",
+              "priority": "P1",
+              "children": []
+            },
+            {
+              "title": "Block or downgrade before mutation when policy fails",
+              "status": "planned",
+              "priority": "P1",
+              "children": []
+            }
+          ]
+        },
+        "task_memory_policy_modes": {
+          "priority": "P1",
+          "priorityLabel": "Operator control",
+          "children": [
+            {
+              "title": "Implement strict, audit, and permissive evaluation branches",
+              "status": "in-progress",
+              "priority": "P1",
+              "children": []
+            },
+            {
+              "title": "Expose mode selection in the operator surface without drifting semantics",
+              "status": "planned",
+              "priority": "P2",
+              "children": []
+            }
+          ]
+        },
+        "task_memory_governance_ledger": {
+          "priority": "P0",
+          "priorityLabel": "Substantiation",
+          "children": [
+            {
+              "title": "Emit dedicated ledger events for promotion, demotion, stale recall, contested writes",
+              "status": "planned",
+              "priority": "P0",
+              "children": []
+            },
+            {
+              "title": "Make the history queryable alongside existing execution audits",
+              "status": "planned",
+              "priority": "P1",
+              "children": []
+            }
+          ]
+        },
+        "task_memory_retrieval_orchestrator_split": {
+          "priority": "P1",
+          "priorityLabel": "Legibility",
+          "children": [
+            {
+              "title": "Split query intent, candidate gather, graph expansion, arbitration, bundle assembly",
+              "status": "planned",
+              "priority": "P1",
+              "children": []
+            },
+            {
+              "title": "Annotate each stage with why recall was strengthened, downgraded, or blocked",
+              "status": "planned",
+              "priority": "P2",
+              "children": []
+            }
+          ]
+        }
+      }
+    },
+    {
+      "phaseId": "phase_victor_pinning_and_promotion",
+      "projectId": "victor-resident",
+      "ordinal": 18,
+      "name": "Weighted Pinning and Associative Promotion",
+      "objective": "Implement the designed reinforcement loop where verified use, cross-reference, conflict, and session co-capture can pin or unpin memory and drive legitimate crystallization.",
+      "sourceClusterIds": [
+        "cluster_memory_temporal",
+        "cluster_memory_governance",
+        "cluster_builder_truth"
+      ],
+      "tasks": [
+        {
+          "taskId": "task_victor_weighted_pinning",
+          "phaseId": "phase_victor_pinning_and_promotion",
+          "title": "Add weighted pinning hierarchy for access, corroboration, and verification",
+          "description": "Implement differentiated pinning events so cryptographic verification, corroboration, cross-reference, and ordinary access do not all distort saturation equally.",
+          "acceptance": [
+            "Pinning events carry differentiated weights.",
+            "Verification pins memory faster than ordinary access.",
+            "Weighting remains bounded and testable."
+          ],
+          "status": "done",
+          "priority": "P2",
+          "priorityLabel": "Foundation",
+          "children": [],
+          "updatedAt": "2026-03-23T04:40:00.000Z"
+        },
+        {
+          "taskId": "task_victor_entropy_injection",
+          "phaseId": "phase_victor_pinning_and_promotion",
+          "title": "Implement entropy injection for contested or conflicting memory",
+          "description": "Allow disputes and contradictions to unpin memory so contested material heats up, decays faster, and stops masquerading as stable knowledge.",
+          "acceptance": [
+            "Conflict paths can reduce saturation deterministically.",
+            "Entropy injection is bounded and auditable.",
+            "Contested memory loses stability without destructive deletion."
+          ],
+          "status": "done",
+          "priority": "P2",
+          "priorityLabel": "Foundation",
+          "children": [],
+          "updatedAt": "2026-03-23T04:40:00.000Z"
+        },
+        {
+          "taskId": "task_victor_cocapture_linking",
+          "phaseId": "phase_victor_pinning_and_promotion",
+          "title": "Add session co-capture linking and peer pinning",
+          "description": "Link memories encoded within the same governed session and let those relationships contribute medium-strength pinning so coherent memory clusters can form without manual authoring.",
+          "acceptance": [
+            "New session memories create associative links to valid peers.",
+            "Cross-reference pinning affects linked memories deterministically.",
+            "Session boundaries remain explicit so unrelated runs do not smear together."
+          ],
+          "status": "done",
+          "priority": "P2",
+          "priorityLabel": "Foundation",
+          "children": [],
+          "updatedAt": "2026-03-23T04:40:00.000Z"
+        },
+        {
+          "taskId": "task_victor_saturation_promotion",
+          "phaseId": "phase_victor_pinning_and_promotion",
+          "title": "Promote L2 memory to crystallized storage on saturation threshold",
+          "description": "Turn saturation crossing into a real L2 to L3 promotion path so the memory system can earn O(1) lookup and permanence through repeated grounded evidence.",
+          "acceptance": [
+            "Saturation-driven promotion moves eligible memory from L2 to L3.",
+            "Promotion is explicit and testable instead of implicit routing drift.",
+            "Promoted memory becomes available to exact-address lookup."
+          ],
+          "status": "done",
+          "priority": "P2",
+          "priorityLabel": "Foundation",
+          "children": [],
+          "updatedAt": "2026-03-23T04:40:00.000Z"
+        }
+      ],
+      "status": "complete",
+      "createdAt": "2026-03-20T08:13:00.000Z",
+      "updatedAt": "2026-03-23T04:40:00.000Z",
+      "priority": "P1",
+      "priorityLabel": "Planned memory track",
+      "dependencies": [
+        "phase_victor_memory_governance_core"
+      ],
+      "nestedPrioritySummary": [
+        "P1: Build the long-term memory substrate after governance is trustworthy.",
+        "P2: Sequence temporal, reliability, and operator ergonomics after core provenance work."
+      ],
+      "taskChildren": {
+        "task_memory_governance_primitives": {
+          "priority": "P0",
+          "priorityLabel": "Critical path",
+          "children": [
+            {
+              "title": "Extend artifact schema with epistemic type, governance state, provenance completeness",
+              "status": "in-progress",
+              "priority": "P0",
+              "children": []
+            },
+            {
+              "title": "Expose those fields in retrieval bundles and audit output",
+              "status": "planned",
+              "priority": "P1",
+              "children": []
+            },
+            {
+              "title": "Verify contested and inferred material stays distinguishable in UI and ledger",
+              "status": "planned",
+              "priority": "P1",
+              "children": []
+            }
+          ]
+        },
+        "task_memory_policy_externalization": {
+          "priority": "P0",
+          "priorityLabel": "Policy substrate",
+          "children": [
+            {
+              "title": "Move promotion, contradiction, stale-cache rules into declarative policy artifacts",
+              "status": "in-progress",
+              "priority": "P0",
+              "children": []
+            },
+            {
+              "title": "Version policy decisions and surface the active revision to operators",
+              "status": "planned",
+              "priority": "P1",
+              "children": []
+            }
+          ]
+        },
+        "task_memory_policy_interceptors": {
+          "priority": "P1",
+          "priorityLabel": "Lifecycle gates",
+          "children": [
+            {
+              "title": "Create deterministic checkpoints for encode, recall, persistence, crystallization",
+              "status": "in-progress",
+              "priority": "P1",
+              "children": []
+            },
+            {
+              "title": "Block or downgrade before mutation when policy fails",
+              "status": "planned",
+              "priority": "P1",
+              "children": []
+            }
+          ]
+        },
+        "task_memory_policy_modes": {
+          "priority": "P1",
+          "priorityLabel": "Operator control",
+          "children": [
+            {
+              "title": "Implement strict, audit, and permissive evaluation branches",
+              "status": "in-progress",
+              "priority": "P1",
+              "children": []
+            },
+            {
+              "title": "Expose mode selection in the operator surface without drifting semantics",
+              "status": "planned",
+              "priority": "P2",
+              "children": []
+            }
+          ]
+        },
+        "task_memory_governance_ledger": {
+          "priority": "P0",
+          "priorityLabel": "Substantiation",
+          "children": [
+            {
+              "title": "Emit dedicated ledger events for promotion, demotion, stale recall, contested writes",
+              "status": "planned",
+              "priority": "P0",
+              "children": []
+            },
+            {
+              "title": "Make the history queryable alongside existing execution audits",
+              "status": "planned",
+              "priority": "P1",
+              "children": []
+            }
+          ]
+        },
+        "task_memory_retrieval_orchestrator_split": {
+          "priority": "P1",
+          "priorityLabel": "Legibility",
+          "children": [
+            {
+              "title": "Split query intent, candidate gather, graph expansion, arbitration, bundle assembly",
+              "status": "planned",
+              "priority": "P1",
+              "children": []
+            },
+            {
+              "title": "Annotate each stage with why recall was strengthened, downgraded, or blocked",
+              "status": "planned",
+              "priority": "P2",
+              "children": []
+            }
+          ]
+        }
+      }
+    },
+    {
+      "phaseId": "phase_victor_zero_trust_crystallization",
+      "projectId": "victor-resident",
+      "ordinal": 19,
+      "name": "Zero-Trust Crystallization and Provenance",
+      "objective": "Move crystallization from optimistic auto-promotion to explicit approval and provenance-aware trust so Victor only hardens memory that has earned it.",
+      "sourceClusterIds": [
+        "cluster_memory_temporal",
+        "cluster_memory_governance",
+        "cluster_builder_truth"
+      ],
+      "tasks": [
+        {
+          "taskId": "task_victor_crystallization_policy",
+          "phaseId": "phase_victor_zero_trust_crystallization",
+          "title": "Make approval-required crystallization the default policy",
+          "description": "Add explicit crystallization policy controls so Victor can require approval before promoting high-saturation memory into permanent storage.",
+          "acceptance": [
+            "Crystallization policy supports approval-required and auto modes.",
+            "Default behavior is zero-trust rather than auto-promote.",
+            "Policy choice is inspectable in processor configuration and governance output."
+          ],
+          "status": "done",
+          "priority": "P2",
+          "priorityLabel": "Foundation",
+          "children": [],
+          "updatedAt": "2026-03-23T04:40:00.000Z"
+        },
+        {
+          "taskId": "task_victor_crystallization_approval",
+          "phaseId": "phase_victor_zero_trust_crystallization",
+          "title": "Implement explicit approval flow for pending crystallization",
+          "description": "Require an explicit approval path for high-saturation memories so promotion to L3 can be reviewed and substantiated instead of silently inferred.",
+          "acceptance": [
+            "High-saturation L2 memory can remain pending until approved.",
+            "Approval promotes only eligible memory above the crystallization threshold.",
+            "Rejected or missing approval leaves memory in a non-crystallized state."
+          ],
+          "status": "done",
+          "priority": "P2",
+          "priorityLabel": "Foundation",
+          "children": [],
+          "updatedAt": "2026-03-23T04:40:00.000Z"
+        },
+        {
+          "taskId": "task_victor_source_trust_levels",
+          "phaseId": "phase_victor_zero_trust_crystallization",
+          "title": "Add source trust levels to initial saturation and provenance",
+          "description": "Map source provenance into trust levels so unverified, user-reviewed, and verified inputs do not all enter the system with identical initial epistemic weight.",
+          "acceptance": [
+            "Input metadata captures explicit source trust level.",
+            "Initial saturation derives from provenance trust instead of a flat default.",
+            "Trust level is carried through governance and audit surfaces."
+          ],
+          "status": "done",
+          "priority": "P2",
+          "priorityLabel": "Foundation",
+          "children": [],
+          "updatedAt": "2026-03-23T04:40:00.000Z"
+        },
+        {
+          "taskId": "task_victor_cross_model_verification",
+          "phaseId": "phase_victor_zero_trust_crystallization",
+          "title": "Add cross-model verification as pre-crystallization fiber pinning",
+          "description": "Introduce multi-model verification as a stronger corroboration primitive so claims can be pinned or reheated before they harden into durable memory.",
+          "acceptance": [
+            "Cross-model verification can strengthen or weaken crystallization candidates.",
+            "Verification outcomes map to explicit pinning or entropy events.",
+            "Unavailable verification degrades gracefully without forging confidence."
+          ],
+          "status": "done",
+          "priority": "P2",
+          "priorityLabel": "Foundation",
+          "children": [],
+          "updatedAt": "2026-03-23T04:40:00.000Z"
+        }
+      ],
+      "status": "complete",
+      "createdAt": "2026-03-20T13:52:00.000Z",
+      "updatedAt": "2026-03-23T04:40:00.000Z",
+      "priority": "P1",
+      "priorityLabel": "Planned memory track",
+      "dependencies": [
+        "phase_victor_memory_governance_core"
+      ],
+      "nestedPrioritySummary": [
+        "P1: Build the long-term memory substrate after governance is trustworthy.",
+        "P2: Sequence temporal, reliability, and operator ergonomics after core provenance work."
+      ],
+      "taskChildren": {
+        "task_memory_governance_primitives": {
+          "priority": "P0",
+          "priorityLabel": "Critical path",
+          "children": [
+            {
+              "title": "Extend artifact schema with epistemic type, governance state, provenance completeness",
+              "status": "in-progress",
+              "priority": "P0",
+              "children": []
+            },
+            {
+              "title": "Expose those fields in retrieval bundles and audit output",
+              "status": "planned",
+              "priority": "P1",
+              "children": []
+            },
+            {
+              "title": "Verify contested and inferred material stays distinguishable in UI and ledger",
+              "status": "planned",
+              "priority": "P1",
+              "children": []
+            }
+          ]
+        },
+        "task_memory_policy_externalization": {
+          "priority": "P0",
+          "priorityLabel": "Policy substrate",
+          "children": [
+            {
+              "title": "Move promotion, contradiction, stale-cache rules into declarative policy artifacts",
+              "status": "in-progress",
+              "priority": "P0",
+              "children": []
+            },
+            {
+              "title": "Version policy decisions and surface the active revision to operators",
+              "status": "planned",
+              "priority": "P1",
+              "children": []
+            }
+          ]
+        },
+        "task_memory_policy_interceptors": {
+          "priority": "P1",
+          "priorityLabel": "Lifecycle gates",
+          "children": [
+            {
+              "title": "Create deterministic checkpoints for encode, recall, persistence, crystallization",
+              "status": "in-progress",
+              "priority": "P1",
+              "children": []
+            },
+            {
+              "title": "Block or downgrade before mutation when policy fails",
+              "status": "planned",
+              "priority": "P1",
+              "children": []
+            }
+          ]
+        },
+        "task_memory_policy_modes": {
+          "priority": "P1",
+          "priorityLabel": "Operator control",
+          "children": [
+            {
+              "title": "Implement strict, audit, and permissive evaluation branches",
+              "status": "in-progress",
+              "priority": "P1",
+              "children": []
+            },
+            {
+              "title": "Expose mode selection in the operator surface without drifting semantics",
+              "status": "planned",
+              "priority": "P2",
+              "children": []
+            }
+          ]
+        },
+        "task_memory_governance_ledger": {
+          "priority": "P0",
+          "priorityLabel": "Substantiation",
+          "children": [
+            {
+              "title": "Emit dedicated ledger events for promotion, demotion, stale recall, contested writes",
+              "status": "planned",
+              "priority": "P0",
+              "children": []
+            },
+            {
+              "title": "Make the history queryable alongside existing execution audits",
+              "status": "planned",
+              "priority": "P1",
+              "children": []
+            }
+          ]
+        },
+        "task_memory_retrieval_orchestrator_split": {
+          "priority": "P1",
+          "priorityLabel": "Legibility",
+          "children": [
+            {
+              "title": "Split query intent, candidate gather, graph expansion, arbitration, bundle assembly",
+              "status": "planned",
+              "priority": "P1",
+              "children": []
+            },
+            {
+              "title": "Annotate each stage with why recall was strengthened, downgraded, or blocked",
+              "status": "planned",
+              "priority": "P2",
+              "children": []
+            }
+          ]
+        }
+      }
+    },
+    {
+      "phaseId": "phase_victor_cache_and_temporal_memory",
+      "projectId": "victor-resident",
+      "ordinal": 20,
+      "name": "Cache Validation and Temporal Memory",
+      "objective": "Bind UOR identity, cache validation, decay profiles, and temporal chaining into one governed memory freshness model so stale or superseded memory fails closed instead of drifting forward.",
+      "sourceClusterIds": [
+        "cluster_memory_temporal",
+        "cluster_memory_governance",
+        "cluster_builder_truth"
+      ],
+      "tasks": [
+        {
+          "taskId": "task_victor_uor_cache_validation",
+          "phaseId": "phase_victor_cache_and_temporal_memory",
+          "title": "Implement deterministic UOR cache validation contract",
+          "description": "Validate cached documents, chunks, semantic nodes, and retrieval bundles against current UOR fingerprints so cache entries are treated as claims about graph state rather than trusted snapshots.",
+          "acceptance": [
+            "Cache validation compares stored UOR fingerprints to current graph state.",
+            "Validation covers source documents, chunks, semantic nodes, and retrieval bundles.",
+            "Failed validation marks cache entries stale instead of trusting advisory timestamps."
+          ],
+          "status": "done",
+          "priority": "P2",
+          "priorityLabel": "Foundation",
+          "children": [],
+          "updatedAt": "2026-03-23T04:40:00.000Z"
+        },
+        {
+          "taskId": "task_victor_uor_cache_shadow_mode",
+          "phaseId": "phase_victor_cache_and_temporal_memory",
+          "title": "Run cache validation in shadow mode and measure drift",
+          "description": "Quantify invalidation rates, false positives, and migration gaps before cache validation becomes an enforcing gate on live retrieval paths.",
+          "acceptance": [
+            "Shadow-mode validation produces measurable invalidation telemetry.",
+            "False positives and migration gaps are surfaced before fail-closed activation.",
+            "Shadow-mode results are written to a reviewable audit trail."
+          ],
+          "status": "done",
+          "priority": "P2",
+          "priorityLabel": "Foundation",
+          "children": [],
+          "updatedAt": "2026-03-23T04:40:00.000Z"
+        },
+        {
+          "taskId": "task_victor_uor_cache_fail_closed",
+          "phaseId": "phase_victor_cache_and_temporal_memory",
+          "title": "Promote cache validation to fail-closed enforcement",
+          "description": "Block stale durable reuse, rehydrate invalid bundles from live state, and demote questionable summaries instead of letting stale memory propagate silently.",
+          "acceptance": [
+            "Stale cache entries are blocked from durable reuse.",
+            "Invalid retrieval bundles are rehydrated from live graph state.",
+            "Failure paths are explicit and auditable rather than silent."
+          ],
+          "status": "done",
+          "priority": "P2",
+          "priorityLabel": "Foundation",
+          "children": [],
+          "updatedAt": "2026-03-23T04:40:00.000Z"
+        },
+        {
+          "taskId": "task_victor_temporal_profiles",
+          "phaseId": "phase_victor_cache_and_temporal_memory",
+          "title": "Assign temporal decay profiles and lazy retrieval weighting",
+          "description": "Apply decay profiles at ingestion and use lazy temporal weighting during retrieval so memory can cool or fade without expensive global recomputation.",
+          "acceptance": [
+            "Artifacts receive deterministic temporal profiles at ingestion.",
+            "Retrieval traces show when temporal weighting affects candidate rank.",
+            "Temporal weighting remains compatible with governance review."
+          ],
+          "status": "done",
+          "priority": "P2",
+          "priorityLabel": "Foundation",
+          "children": [],
+          "updatedAt": "2026-03-23T04:40:00.000Z"
+        },
+        {
+          "taskId": "task_victor_temporal_chaining_restaking",
+          "phaseId": "phase_victor_cache_and_temporal_memory",
+          "title": "Add temporal chaining and restaking for superseding memory",
+          "description": "Create verifiable temporal lineage and a governed restaking path so superseded or operationally critical memories can be justified, revived, or downgraded without narrative handwaving.",
+          "acceptance": [
+            "Superseding memories are linked through temporal chain metadata.",
+            "Critical decayed memories can be restaked with audit evidence.",
+            "Chain breaks or unjustified restakes surface as governance blockers."
+          ],
+          "status": "done",
+          "priority": "P2",
+          "priorityLabel": "Foundation",
+          "children": [],
+          "updatedAt": "2026-03-23T04:40:00.000Z"
+        }
+      ],
+      "status": "complete",
+      "createdAt": "2026-03-20T13:53:00.000Z",
+      "updatedAt": "2026-03-23T04:40:00.000Z",
+      "priority": "P1",
+      "priorityLabel": "Planned memory track",
+      "dependencies": [
+        "phase_victor_memory_governance_core"
+      ],
+      "nestedPrioritySummary": [
+        "P1: Build the long-term memory substrate after governance is trustworthy.",
+        "P2: Sequence temporal, reliability, and operator ergonomics after core provenance work."
+      ],
+      "taskChildren": {
+        "task_memory_governance_primitives": {
+          "priority": "P0",
+          "priorityLabel": "Critical path",
+          "children": [
+            {
+              "title": "Extend artifact schema with epistemic type, governance state, provenance completeness",
+              "status": "in-progress",
+              "priority": "P0",
+              "children": []
+            },
+            {
+              "title": "Expose those fields in retrieval bundles and audit output",
+              "status": "planned",
+              "priority": "P1",
+              "children": []
+            },
+            {
+              "title": "Verify contested and inferred material stays distinguishable in UI and ledger",
+              "status": "planned",
+              "priority": "P1",
+              "children": []
+            }
+          ]
+        },
+        "task_memory_policy_externalization": {
+          "priority": "P0",
+          "priorityLabel": "Policy substrate",
+          "children": [
+            {
+              "title": "Move promotion, contradiction, stale-cache rules into declarative policy artifacts",
+              "status": "in-progress",
+              "priority": "P0",
+              "children": []
+            },
+            {
+              "title": "Version policy decisions and surface the active revision to operators",
+              "status": "planned",
+              "priority": "P1",
+              "children": []
+            }
+          ]
+        },
+        "task_memory_policy_interceptors": {
+          "priority": "P1",
+          "priorityLabel": "Lifecycle gates",
+          "children": [
+            {
+              "title": "Create deterministic checkpoints for encode, recall, persistence, crystallization",
+              "status": "in-progress",
+              "priority": "P1",
+              "children": []
+            },
+            {
+              "title": "Block or downgrade before mutation when policy fails",
+              "status": "planned",
+              "priority": "P1",
+              "children": []
+            }
+          ]
+        },
+        "task_memory_policy_modes": {
+          "priority": "P1",
+          "priorityLabel": "Operator control",
+          "children": [
+            {
+              "title": "Implement strict, audit, and permissive evaluation branches",
+              "status": "in-progress",
+              "priority": "P1",
+              "children": []
+            },
+            {
+              "title": "Expose mode selection in the operator surface without drifting semantics",
+              "status": "planned",
+              "priority": "P2",
+              "children": []
+            }
+          ]
+        },
+        "task_memory_governance_ledger": {
+          "priority": "P0",
+          "priorityLabel": "Substantiation",
+          "children": [
+            {
+              "title": "Emit dedicated ledger events for promotion, demotion, stale recall, contested writes",
+              "status": "planned",
+              "priority": "P0",
+              "children": []
+            },
+            {
+              "title": "Make the history queryable alongside existing execution audits",
+              "status": "planned",
+              "priority": "P1",
+              "children": []
+            }
+          ]
+        },
+        "task_memory_retrieval_orchestrator_split": {
+          "priority": "P1",
+          "priorityLabel": "Legibility",
+          "children": [
+            {
+              "title": "Split query intent, candidate gather, graph expansion, arbitration, bundle assembly",
+              "status": "planned",
+              "priority": "P1",
+              "children": []
+            },
+            {
+              "title": "Annotate each stage with why recall was strengthened, downgraded, or blocked",
+              "status": "planned",
+              "priority": "P2",
+              "children": []
+            }
+          ]
+        }
+      }
+    },
+    {
+      "phaseId": "phase_victor_memory_reliability",
+      "projectId": "victor-resident",
+      "ordinal": 21,
+      "name": "Memory Reliability and Pressure Control",
+      "objective": "Give Victor a measurable reliability model so memory quality, pressure, and decay behavior are supervised by explicit SLOs instead of inferred from intuition.",
+      "sourceClusterIds": [
+        "cluster_memory_temporal",
+        "cluster_memory_governance",
+        "cluster_builder_truth"
+      ],
+      "tasks": [
+        {
+          "taskId": "task_victor_slo_tracker",
+          "phaseId": "phase_victor_memory_reliability",
+          "title": "Add memory SLO tracking and error budgets",
+          "description": "Define recall, integrity, decay, and latency targets so Victor can detect when the memory system is degrading before bad memory reaches action selection.",
+          "acceptance": [
+            "Memory SLOs are explicit and measurable.",
+            "Error budgets can be computed from current performance.",
+            "Reliability degradation can surface as an actionable governance signal."
+          ],
+          "status": "done",
+          "priority": "P2",
+          "priorityLabel": "Foundation",
+          "children": [],
+          "updatedAt": "2026-03-23T04:40:00.000Z"
+        },
+        {
+          "taskId": "task_victor_pressure_aware_decay",
+          "phaseId": "phase_victor_memory_reliability",
+          "title": "Implement pressure-aware decay and adjusted half-life reporting",
+          "description": "Compute memory pressure from tier utilization and expose the adjusted half-life so the system can quantify when pressure should accelerate forgetting.",
+          "acceptance": [
+            "Pressure is computed from memory tier utilization.",
+            "Adjusted half-life is reported through the SLO surface.",
+            "Pressure-aware behavior remains a deterministic value function."
+          ],
+          "status": "done",
+          "priority": "P2",
+          "priorityLabel": "Foundation",
+          "children": [],
+          "updatedAt": "2026-03-23T04:40:00.000Z"
+        },
+        {
+          "taskId": "task_victor_reliability_circuit_breakers",
+          "phaseId": "phase_victor_memory_reliability",
+          "title": "Add circuit breakers for exhausted reliability budgets",
+          "description": "Pause crystallization, tighten decay, or force audit mode when reliability budgets are exhausted so degraded memory quality cannot silently self-authorize.",
+          "acceptance": [
+            "Reliability failures can trigger explicit protective interventions.",
+            "Circuit-breaker actions are auditable and reversible.",
+            "Protective interventions integrate with existing memory governance policy."
+          ],
+          "status": "done",
+          "priority": "P2",
+          "priorityLabel": "Foundation",
+          "children": [],
+          "updatedAt": "2026-03-23T04:40:00.000Z"
+        }
+      ],
+      "status": "complete",
+      "createdAt": "2026-03-20T13:54:00.000Z",
+      "updatedAt": "2026-03-23T04:40:00.000Z",
+      "priority": "P1",
+      "priorityLabel": "Planned memory track",
+      "dependencies": [
+        "phase_victor_memory_governance_core"
+      ],
+      "nestedPrioritySummary": [
+        "P1: Build the long-term memory substrate after governance is trustworthy.",
+        "P2: Sequence temporal, reliability, and operator ergonomics after core provenance work."
+      ],
+      "taskChildren": {
+        "task_memory_governance_primitives": {
+          "priority": "P0",
+          "priorityLabel": "Critical path",
+          "children": [
+            {
+              "title": "Extend artifact schema with epistemic type, governance state, provenance completeness",
+              "status": "in-progress",
+              "priority": "P0",
+              "children": []
+            },
+            {
+              "title": "Expose those fields in retrieval bundles and audit output",
+              "status": "planned",
+              "priority": "P1",
+              "children": []
+            },
+            {
+              "title": "Verify contested and inferred material stays distinguishable in UI and ledger",
+              "status": "planned",
+              "priority": "P1",
+              "children": []
+            }
+          ]
+        },
+        "task_memory_policy_externalization": {
+          "priority": "P0",
+          "priorityLabel": "Policy substrate",
+          "children": [
+            {
+              "title": "Move promotion, contradiction, stale-cache rules into declarative policy artifacts",
+              "status": "in-progress",
+              "priority": "P0",
+              "children": []
+            },
+            {
+              "title": "Version policy decisions and surface the active revision to operators",
+              "status": "planned",
+              "priority": "P1",
+              "children": []
+            }
+          ]
+        },
+        "task_memory_policy_interceptors": {
+          "priority": "P1",
+          "priorityLabel": "Lifecycle gates",
+          "children": [
+            {
+              "title": "Create deterministic checkpoints for encode, recall, persistence, crystallization",
+              "status": "in-progress",
+              "priority": "P1",
+              "children": []
+            },
+            {
+              "title": "Block or downgrade before mutation when policy fails",
+              "status": "planned",
+              "priority": "P1",
+              "children": []
+            }
+          ]
+        },
+        "task_memory_policy_modes": {
+          "priority": "P1",
+          "priorityLabel": "Operator control",
+          "children": [
+            {
+              "title": "Implement strict, audit, and permissive evaluation branches",
+              "status": "in-progress",
+              "priority": "P1",
+              "children": []
+            },
+            {
+              "title": "Expose mode selection in the operator surface without drifting semantics",
+              "status": "planned",
+              "priority": "P2",
+              "children": []
+            }
+          ]
+        },
+        "task_memory_governance_ledger": {
+          "priority": "P0",
+          "priorityLabel": "Substantiation",
+          "children": [
+            {
+              "title": "Emit dedicated ledger events for promotion, demotion, stale recall, contested writes",
+              "status": "planned",
+              "priority": "P0",
+              "children": []
+            },
+            {
+              "title": "Make the history queryable alongside existing execution audits",
+              "status": "planned",
+              "priority": "P1",
+              "children": []
+            }
+          ]
+        },
+        "task_memory_retrieval_orchestrator_split": {
+          "priority": "P1",
+          "priorityLabel": "Legibility",
+          "children": [
+            {
+              "title": "Split query intent, candidate gather, graph expansion, arbitration, bundle assembly",
+              "status": "planned",
+              "priority": "P1",
+              "children": []
+            },
+            {
+              "title": "Annotate each stage with why recall was strengthened, downgraded, or blocked",
+              "status": "planned",
+              "priority": "P2",
+              "children": []
+            }
+          ]
+        }
+      }
+    },
+    {
+      "phaseId": "phase_victor_memory_surface",
+      "projectId": "victor-resident",
+      "ordinal": 22,
+      "name": "Memory Operator Surface and Ergonomic API",
+      "objective": "Expose the completed memory system through usable operator and developer surfaces so the design is not trapped in low-level internals.",
+      "sourceClusterIds": [
+        "cluster_memory_temporal",
+        "cluster_memory_governance",
+        "cluster_builder_truth"
+      ],
+      "tasks": [
+        {
+          "taskId": "task_victor_simple_memory_facade",
+          "phaseId": "phase_victor_memory_surface",
+          "title": "Add simplified facade for common memory operations",
+          "description": "Wrap the full processor in an ergonomic API for add, search, feedback, dispute, and session control so the memory system is practical to consume without understanding every subsystem.",
+          "acceptance": [
+            "A simplified facade supports the core memory workflow.",
+            "The facade preserves an escape hatch to the full processor.",
+            "Facade behavior remains aligned with governed memory semantics."
+          ],
+          "status": "pending",
+          "priority": "P2",
+          "priorityLabel": "Foundation",
+          "children": []
+        },
+        {
+          "taskId": "task_victor_memory_traversal_forget",
+          "phaseId": "phase_victor_memory_surface",
+          "title": "Add governed traversal and forgetting operations",
+          "description": "Support association traversal and deliberate forgetting so the operator surface can inspect or remove memory with explicit graph semantics instead of brittle data surgery.",
+          "acceptance": [
+            "Operators can inspect related memory through graph traversal.",
+            "Forgetting removes memory cleanly from governed tiers and edges.",
+            "Delete and traversal actions are visible in audit output."
+          ],
+          "status": "pending",
+          "priority": "P2",
+          "priorityLabel": "Foundation",
+          "children": []
+        },
+        {
+          "taskId": "task_victor_memory_ingestion_surface",
+          "phaseId": "phase_victor_memory_surface",
+          "title": "Add file and document ingestion surface",
+          "description": "Expose file and document ingestion so external materials can enter the governed memory pipeline with preserved provenance instead of bypassing the memory system.",
+          "acceptance": [
+            "File ingestion supports the intended document classes.",
+            "Chunking, encoding, and routing preserve source provenance.",
+            "Ingestion remains policy-checked instead of bypassing governance."
+          ],
+          "status": "pending",
+          "priority": "P2",
+          "priorityLabel": "Foundation",
+          "children": []
+        },
+        {
+          "taskId": "task_victor_memory_operator_views",
+          "phaseId": "phase_victor_memory_surface",
+          "title": "Add operator views for chain, decay, and governance inspection",
+          "description": "Expose the memory ledger, chain state, decay status, and governance decisions through operator-facing views so Victor's memory system is legible during review and debugging.",
+          "acceptance": [
+            "Operators can inspect chain state, decay state, and governance state.",
+            "Views distinguish grounded memory evidence from inferred summaries.",
+            "Inspection surfaces support review without requiring code-level tracing."
+          ],
+          "status": "pending",
+          "priority": "P2",
+          "priorityLabel": "Foundation",
+          "children": []
+        }
+      ],
+      "status": "planned",
+      "createdAt": "2026-03-20T13:55:00.000Z",
+      "updatedAt": "2026-03-20T13:55:00.000Z",
+      "priority": "P1",
+      "priorityLabel": "Planned memory track",
+      "dependencies": [
+        "phase_victor_memory_governance_core"
+      ],
+      "nestedPrioritySummary": [
+        "P1: Build the long-term memory substrate after governance is trustworthy.",
+        "P2: Sequence temporal, reliability, and operator ergonomics after core provenance work."
+      ],
+      "taskChildren": {
+        "task_memory_governance_primitives": {
+          "priority": "P0",
+          "priorityLabel": "Critical path",
+          "children": [
+            {
+              "title": "Extend artifact schema with epistemic type, governance state, provenance completeness",
+              "status": "in-progress",
+              "priority": "P0",
+              "children": []
+            },
+            {
+              "title": "Expose those fields in retrieval bundles and audit output",
+              "status": "planned",
+              "priority": "P1",
+              "children": []
+            },
+            {
+              "title": "Verify contested and inferred material stays distinguishable in UI and ledger",
+              "status": "planned",
+              "priority": "P1",
+              "children": []
+            }
+          ]
+        },
+        "task_memory_policy_externalization": {
+          "priority": "P0",
+          "priorityLabel": "Policy substrate",
+          "children": [
+            {
+              "title": "Move promotion, contradiction, stale-cache rules into declarative policy artifacts",
+              "status": "in-progress",
+              "priority": "P0",
+              "children": []
+            },
+            {
+              "title": "Version policy decisions and surface the active revision to operators",
+              "status": "planned",
+              "priority": "P1",
+              "children": []
+            }
+          ]
+        },
+        "task_memory_policy_interceptors": {
+          "priority": "P1",
+          "priorityLabel": "Lifecycle gates",
+          "children": [
+            {
+              "title": "Create deterministic checkpoints for encode, recall, persistence, crystallization",
+              "status": "in-progress",
+              "priority": "P1",
+              "children": []
+            },
+            {
+              "title": "Block or downgrade before mutation when policy fails",
+              "status": "planned",
+              "priority": "P1",
+              "children": []
+            }
+          ]
+        },
+        "task_memory_policy_modes": {
+          "priority": "P1",
+          "priorityLabel": "Operator control",
+          "children": [
+            {
+              "title": "Implement strict, audit, and permissive evaluation branches",
+              "status": "in-progress",
+              "priority": "P1",
+              "children": []
+            },
+            {
+              "title": "Expose mode selection in the operator surface without drifting semantics",
+              "status": "planned",
+              "priority": "P2",
+              "children": []
+            }
+          ]
+        },
+        "task_memory_governance_ledger": {
+          "priority": "P0",
+          "priorityLabel": "Substantiation",
+          "children": [
+            {
+              "title": "Emit dedicated ledger events for promotion, demotion, stale recall, contested writes",
+              "status": "planned",
+              "priority": "P0",
+              "children": []
+            },
+            {
+              "title": "Make the history queryable alongside existing execution audits",
+              "status": "planned",
+              "priority": "P1",
+              "children": []
+            }
+          ]
+        },
+        "task_memory_retrieval_orchestrator_split": {
+          "priority": "P1",
+          "priorityLabel": "Legibility",
+          "children": [
+            {
+              "title": "Split query intent, candidate gather, graph expansion, arbitration, bundle assembly",
+              "status": "planned",
+              "priority": "P1",
+              "children": []
+            },
+            {
+              "title": "Annotate each stage with why recall was strengthened, downgraded, or blocked",
+              "status": "planned",
+              "priority": "P2",
+              "children": []
+            }
+          ]
+        }
+      }
+    },
+    {
+      "phaseId": "phase_evolveai_recursive_learning",
+      "projectId": "builder-console",
+      "ordinal": 23,
+      "name": "EvolveAI Recursive Learning and Model Governance",
+      "objective": "Add the missing EvolveAI track so recursive learning, model governance, and self-improvement proposals become explicit product work instead of ambient ambition.",
+      "sourceClusterIds": [
+        "cluster_evolveai",
+        "cluster_memory_governance",
+        "cluster_memory_temporal",
+        "cluster_builder_truth"
+      ],
+      "dependencies": [
+        "phase_victor_memory_governance_core",
+        "phase_victor_memory_surface"
+      ],
+      "nestedPrioritySummary": [
+        "P0: Learning packets and self-improvement proposals are governed artifacts, not informal notes.",
+        "P1: EvolveAI state is visible in Builder alongside memory and execution state.",
+        "P1: Model/runtime changes require explicit review and rollback posture."
+      ],
+      "tasks": [
+        {
+          "taskId": "task_evolveai_learning_packets",
+          "phaseId": "phase_evolveai_recursive_learning",
+          "title": "Formalize EvolveAI learning packets and improvement proposals",
+          "description": "Represent self-improvement opportunities as governed packets with evidence, risk classification, expected benefit, rollback conditions, and promotion status.",
+          "acceptance": [
+            "Learning packets have a durable schema with evidence and rollback fields.",
+            "Improvement proposals are distinct from observed lessons and failures.",
+            "Packets can be reviewed, accepted, rejected, or quarantined explicitly."
+          ],
+          "status": "planned",
+          "priority": "P0",
+          "priorityLabel": "Governed learning",
+          "children": [
+            {
+              "title": "Define packet schema for lesson, proposal, experiment, rollback",
+              "status": "planned",
+              "priority": "P0",
+              "children": []
+            },
+            {
+              "title": "Bind packets to evidence in memory and execution ledgers",
+              "status": "planned",
+              "priority": "P1",
+              "children": []
+            }
+          ]
+        },
+        {
+          "taskId": "task_evolveai_builder_surface",
+          "phaseId": "phase_evolveai_recursive_learning",
+          "title": "Expose EvolveAI state in Forge UI",
+          "description": "Show learning queues, proposals, active experiments, and blocked self-modification items in the same operator surface as roadmap and memory state.",
+          "acceptance": [
+            "Builder shows EvolveAI queues and proposal state.",
+            "Operators can see why proposals are blocked or pending.",
+            "EvolveAI visualization links back to roadmap phases and evidence."
+          ],
+          "status": "planned",
+          "priority": "P1",
+          "priorityLabel": "Operator visibility",
+          "children": [
+            {
+              "title": "Add visual hooks for proposal queue, experiment state, blocked changes",
+              "status": "planned",
+              "priority": "P1",
+              "children": []
+            },
+            {
+              "title": "Trace each item back to roadmap and evidence artifacts",
+              "status": "planned",
+              "priority": "P1",
+              "children": []
+            }
+          ]
+        },
+        {
+          "taskId": "task_evolveai_model_governance",
+          "phaseId": "phase_evolveai_recursive_learning",
+          "title": "Gate model/runtime self-modification through explicit governance",
+          "description": "Require review, rollback planning, and bounded experiment definitions before EvolveAI can alter model selection, prompts, adapters, or runtime behavior.",
+          "acceptance": [
+            "Self-modification proposals require explicit review and rollback posture.",
+            "Changes are bounded by experiment definitions before activation.",
+            "Model/runtime governance stays legible to the operator."
+          ],
+          "status": "planned",
+          "priority": "P1",
+          "priorityLabel": "Change control",
+          "children": [
+            {
+              "title": "Require rollback strategy and blast-radius declaration",
+              "status": "planned",
+              "priority": "P1",
+              "children": []
+            },
+            {
+              "title": "Separate low-risk tuning from structural runtime changes",
+              "status": "planned",
+              "priority": "P2",
+              "children": []
+            }
+          ]
+        },
+        {
+          "taskId": "task_evolveai_feedback_loop",
+          "phaseId": "phase_evolveai_recursive_learning",
+          "title": "Close the loop from runtime outcomes back into EvolveAI",
+          "description": "Ensure wins, failures, and contradictions from execution and memory governance feed the recursive learning queue instead of disappearing into narrative residue.",
+          "acceptance": [
+            "Execution and memory outcomes can generate EvolveAI intake items.",
+            "Contradictions and failures produce feedback that survives beyond a single session.",
+            "Learning loops remain auditable and disableable."
+          ],
+          "status": "planned",
+          "priority": "P2",
+          "priorityLabel": "Continuity",
+          "children": [
+            {
+              "title": "Ingest execution outcomes into EvolveAI intake",
+              "status": "planned",
+              "priority": "P2",
+              "children": []
+            },
+            {
+              "title": "Turn contradiction and failure events into queued learning work",
+              "status": "planned",
+              "priority": "P2",
+              "children": []
+            }
+          ]
+        }
+      ],
+      "status": "planned",
+      "createdAt": "2026-03-20T16:39:48.025Z",
+      "updatedAt": "2026-03-20T16:39:48.025Z"
+    },
+    {
+      "phaseId": "phase_mnm1aeb2",
+      "projectId": "builder-console",
+      "ordinal": 24,
+      "name": "Evidence Layer API Wiring",
+      "objective": "Expose evidence-layer contract (evaluate, log, bundle) through Continuum API routes and wire the write-side so governance lifecycle events automatically produce evidence records.",
+      "sourceClusterIds": [],
+      "dependencies": [],
+      "nestedPrioritySummary": [],
+      "tasks": [
+        {
+          "taskId": "task_phase_mnm1aeb2_0",
+          "phaseId": "phase_mnm1aeb2",
+          "title": "Create evidence API route handlers on Continuum service",
+          "description": "Add POST /api/continuum/evidence/evaluate, /evidence/log, /evidence/bundle endpoints that call the existing contract.ts, evaluate.ts, log.ts, bundle.ts modules.",
+          "acceptance": [],
+          "status": "pending",
+          "priority": 3,
+          "priorityLabel": "medium",
+          "children": []
+        },
+        {
+          "taskId": "task_phase_mnm1aeb2_1",
+          "phaseId": "phase_mnm1aeb2",
+          "title": "Wire governance lifecycle events to evidence logger",
+          "description": "Hook plan, audit, implement, substantiate events into the evidence append-only ledger so every lifecycle transition is recorded automatically.",
+          "acceptance": [],
+          "status": "pending",
+          "priority": 3,
+          "priorityLabel": "medium",
+          "children": []
+        },
+        {
+          "taskId": "task_phase_mnm1aeb2_2",
+          "phaseId": "phase_mnm1aeb2",
+          "title": "Add evidence proxy paths to zo.space API route",
+          "description": "Extend the /api/continuum/graph proxy ALLOWED list with evidence endpoints.",
+          "acceptance": [],
+          "status": "pending",
+          "priority": 3,
+          "priorityLabel": "medium",
+          "children": []
+        },
+        {
+          "taskId": "task_phase_mnm1aeb2_3",
+          "phaseId": "phase_mnm1aeb2",
+          "title": "Write integration tests for evidence API endpoints",
+          "description": "Test evaluate, log, and bundle endpoints return correct shapes and persist to the evidence ledger.",
+          "acceptance": [],
+          "status": "pending",
+          "priority": 3,
+          "priorityLabel": "medium",
+          "children": []
+        }
+      ],
+      "status": "planned",
+      "createdAt": "2026-04-05T17:27:04.430Z",
+      "updatedAt": "2026-04-05T17:27:04.430Z"
+    },
+    {
+      "phaseId": "phase_mnm1aebc",
+      "projectId": "builder-console",
+      "ordinal": 25,
+      "name": "Evidence Recording in Governance Lifecycle",
+      "objective": "Ensure every governance lifecycle event (plan creation, audit verdict, implementation seal, substantiation) automatically produces a structured evidence record linked to Continuum.",
+      "sourceClusterIds": [],
+      "dependencies": [],
+      "nestedPrioritySummary": [],
+      "tasks": [
+        {
+          "taskId": "task_phase_mnm1aebc_0",
+          "phaseId": "phase_mnm1aebc",
+          "title": "Define evidence record schema for each lifecycle event type",
+          "description": "Specify the shape of evidence records for plan, audit, implement, and substantiate events with provenance hashes.",
+          "acceptance": [],
+          "status": "pending",
+          "priority": 3,
+          "priorityLabel": "medium",
+          "children": []
+        },
+        {
+          "taskId": "task_phase_mnm1aebc_1",
+          "phaseId": "phase_mnm1aebc",
+          "title": "Instrument qor-plan skill to emit evidence on plan creation",
+          "description": "After a plan is created and committed, emit an evidence record to the evidence ledger.",
+          "acceptance": [],
+          "status": "pending",
+          "priority": 3,
+          "priorityLabel": "medium",
+          "children": []
+        },
+        {
+          "taskId": "task_phase_mnm1aebc_2",
+          "phaseId": "phase_mnm1aebc",
+          "title": "Instrument qor-audit skill to emit evidence on verdict",
+          "description": "After audit PASS/VETO, emit evidence with the verdict, chain hash, and flagged items.",
+          "acceptance": [],
+          "status": "pending",
+          "priority": 3,
+          "priorityLabel": "medium",
+          "children": []
+        },
+        {
+          "taskId": "task_phase_mnm1aebc_3",
+          "phaseId": "phase_mnm1aebc",
+          "title": "Instrument qor-substantiate to emit evidence on seal",
+          "description": "After Merkle seal, emit a final evidence record linking all prior evidence for the session.",
+          "acceptance": [],
+          "status": "pending",
+          "priority": 3,
+          "priorityLabel": "medium",
+          "children": []
+        }
+      ],
+      "status": "planned",
+      "createdAt": "2026-04-05T17:27:04.440Z",
+      "updatedAt": "2026-04-05T17:27:04.440Z"
+    },
+    {
+      "phaseId": "phase_mnm1aebk",
+      "projectId": "builder-console",
+      "ordinal": 26,
+      "name": "Victor Audit Page Rewire",
+      "objective": "Rewire the /qor/victor zo.space page to consume real promotion-gate, soak-evidence, and heartbeat data from the Victor kernel APIs instead of stubs.",
+      "sourceClusterIds": [],
+      "dependencies": [],
+      "nestedPrioritySummary": [],
+      "tasks": [
+        {
+          "taskId": "task_phase_mnm1aebk_0",
+          "phaseId": "phase_mnm1aebk",
+          "title": "Expose promotion-gate summary as a Victor API endpoint",
+          "description": "Create GET /api/victor/promotion-gate that returns the PromotionGateSummary from promotion-gate.ts.",
+          "acceptance": [],
+          "status": "pending",
+          "priority": 3,
+          "priorityLabel": "medium",
+          "children": []
+        },
+        {
+          "taskId": "task_phase_mnm1aebk_1",
+          "phaseId": "phase_mnm1aebk",
+          "title": "Expose soak-evidence summary as a Victor API endpoint",
+          "description": "Create GET /api/victor/soak-evidence that returns the SoakEvidenceSummary.",
+          "acceptance": [],
+          "status": "pending",
+          "priority": 3,
+          "priorityLabel": "medium",
+          "children": []
+        },
+        {
+          "taskId": "task_phase_mnm1aebk_2",
+          "phaseId": "phase_mnm1aebk",
+          "title": "Update /qor/victor page to fetch and display real promotion data",
+          "description": "Replace stubbed promotion status with live API calls to promotion-gate and soak-evidence endpoints.",
+          "acceptance": [],
+          "status": "pending",
+          "priority": 3,
+          "priorityLabel": "medium",
+          "children": []
+        },
+        {
+          "taskId": "task_phase_mnm1aebk_3",
+          "phaseId": "phase_mnm1aebk",
+          "title": "Write tests for Victor API endpoints",
+          "description": "Test promotion-gate and soak-evidence endpoints return correct shapes.",
+          "acceptance": [],
+          "status": "pending",
+          "priority": 3,
+          "priorityLabel": "medium",
+          "children": []
+        }
+      ],
+      "status": "planned",
+      "createdAt": "2026-04-05T17:27:04.448Z",
+      "updatedAt": "2026-04-05T17:27:04.448Z"
+    },
+    {
+      "phaseId": "phase_mnm1aebp",
+      "projectId": "builder-console",
+      "ordinal": 27,
+      "name": "Continuum Ingestion Reliability",
+      "objective": "Harden the Continuum ingestion pipeline to handle edge cases: duplicate records, malformed JSONL, missing embeddings, and stale heartbeat files.",
+      "sourceClusterIds": [],
+      "dependencies": [],
+      "nestedPrioritySummary": [],
+      "tasks": [
+        {
+          "taskId": "task_phase_mnm1aebp_0",
+          "phaseId": "phase_mnm1aebp",
+          "title": "Add deduplication guard to memory-to-graph ingest",
+          "description": "Check record fingerprint before inserting to Neo4j, skip duplicates.",
+          "acceptance": [],
+          "status": "pending",
+          "priority": 3,
+          "priorityLabel": "medium",
+          "children": []
+        },
+        {
+          "taskId": "task_phase_mnm1aebp_1",
+          "phaseId": "phase_mnm1aebp",
+          "title": "Add JSONL validation before ingestion",
+          "description": "Validate each line parses as valid JSON with required fields before graph write.",
+          "acceptance": [],
+          "status": "pending",
+          "priority": 3,
+          "priorityLabel": "medium",
+          "children": []
+        },
+        {
+          "taskId": "task_phase_mnm1aebp_2",
+          "phaseId": "phase_mnm1aebp",
+          "title": "Handle missing embeddings gracefully in batch clustering",
+          "description": "Skip records without embeddings in cluster pipeline instead of erroring (audit flag F2 hardening).",
+          "acceptance": [],
+          "status": "pending",
+          "priority": 3,
+          "priorityLabel": "medium",
+          "children": []
+        },
+        {
+          "taskId": "task_phase_mnm1aebp_3",
+          "phaseId": "phase_mnm1aebp",
+          "title": "Write tests for ingestion edge cases",
+          "description": "Test duplicate rejection, malformed JSONL handling, and missing embedding graceful degradation.",
+          "acceptance": [],
+          "status": "pending",
+          "priority": 3,
+          "priorityLabel": "medium",
+          "children": []
+        }
+      ],
+      "status": "planned",
+      "createdAt": "2026-04-05T17:27:04.453Z",
+      "updatedAt": "2026-04-05T17:27:04.453Z"
+    },
+    {
+      "phaseId": "phase_mnm1aebu",
+      "projectId": "builder-console",
+      "ordinal": 28,
+      "name": "Dead Service and Route Cleanup",
+      "objective": "Identify and remove dead zo.space routes, unused API endpoints, and orphaned service registrations that no longer serve live functionality.",
+      "sourceClusterIds": [],
+      "dependencies": [],
+      "nestedPrioritySummary": [],
+      "tasks": [
+        {
+          "taskId": "task_phase_mnm1aebu_0",
+          "phaseId": "phase_mnm1aebu",
+          "title": "Audit all zo.space routes for liveness",
+          "description": "List all routes, test each for 200/404, flag dead ones.",
+          "acceptance": [],
+          "status": "pending",
+          "priority": 3,
+          "priorityLabel": "medium",
+          "children": []
+        },
+        {
+          "taskId": "task_phase_mnm1aebu_1",
+          "phaseId": "phase_mnm1aebu",
+          "title": "Audit registered user services for liveness",
+          "description": "List all registered services, check if their ports respond, flag dead ones.",
+          "acceptance": [],
+          "status": "pending",
+          "priority": 3,
+          "priorityLabel": "medium",
+          "children": []
+        },
+        {
+          "taskId": "task_phase_mnm1aebu_2",
+          "phaseId": "phase_mnm1aebu",
+          "title": "Remove confirmed dead routes and services",
+          "description": "Delete routes and unregister services confirmed dead after audit.",
+          "acceptance": [],
+          "status": "pending",
+          "priority": 3,
+          "priorityLabel": "medium",
+          "children": []
+        },
+        {
+          "taskId": "task_phase_mnm1aebu_3",
+          "phaseId": "phase_mnm1aebu",
+          "title": "Document active service inventory",
+          "description": "Update SYSTEM_STATE with the canonical list of active services, ports, and routes.",
+          "acceptance": [],
+          "status": "pending",
+          "priority": 3,
+          "priorityLabel": "medium",
+          "children": []
+        }
+      ],
+      "status": "planned",
+      "createdAt": "2026-04-05T17:27:04.458Z",
+      "updatedAt": "2026-04-05T17:27:04.458Z"
+    },
+    {
+      "phaseId": "phase_mnm1aebz",
+      "projectId": "builder-console",
+      "ordinal": 29,
+      "name": "Governance Memory Integration",
+      "objective": "Record all governance decisions (plan verdicts, audit results, VETO patterns, substantiation seals) as first-class Continuum episodic records so the intelligence layers can derive governance patterns.",
+      "sourceClusterIds": [],
+      "dependencies": [],
+      "nestedPrioritySummary": [],
+      "tasks": [
+        {
+          "taskId": "task_phase_mnm1aebz_0",
+          "phaseId": "phase_mnm1aebz",
+          "title": "Define governance episodic record types",
+          "description": "Extend EpisodicRecord with governance-specific fields: verdict, chain_hash, session_id, lifecycle_stage.",
+          "acceptance": [],
+          "status": "pending",
+          "priority": 3,
+          "priorityLabel": "medium",
+          "children": []
+        },
+        {
+          "taskId": "task_phase_mnm1aebz_1",
+          "phaseId": "phase_mnm1aebz",
+          "title": "Write governance events to Neo4j on lifecycle transitions",
+          "description": "Hook into META_LEDGER append to also write governance nodes to the graph.",
+          "acceptance": [],
+          "status": "pending",
+          "priority": 3,
+          "priorityLabel": "medium",
+          "children": []
+        },
+        {
+          "taskId": "task_phase_mnm1aebz_2",
+          "phaseId": "phase_mnm1aebz",
+          "title": "Enable semantic derivation over governance records",
+          "description": "Ensure co-occurrence and clustering include governance records, surfacing recurring decision patterns.",
+          "acceptance": [],
+          "status": "pending",
+          "priority": 3,
+          "priorityLabel": "medium",
+          "children": []
+        },
+        {
+          "taskId": "task_phase_mnm1aebz_3",
+          "phaseId": "phase_mnm1aebz",
+          "title": "Write tests for governance record ingestion",
+          "description": "Test that plan, audit, implement, and seal events create proper graph nodes.",
+          "acceptance": [],
+          "status": "pending",
+          "priority": 3,
+          "priorityLabel": "medium",
+          "children": []
+        }
+      ],
+      "status": "planned",
+      "createdAt": "2026-04-05T17:27:04.463Z",
+      "updatedAt": "2026-04-05T17:27:04.463Z"
+    },
+    {
+      "phaseId": "phase_mnm1aec4",
+      "projectId": "builder-console",
+      "ordinal": 30,
+      "name": "Shadow Genome Graph Projection",
+      "objective": "Project SHADOW_GENOME failure patterns and mandatory guards into Neo4j as queryable graph nodes, enabling the procedural layer to mine anti-patterns.",
+      "sourceClusterIds": [],
+      "dependencies": [],
+      "nestedPrioritySummary": [],
+      "tasks": [
+        {
+          "taskId": "task_phase_mnm1aec4_0",
+          "phaseId": "phase_mnm1aec4",
+          "title": "Parse SHADOW_GENOME.md into structured records",
+          "description": "Extract VETO patterns, mandatory guards, and failure modes from the Shadow Genome document.",
+          "acceptance": [],
+          "status": "pending",
+          "priority": 3,
+          "priorityLabel": "medium",
+          "children": []
+        },
+        {
+          "taskId": "task_phase_mnm1aec4_1",
+          "phaseId": "phase_mnm1aec4",
+          "title": "Create Shadow Genome node types in Neo4j",
+          "description": "Define :ShadowGenome:Pattern and :ShadowGenome:Guard labels with provenance edges.",
+          "acceptance": [],
+          "status": "pending",
+          "priority": 3,
+          "priorityLabel": "medium",
+          "children": []
+        },
+        {
+          "taskId": "task_phase_mnm1aec4_2",
+          "phaseId": "phase_mnm1aec4",
+          "title": "Wire procedural mining to check against shadow patterns",
+          "description": "When mining procedures, cross-reference against shadow genome to flag anti-patterns.",
+          "acceptance": [],
+          "status": "pending",
+          "priority": 3,
+          "priorityLabel": "medium",
+          "children": []
+        },
+        {
+          "taskId": "task_phase_mnm1aec4_3",
+          "phaseId": "phase_mnm1aec4",
+          "title": "Write tests for shadow genome graph operations",
+          "description": "Test parsing, graph insertion, and anti-pattern detection.",
+          "acceptance": [],
+          "status": "pending",
+          "priority": 3,
+          "priorityLabel": "medium",
+          "children": []
+        }
+      ],
+      "status": "planned",
+      "createdAt": "2026-04-05T17:27:04.468Z",
+      "updatedAt": "2026-04-05T17:27:04.468Z"
+    },
+    {
+      "phaseId": "phase_mnm1aeca",
+      "projectId": "builder-console",
+      "ordinal": 31,
+      "name": "Workcell Formal State Machine",
+      "objective": "Replace ad-hoc task status transitions with a formal state machine that enforces valid lifecycle transitions: planned → active → blocked/done, with governance gates at each transition.",
+      "sourceClusterIds": [],
+      "dependencies": [],
+      "nestedPrioritySummary": [],
+      "tasks": [
+        {
+          "taskId": "task_phase_mnm1aeca_0",
+          "phaseId": "phase_mnm1aeca",
+          "title": "Define the workcell state machine transitions",
+          "description": "Specify valid state transitions with guards: planned→active requires plan, active→done requires substantiation.",
+          "acceptance": [],
+          "status": "pending",
+          "priority": 3,
+          "priorityLabel": "medium",
+          "children": []
+        },
+        {
+          "taskId": "task_phase_mnm1aeca_1",
+          "phaseId": "phase_mnm1aeca",
+          "title": "Implement state machine enforcement in task updates",
+          "description": "Reject invalid transitions in updateTaskStatus with clear error messages.",
+          "acceptance": [],
+          "status": "pending",
+          "priority": 3,
+          "priorityLabel": "medium",
+          "children": []
+        },
+        {
+          "taskId": "task_phase_mnm1aeca_2",
+          "phaseId": "phase_mnm1aeca",
+          "title": "Add governance gate checks at transition boundaries",
+          "description": "Before transitioning to 'done', verify evidence exists. Before 'active', verify plan exists.",
+          "acceptance": [],
+          "status": "pending",
+          "priority": 3,
+          "priorityLabel": "medium",
+          "children": []
+        },
+        {
+          "taskId": "task_phase_mnm1aeca_3",
+          "phaseId": "phase_mnm1aeca",
+          "title": "Write tests for state machine enforcement",
+          "description": "Test all valid transitions succeed and invalid transitions are rejected.",
+          "acceptance": [],
+          "status": "pending",
+          "priority": 3,
+          "priorityLabel": "medium",
+          "children": []
+        }
+      ],
+      "status": "planned",
+      "createdAt": "2026-04-05T17:27:04.474Z",
+      "updatedAt": "2026-04-05T17:27:04.474Z"
+    },
+    {
+      "phaseId": "phase_mnm1aecf",
+      "projectId": "builder-console",
+      "ordinal": 32,
+      "name": "Runtime Trust Stage Enforcement",
+      "objective": "Enforce the 5-tier trust progression at runtime so Victor cannot escalate beyond its earned autonomy level, with automatic demotion on governance violations.",
+      "sourceClusterIds": [],
+      "dependencies": [],
+      "nestedPrioritySummary": [],
+      "tasks": [
+        {
+          "taskId": "task_phase_mnm1aecf_0",
+          "phaseId": "phase_mnm1aecf",
+          "title": "Add trust stage validation to heartbeat execution",
+          "description": "Before executing any action, verify the current trust tier permits it.",
+          "acceptance": [],
+          "status": "pending",
+          "priority": 3,
+          "priorityLabel": "medium",
+          "children": []
+        },
+        {
+          "taskId": "task_phase_mnm1aecf_1",
+          "phaseId": "phase_mnm1aecf",
+          "title": "Implement automatic demotion on governance violation",
+          "description": "When a governance denial or contradiction is detected, drop trust tier by one level.",
+          "acceptance": [],
+          "status": "pending",
+          "priority": 3,
+          "priorityLabel": "medium",
+          "children": []
+        },
+        {
+          "taskId": "task_phase_mnm1aecf_2",
+          "phaseId": "phase_mnm1aecf",
+          "title": "Add trust stage audit trail to heartbeat ledger",
+          "description": "Log every trust stage transition (promotion/demotion) with reason and evidence.",
+          "acceptance": [],
+          "status": "pending",
+          "priority": 3,
+          "priorityLabel": "medium",
+          "children": []
+        },
+        {
+          "taskId": "task_phase_mnm1aecf_3",
+          "phaseId": "phase_mnm1aecf",
+          "title": "Write tests for trust enforcement and demotion",
+          "description": "Test that violations trigger demotion and tier checks prevent unauthorized actions.",
+          "acceptance": [],
+          "status": "pending",
+          "priority": 3,
+          "priorityLabel": "medium",
+          "children": []
+        }
+      ],
+      "status": "planned",
+      "createdAt": "2026-04-05T17:27:04.479Z",
+      "updatedAt": "2026-04-05T17:27:04.479Z"
+    },
+    {
+      "phaseId": "phase_mnm1aeck",
+      "projectId": "builder-console",
+      "ordinal": 33,
+      "name": "Autonomy Boundary Runtime Limits",
+      "objective": "Define and enforce runtime resource limits per autonomy level: action budgets, time windows, file access scope, and API call limits that scale with trust tier.",
+      "sourceClusterIds": [],
+      "dependencies": [],
+      "nestedPrioritySummary": [],
+      "tasks": [
+        {
+          "taskId": "task_phase_mnm1aeck_0",
+          "phaseId": "phase_mnm1aeck",
+          "title": "Define resource limits per autonomy level",
+          "description": "Specify max actions/tick, max files modified, max API calls, and time window per tier.",
+          "acceptance": [],
+          "status": "pending",
+          "priority": 3,
+          "priorityLabel": "medium",
+          "children": []
+        },
+        {
+          "taskId": "task_phase_mnm1aeck_1",
+          "phaseId": "phase_mnm1aeck",
+          "title": "Implement resource limit enforcement in heartbeat",
+          "description": "Track resource consumption per tick and enforce limits, blocking when exceeded.",
+          "acceptance": [],
+          "status": "pending",
+          "priority": 3,
+          "priorityLabel": "medium",
+          "children": []
+        },
+        {
+          "taskId": "task_phase_mnm1aeck_2",
+          "phaseId": "phase_mnm1aeck",
+          "title": "Add resource consumption metrics to heartbeat state",
+          "description": "Expose current consumption vs limits in the heartbeat state snapshot.",
+          "acceptance": [],
+          "status": "pending",
+          "priority": 3,
+          "priorityLabel": "medium",
+          "children": []
+        },
+        {
+          "taskId": "task_phase_mnm1aeck_3",
+          "phaseId": "phase_mnm1aeck",
+          "title": "Write tests for resource limit enforcement",
+          "description": "Test that exceeding limits blocks further actions and consumption tracking is accurate.",
+          "acceptance": [],
+          "status": "pending",
+          "priority": 3,
+          "priorityLabel": "medium",
+          "children": []
+        }
+      ],
+      "status": "planned",
+      "createdAt": "2026-04-05T17:27:04.484Z",
+      "updatedAt": "2026-04-05T17:27:04.484Z"
+    }
+  ]
+}

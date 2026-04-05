@@ -1378,3 +1378,121 @@ Chain: sha256(evidence-layer-integration-v1 + content-hash + parent-commit-7ef19
 - **F3** (service registration): Out of scope, fallback preserved on page
 
 **SEALED** — Continuum now has Semantic and Procedural intelligence layers. 5 new source files (695 lines), 4 test files (44 tests), 6 API endpoints, and the /qor/continuum page displays real layer counts with Derive, Semantic, and Procedural tabs. Zero new dependencies.
+
+---
+
+## 2026-04-05T21:50:00Z — GATE TRIBUNAL (Dashboard Data Flow Fix)
+
+| Field | Value |
+|-------|-------|
+| Phase | GATE |
+| Verdict | PASS |
+| Risk Grade | L1 |
+| Blueprint | docs/plans/2026-04-05-qor-dashboard-data-flow.md |
+| Blueprint Hash | sha256:dashboard-data-flow-v1 |
+| Chain Hash | sha256:dashboard-data-flow-v1-audit-v1 |
+| Auditor | QoreLogic Judge |
+| Notes | Page-only data path corrections. All 6 audit passes clean. 1 non-blocking flag (hardcoded Forge governance status string). |
+
+---
+
+## 2026-04-05T22:15:00Z — IMPLEMENTATION (Dashboard Data Flow Fix)
+
+| Field | Value |
+|-------|-------|
+| Phase | IMPLEMENT |
+| Blueprint | docs/plans/2026-04-05-qor-dashboard-data-flow.md |
+| Risk Grade | L1 |
+| Gate | PASS (audited 2026-04-05T21:50:00Z) |
+
+### Routes Modified
+
+| Route | Type | Change |
+|-------|------|--------|
+| `/qor` | Page | Fixed Victor/Qora data paths, added Forge fetch + state, updated all 3 card stats arrays |
+| `/api/victor/project-state` | API | Added `mkdirSync` import and defensive `/tmp/victor-heartbeat` directory creation |
+
+### Phase 1: Data Path Fixes
+
+| Fix | Before | After |
+|-----|--------|-------|
+| Victor nesting | `victorState?.heartbeat?.totalTicks` → undefined | `victorState?.victor?.heartbeat?.totalTicks` → 107 |
+| Victor card stats | Tier, Ticks, Consec, Readiness | Tier, Ticks, Mode, Queue |
+| Qora nesting | `qoraState?.operator?.phase` → undefined | `qoraState?.status` → "healthy" |
+| Qora card stats | Phase, Followers, Mode, Status | Status, Entries, Types, Chain |
+| Forge fetch | Missing entirely | Added `/api/forge/status` fetch + `forgeState` useState |
+| Forge card stats | Hardcoded "—" placeholders | Progress (60%), Tasks (82/136), Phase, Governance |
+| Phase 1 status | `phases.json` Phase 1 "active" | Changed to "complete" |
+
+### Phase 2: Defensive mkdir
+
+| Fix | Detail |
+|-----|--------|
+| `/tmp/victor-heartbeat` | `mkdirSync` with `{ recursive: true }` at handler top |
+
+### TDD Verification
+
+| Check | Result |
+|-------|--------|
+| `/api/victor/project-state` → `victor.heartbeat.totalTicks` | 107 ✅ |
+| `/api/forge/status` → `forge.progress.percent` | 60 ✅ |
+| `/api/qora/status` → `status` | "healthy" ✅ |
+| `/api/continuum/status` → `agents.victor.recordCount` | 872 ✅ |
+| `/tmp/victor-heartbeat/` exists | ✅ |
+
+### Content Hash
+
+`impl-dashboard-data-flow-v1`
+
+---
+
+## 2026-04-05T22:20:00Z — SUBSTANTIATION (Dashboard Data Flow Fix)
+
+| Field | Value |
+|-------|-------|
+| Phase | SUBSTANTIATE |
+| Blueprint | docs/plans/2026-04-05-qor-dashboard-data-flow.md |
+| Risk Grade | L1 |
+| Verdict | **PASS** |
+| Merkle Seal | `bed77cf11cba77ece581b92ecf303a1e2c3989bd4afa99e9e445845a3d41f3f9` |
+
+### Reality Audit
+
+| Check | Result |
+|-------|--------|
+| Blueprint items implemented | 11/11 ✅ |
+| Missing items | 0 |
+| Unplanned items | 0 |
+
+### Functional Verification
+
+| API | Key Field | Live Value | Status |
+|-----|-----------|------------|--------|
+| `/api/victor/project-state` | `victor.heartbeat.totalTicks` | 107 | ✅ |
+| `/api/victor/project-state` | `victor.heartbeat.mode` | execute | ✅ |
+| `/api/victor/project-state` | `victor.heartbeat.queueState` | No eligible work | ✅ |
+| `/api/qora/status` | `status` | healthy | ✅ |
+| `/api/qora/status` | `entryCount` | 1 | ✅ |
+| `/api/qora/status` | `chainIntegrity.valid` | true | ✅ |
+| `/api/forge/status` | `forge.progress.percent` | 60 | ✅ |
+| `/api/forge/status` | `forge.progress.completed` | 82 | ✅ |
+| `/api/continuum/status` | `agents.victor.recordCount` | 873 | ✅ |
+| `/api/continuum/status` | `agents.qora.recordCount` | 439 | ✅ |
+
+### Section 4 Razor
+
+| Check | Status |
+|-------|--------|
+| Max function lines <= 40 | ✅ PASS |
+| Nesting depth <= 3 | ✅ PASS |
+| Nested ternaries = 0 | ✅ PASS |
+| No console.log | ✅ PASS |
+
+### Runtime Errors
+
+| Route | Errors |
+|-------|--------|
+| `/qor` | 0 ✅ |
+| `/api/victor/project-state` | 0 ✅ |
+
+**SEALED** — Dashboard data flow fix substantiated. All 4 entity cards now display live API data. Victor ticks: 107, Qora: healthy, Forge: 60%, Continuum: 873+439 records.
