@@ -1,10 +1,10 @@
-# AUDIT REPORT: Evidence Layer Integration
+# AUDIT REPORT: Continuum Semantic + Procedural Layers
 
 **Verdict**: PASS  
 **Risk Grade**: L2  
-**Blueprint**: `docs/plans/2026-04-05-evidence-layer-integration.md`  
-**Blueprint Hash**: `sha256:evidence-layer-v1`  
-**Chain Hash**: `sha256:evidence-layer-v1-audit-v1`  
+**Blueprint**: `docs/plans/2026-04-05-continuum-semantic-procedural-layers.md`  
+**Blueprint Hash**: `sha256:continuum-layers-v1`  
+**Chain Hash**: `sha256:continuum-layers-v1-audit-v1`  
 **Auditor**: QoreLogic Judge  
 **Date**: 2026-04-05
 
@@ -12,7 +12,7 @@
 
 ## Summary
 
-The Evidence Layer Integration plan ports FailSafe-Pro's proven evidence architecture (typed entries, append-only logs, evaluation engine, evidence bundles) to QOR's TypeScript layer. It creates a new unified evidence ledger, three API endpoints with separation of concerns, and wires existing Forge/Victor surfaces to the unified contract. No new dependencies. No auth regressions.
+The plan adds Semantic and Procedural intelligence layers to Continuum's existing episodic graph. Hybrid derivation strategy (incremental co-occurrence + batch embedding clusters for semantic; temporal chain discovery + outcome-anchored promotion for procedural). All logic in filesystem modules, exposed via 6 new API endpoints on the existing Continuum service. No new dependencies, no new auth surfaces, no new server processes.
 
 ---
 
@@ -20,24 +20,28 @@ The Evidence Layer Integration plan ports FailSafe-Pro's proven evidence archite
 
 | Pass | Result | Notes |
 |------|--------|-------|
-| Security (L3) | ✅ PASS | Bearer auth on write endpoints; evaluate is pure function (no writes); env-var secrets |
-| Ghost UI | ✅ PASS | All UI changes are data-source rewires, not new interactive elements |
-| Razor | ✅ PASS | All functions ≤ 20 lines; all files ≤ 110 lines; nesting ≤ 2; zero ternaries |
-| Dependency | ✅ PASS | Zero new packages — stdlib only (node:fs, node:crypto) |
-| Macro-Level | ✅ PASS | Clean module boundaries; no cycles; unidirectional layering; single type source |
-| Orphan | ✅ PASS | All 11 files traced to entry points (zo.space routes or test runner) |
+| Security (L3) | ✅ PASS | No new auth surfaces; internal service endpoints only; Shadow Genome guards satisfied |
+| Ghost UI | ✅ PASS | All proposed UI elements (tabs, derive button, layer cards) have specified data sources and handlers |
+| Razor | ✅ PASS | All functions estimable under 40 lines; files under 250; no nested ternaries |
+| Dependency | ✅ PASS | Zero new packages; all math is vanilla TypeScript |
+| Macro-Level | ✅ PASS | Clean 4-file separation by concern; one-directional data flow; no cycles |
+| Orphan | ✅ PASS | All 4 source files + 4 test files traced to entry points |
 
 ---
 
 ## Flagged Items (Non-Blocking)
 
-### F1: Legacy Ledger Read Path
-**Issue**: Existing builder-console and victor-resident ledgers remain as legacy read-only sources. New evidence entries go to the unified ledger only. There is no migration of historical data.
-**Remediation**: Acceptable for v1. Future phase can create a read adapter that aggregates legacy + unified entries into a single timeline view.
+### F1: O(n²) Clustering Scalability
+**Issue**: Agglomerative clustering is O(n²). Currently tractable at <10k records.
+**Remediation**: Document the ceiling. If episodic count exceeds 10k, switch to approximate nearest neighbors or mini-batch clustering.
 
-### F2: Evaluate Endpoint Memory Context
-**Issue**: Blueprint mentions optionally querying Continuum graph for memory context via `/api/continuum/graph?endpoint=recall`. This cross-service call could add latency or fail if Continuum service is down.
-**Remediation**: Make it best-effort with timeout. Return evaluation without memory context if recall fails. Already acceptable per blueprint ("optionally queries").
+### F2: Embedding Population Dependency
+**Issue**: Phase 2 (batch clustering) requires episodic records to have vector embeddings. Embeddings infrastructure exists but may not be populated.
+**Remediation**: Phase 2 implementation must handle empty embeddings gracefully (return zero clusters, not error). Run embedding population before first batch clustering.
+
+### F3: Continuum Service Registration
+**Issue**: Continuum service on port 4100 is not registered as a persistent zo service. If not running, new endpoints are unreachable.
+**Remediation**: Phase 5 preserves fallback behavior on the page. Service registration is a separate concern (not in scope for this plan).
 
 ---
 
@@ -45,21 +49,10 @@ The Evidence Layer Integration plan ports FailSafe-Pro's proven evidence archite
 
 | Check | Limit | Actual | Status |
 |-------|-------|--------|--------|
-| Function lines | 40 | ≤ 20 (evaluate) | ✅ |
-| File lines | 250 | ≤ 110 (contract.ts) | ✅ |
-| Nesting depth | 3 | ≤ 2 (scoreResource) | ✅ |
+| Function lines | 40 | ~30 max (pipeline functions) | ✅ |
+| File lines | 250 | ~180 max (semantic-cluster.ts) | ✅ |
+| Nesting depth | 3 | 3 max (for...if...map) | ✅ |
 | Nested ternaries | 0 | 0 | ✅ |
-
----
-
-## Shadow Genome Cross-Check
-
-| Guard | Status |
-|-------|--------|
-| Authenticated principal path is real, not placeholder | ✅ Bearer auth via env var on write endpoints |
-| UI/API/CLI surfaces show traced runtime registration | ✅ 3 zo.space routes auto-registered |
-| Executable receipts exist for every proposed operator surface | ✅ All 11 files traced to entry points |
-| Ledger state updated only after tribunal evidence matches code reality | ✅ Plan specifies ledger update as final step |
 
 ---
 
