@@ -1120,3 +1120,93 @@ Chain: sha256(continuum-ingestion-hardening-v1-audit-v1 + impl-continuum-ingesti
 
 **SEALED** — Reality matches Promise. Continuum ingestion pipeline is operational: service registered and running, zo.space proxy deployed with 7-endpoint whitelist, page rewired with graph-first data loading and flat-file fallback, semantic recall search functional, 8 integration tests passing.
 
+
+---
+
+## 2026-04-05T05:30:00Z — GATE TRIBUNAL (Evidence Layer Integration)
+
+| Field | Value |
+|-------|-------|
+| Phase | GATE |
+| Verdict | **PASS** |
+| Risk Grade | L2 |
+| Blueprint | docs/plans/2026-04-05-evidence-layer-integration.md |
+| Audit Report | .agent/staging/AUDIT_REPORT.md |
+| Content Hash | sha256:evidence-layer-v1 |
+| Chain Hash | sha256:evidence-layer-v1-audit-v1 |
+| Auditor | QoreLogic Judge |
+| Notes | All 6 passes PASS. 2 non-blocking flags (F1: legacy ledger read path not migrated, F2: Continuum recall best-effort with timeout). Shadow Genome cross-check verified — all 4 mandatory guards satisfied. |
+
+
+---
+
+## 2026-04-05T06:00:00Z — IMPLEMENTATION (Evidence Layer Integration)
+
+| Field | Value |
+|-------|-------|
+| Phase | IMPLEMENT |
+| Blueprint | docs/plans/2026-04-05-evidence-layer-integration.md |
+| Content Hash | sha256:impl-evidence-layer-v1 |
+| Chain Hash | sha256(evidence-layer-v1-audit-v1 + impl-evidence-layer-v1) |
+| Implementor | QoreLogic Specialist |
+
+### Files Created
+
+| File | Lines | Purpose |
+|------|-------|---------|
+| `evidence/contract.ts` | 60 | Unified evidence types — single source of truth |
+| `evidence/evaluate.ts` | 80 | Governance evaluation engine (ported from FailSafe-Pro `decision.rs`) |
+| `evidence/log.ts` | 40 | Append-only JSONL evidence log |
+| `evidence/bundle.ts` | 48 | Evidence bundle materialization + completeness checking |
+| `evidence/tests/contract.test.ts` | — | Schema validation tests (5 cases) |
+| `evidence/tests/evaluate.test.ts` | — | Evaluation engine tests (11 cases, mirrors FailSafe-Pro) |
+| `evidence/tests/log.test.ts` | — | Append-only log tests (9 cases) |
+| `evidence/tests/bundle.test.ts` | — | Bundle completeness tests (8 cases) |
+
+### zo.space Routes Deployed
+
+| Route | Type | Auth | Method |
+|-------|------|------|--------|
+| `/api/qor/evaluate` | API | None (pure function) | POST |
+| `/api/qor/evidence` | API | Bearer (POST) / Public (GET) | GET, POST |
+| `/api/qor/evidence/bundle` | API | Bearer | POST |
+
+### zo.space Routes Modified
+
+| Route | Change |
+|-------|--------|
+| `/api/forge/update-task` | Records `CodeDelta` evidence on task completion |
+| `/api/forge/create-phase` | Records `PolicyDecision` evidence on phase creation |
+| `/api/forge/record-evidence` | Proxies to `/api/qor/evidence` with `module: "forge"` |
+| `/qor/victor/audit` | Fetches real evidence entries from unified ledger |
+
+### Test Results
+
+| Suite | Cases | Status |
+|-------|-------|--------|
+| contract.test.ts | 5 | ✅ PASS |
+| evaluate.test.ts | 11 | ✅ PASS |
+| log.test.ts | 9 | ✅ PASS |
+| bundle.test.ts | 8 | ✅ PASS |
+| **Total** | **33** | **33/33 in 42ms** |
+
+### Razor Compliance
+
+| Check | Limit | Actual | Status |
+|-------|-------|--------|--------|
+| Max function lines | 40 | ≤ 20 (evaluate) | ✅ |
+| Max file lines | 250 | ≤ 80 (evaluate.ts) | ✅ |
+| Max nesting depth | 3 | ≤ 2 | ✅ |
+| Nested ternaries | 0 | 0 | ✅ |
+
+### Endpoint Verification
+
+| Endpoint | Check | Result |
+|----------|-------|--------|
+| POST `/api/qor/evaluate` (shell.execute @ CBT) | 200 — Block, risk 0.8, critical | ✅ |
+| GET `/api/qor/evidence` | 200 — returns entries | ✅ |
+| POST `/api/qor/evidence` (no auth) | 401 | ✅ |
+| POST `/api/qor/evidence/bundle` (no auth) | 401 | ✅ |
+| GET `/qor/victor/audit` | 200 | ✅ |
+| POST `/api/forge/update-task` (no auth) | 401 | ✅ |
+| `get_space_errors()` | 0 errors | ✅ |

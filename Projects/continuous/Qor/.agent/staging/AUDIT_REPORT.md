@@ -1,10 +1,10 @@
-# AUDIT REPORT: Continuum Ingestion Pipeline Hardening
+# AUDIT REPORT: Evidence Layer Integration
 
 **Verdict**: PASS  
-**Risk Grade**: L1  
-**Blueprint**: `docs/plans/2026-04-05-continuum-ingestion-hardening.md`  
-**Blueprint Hash**: `sha256:continuum-ingestion-hardening-v1`  
-**Chain Hash**: `sha256:continuum-ingestion-hardening-v1-audit-v1`  
+**Risk Grade**: L2  
+**Blueprint**: `docs/plans/2026-04-05-evidence-layer-integration.md`  
+**Blueprint Hash**: `sha256:evidence-layer-v1`  
+**Chain Hash**: `sha256:evidence-layer-v1-audit-v1`  
 **Auditor**: QoreLogic Judge  
 **Date**: 2026-04-05
 
@@ -12,7 +12,7 @@
 
 ## Summary
 
-The plan registers the existing Continuum service as a persistent Zo service, populates vector embeddings, creates a single zo.space proxy route to avoid CORS, rewires the `/qor/continuum` page to use graph data with flat-file fallback, and adds 8 integration tests. No new dependencies, no new auth surfaces, no write endpoints.
+The Evidence Layer Integration plan ports FailSafe-Pro's proven evidence architecture (typed entries, append-only logs, evaluation engine, evidence bundles) to QOR's TypeScript layer. It creates a new unified evidence ledger, three API endpoints with separation of concerns, and wires existing Forge/Victor surfaces to the unified contract. No new dependencies. No auth regressions.
 
 ---
 
@@ -20,24 +20,24 @@ The plan registers the existing Continuum service as a persistent Zo service, po
 
 | Pass | Result | Notes |
 |------|--------|-------|
-| Security (L3) | ✅ PASS | Read-only proxy with endpoint whitelist. No auth surfaces introduced. Neo4j creds via env vars (prior F2 resolved). Shadow Genome mandatory guards satisfied. |
-| Ghost UI | ✅ PASS | Search bar wired to recall endpoint. Timeline tabs wired to timeline endpoint. Fallback to `/api/continuum/status` is graceful degradation, not ghost. |
-| Razor | ✅ PASS | Proxy handler ~15 lines. No new files exceed limits. |
-| Dependency | ✅ PASS | Zero new packages. Uses existing bun, neo4j-driver, sentence-transformers. |
-| Macro-Level | ✅ PASS | Unidirectional: page → proxy → service → Neo4j. Single source of truth for API base URL. No cyclic deps. |
-| Orphan | ✅ PASS | All files connected: service via `register_user_service`, proxy via zo.space route, tests via `bun test`. |
+| Security (L3) | ✅ PASS | Bearer auth on write endpoints; evaluate is pure function (no writes); env-var secrets |
+| Ghost UI | ✅ PASS | All UI changes are data-source rewires, not new interactive elements |
+| Razor | ✅ PASS | All functions ≤ 20 lines; all files ≤ 110 lines; nesting ≤ 2; zero ternaries |
+| Dependency | ✅ PASS | Zero new packages — stdlib only (node:fs, node:crypto) |
+| Macro-Level | ✅ PASS | Clean module boundaries; no cycles; unidirectional layering; single type source |
+| Orphan | ✅ PASS | All 11 files traced to entry points (zo.space routes or test runner) |
 
 ---
 
 ## Flagged Items (Non-Blocking)
 
-### F1: Batch Embedding Duration
-**Issue**: Phase 1c estimates 10-20 min for ~1,192 nodes. If the service is registered (Phase 1b) before embeddings populate (Phase 1c), recall queries will return empty results during the gap.
-**Remediation**: Acceptable — the page falls back to `/api/continuum/status` if graph returns errors. Recall with empty embeddings returns empty arrays, not errors. Document as expected cold-start behavior.
+### F1: Legacy Ledger Read Path
+**Issue**: Existing builder-console and victor-resident ledgers remain as legacy read-only sources. New evidence entries go to the unified ledger only. There is no migration of historical data.
+**Remediation**: Acceptable for v1. Future phase can create a read adapter that aggregates legacy + unified entries into a single timeline view.
 
-### F2: Proxy Passthrough Scope
-**Issue**: The `sync` endpoint is in the whitelist. This triggers an ingestion cycle — effectively a write operation exposed through a read-only proxy.
-**Remediation**: `sync` is idempotent (re-ingests existing files). No data mutation risk. If future sync behavior changes, revisit the whitelist.
+### F2: Evaluate Endpoint Memory Context
+**Issue**: Blueprint mentions optionally querying Continuum graph for memory context via `/api/continuum/graph?endpoint=recall`. This cross-service call could add latency or fail if Continuum service is down.
+**Remediation**: Make it best-effort with timeout. Return evaluation without memory context if recall fails. Already acceptable per blueprint ("optionally queries").
 
 ---
 
@@ -45,21 +45,21 @@ The plan registers the existing Continuum service as a persistent Zo service, po
 
 | Check | Limit | Actual | Status |
 |-------|-------|--------|--------|
-| Function lines | 40 | ~15 (proxy handler) | ✅ |
-| File lines | 250 | ~20 (proxy route) | ✅ |
-| Nesting depth | 3 | 1 | ✅ |
+| Function lines | 40 | ≤ 20 (evaluate) | ✅ |
+| File lines | 250 | ≤ 110 (contract.ts) | ✅ |
+| Nesting depth | 3 | ≤ 2 (scoreResource) | ✅ |
 | Nested ternaries | 0 | 0 | ✅ |
 
 ---
 
 ## Shadow Genome Cross-Check
 
-| Mandatory Guard | Status |
-|----------------|--------|
-| Authenticated principal path is real, not placeholder | ✅ N/A — no auth surfaces |
-| UI/API/CLI surfaces show traced runtime registration | ✅ Service via `register_user_service`, routes via zo.space |
-| Executable receipts exist for every proposed operator surface | ✅ 8 integration tests defined |
-| Ledger state updated only after tribunal evidence matches code reality | ✅ Plan includes substantiation step |
+| Guard | Status |
+|-------|--------|
+| Authenticated principal path is real, not placeholder | ✅ Bearer auth via env var on write endpoints |
+| UI/API/CLI surfaces show traced runtime registration | ✅ 3 zo.space routes auto-registered |
+| Executable receipts exist for every proposed operator surface | ✅ All 11 files traced to entry points |
+| Ledger state updated only after tribunal evidence matches code reality | ✅ Plan specifies ledger update as final step |
 
 ---
 
