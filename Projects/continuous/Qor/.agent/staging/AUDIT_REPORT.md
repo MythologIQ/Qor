@@ -1,20 +1,18 @@
-# AUDIT REPORT: Complete Forge Realization
+# AUDIT REPORT: Qora Transaction Detail View
 
 **Verdict**: PASS  
-**Risk Grade**: L2  
-**Blueprint**: `docs/plans/2026-04-02-forge-realization.md`  
-**Blueprint Hash**: `sha256:forge-realization-v1`  
-**Chain Hash**: `sha256:forge-realization-v1-audit-v2`  
+**Risk Grade**: L1  
+**Blueprint**: `docs/plans/2026-04-04-qora-transaction-detail.md`  
+**Blueprint Hash**: `sha256:qora-transaction-detail-v1`  
+**Chain Hash**: `sha256:qora-transaction-detail-v1-audit-v1`  
 **Auditor**: QoreLogic Judge  
-**Date**: 2026-04-04
+**Date**: 2026-04-05
 
 ---
 
 ## Summary
 
-The Forge Realization Plan creates an independent, data-sovereign Forge entity with its own API (`/api/forge/status`), concept-derived constellation mindmap, 4 bearer-auth-gated write endpoints, and mobile parity across all 5 page routes. No new dependencies. No new auth patterns — reuses proven bearer token model.
-
-All mandatory audit passes completed. No VETO conditions found.
+The plan adds two read-only API endpoints and a modal overlay to the existing Qora page. No new dependencies, no auth surfaces, no write operations. Pure data retrieval and display. Risk is minimal — L1.
 
 ---
 
@@ -22,39 +20,20 @@ All mandatory audit passes completed. No VETO conditions found.
 
 | Pass | Result | Notes |
 |------|--------|-------|
-| Security (L3) | ✅ PASS | Bearer auth on write endpoints via `FORGE_API_SECRET`; read-only filesystem access for data |
-| Ghost UI | ✅ PASS | No new UI elements — existing routes rewired to new data source |
-| Razor | ✅ PASS | All proposed files < 250 lines; functions < 40 lines; no nesting violations |
-| Dependency | ✅ PASS | No new packages — filesystem reads + JSON parsing only |
-| Macro-Level | ✅ PASS | Clear module boundaries; no cyclic deps; PATHS centralizes config |
-| Orphan | ✅ PASS | All proposed files traced to entry points (1 non-blocking flag) |
+| Security (L3) | ✅ PASS | Read-only endpoints, no auth required (consistent with existing `/api/qora/status`) |
+| Ghost UI | ✅ PASS | Every interactive element (row click, prev/next, pagination, dismiss) maps to real data source |
+| Razor | ✅ PASS | All proposed functions < 40 lines, files < 250 lines, nesting ≤ 3, zero nested ternaries |
+| Dependency | ✅ PASS | Zero new dependencies |
+| Macro-Level | ✅ PASS | Clean layering: Page → API → filesystem. No cyclic deps. Single LEDGER_PATH source of truth |
+| Orphan | ✅ PASS | All 4 proposed artifacts connected to build path |
 
 ---
 
 ## Flagged Items (Non-Blocking)
 
-### F1: Filesystem-to-Route Relationship
-**Issue**: Plan proposes filesystem files (`forge/src/api/status.ts`, `forge/src/mindmap/derive.ts`) alongside zo.space inline routes. The relationship between the two is not explicitly stated — are filesystem files the source of truth that routes are copied from, or are they independent implementations?
-**Remediation**: Document that filesystem files are reference implementations. zo.space routes are the runtime; filesystem is the versioned source pushed to GitHub.
-
-### F2: Concept Node Derivation Complexity
-**Issue**: Deriving concept nodes from `AGENTS.md` + `phases.json` + brainstorming artifacts requires parsing multiple heterogeneous formats. The mapping function complexity could exceed razor limits if not carefully scoped.
-**Remediation**: Start with a static concept seed (the 5-entity tree specified in the plan). Derive phase/task metadata from `phases.json` only. Defer brainstorming artifact parsing to a future phase.
-
-### F3: Write Surface Testing Gap
-**Issue**: Plan specifies 4 write API endpoints but only 2 test files (`status.test.ts`, `derive.test.ts`). No test file for write operations (`manager.ts`).
-**Remediation**: Add `forge/tests/manager.test.ts` covering all 4 write endpoints. Per project memory: "Every function needs a corresponding test, always."
-
----
-
-## Shadow Genome Cross-Check
-
-| Guard | Blueprint Compliance |
-|-------|---------------------|
-| Authenticated principal path is real, not placeholder | ✅ Bearer auth via env var `FORGE_API_SECRET` |
-| UI/API/CLI surfaces show traced runtime registration | ✅ All routes already exist in zo.space; rewired to new data |
-| Executable receipts exist for every proposed operator surface | ✅ 5 page routes + 5 API routes, all with defined data sources |
-| Ledger state updated only after tribunal evidence matches code reality | ✅ Plan includes substantiation step |
+### F1: Ledger Parsing Duplication
+**Issue**: `/api/qora/status` already has `parseLedger()`. The two new endpoints will need the same function.
+**Remediation**: Extract shared `parseLedger()` into both new routes (inline copy is acceptable for zo.space routes which are self-contained). Do NOT create a shared module — zo.space routes cannot import from each other.
 
 ---
 
@@ -62,10 +41,21 @@ All mandatory audit passes completed. No VETO conditions found.
 
 | Check | Limit | Actual | Status |
 |-------|-------|--------|--------|
-| Max function lines | 40 | ~20-30 per function (aggregation, derivation, CRUD) | ✅ |
-| Max file lines | 250 | ~100-150 per file | ✅ |
-| Max nesting depth | 3 | Flat map/filter chains | ✅ |
+| Function lines | 40 | ~20 max (pagination math, entry lookup) | ✅ |
+| File lines | 250 | ~60 per API route; ~120 added to page | ✅ |
+| Nesting depth | 3 | 3 max (modal + map + conditional) | ✅ |
 | Nested ternaries | 0 | 0 | ✅ |
+
+---
+
+## Shadow Genome Cross-Check
+
+| Guard (from audit-v2-veto) | Status |
+|----------------------------|--------|
+| Authenticated principal path is real | N/A — read-only, no auth surfaces |
+| UI/API surfaces show traced runtime registration | ✅ zo.space routes self-register |
+| Executable receipts for operator surfaces | ✅ Tests planned in Phase 3 |
+| Ledger state updated after evidence matches | ✅ Phase 3 includes chain integrity validation |
 
 ---
 

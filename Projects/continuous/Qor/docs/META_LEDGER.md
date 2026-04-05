@@ -740,3 +740,75 @@ Chain Hash: sha256(forge-realization-v1-audit-v2 + impl-forge-realization-v1 + s
 
 **✅ SEALED** — Reality matches Promise. Forge is a sovereign entity with independent data API, 4 bearer-auth write surfaces, concept-derived constellation, and 32 passing tests.
 
+---
+
+## 2026-04-05T00:00:00Z — GATE TRIBUNAL (Qora Transaction Detail)
+
+| Field | Value |
+|-------|-------|
+| Phase | GATE |
+| Verdict | **PASS** |
+| Risk Grade | L1 |
+| Blueprint | docs/plans/2026-04-04-qora-transaction-detail.md |
+| Audit Report | .agent/staging/AUDIT_REPORT.md |
+| Content Hash | sha256:qora-transaction-detail-v1 |
+| Chain Hash | sha256:qora-transaction-detail-v1-audit-v1 |
+| Auditor | QoreLogic Judge |
+| Notes | All 6 passes PASS. 1 non-blocking flag (F1: ledger parsing duplication — inline copy acceptable for zo.space). Shadow Genome cross-check verified. |
+
+---
+
+## 2026-04-05T00:25:00Z — IMPLEMENTATION (Qora Transaction Detail)
+
+| Field | Value |
+|-------|-------|
+| Phase | IMPLEMENT |
+| Blueprint | docs/plans/2026-04-04-qora-transaction-detail.md |
+| Risk Grade | L1 |
+| Gate | PASS (audited 2026-04-05) |
+
+### zo.space Routes Deployed
+
+| Route | Type | Purpose |
+|-------|------|---------|
+| `/api/qora/entries` | API | Paginated entry list (reverse chronological, configurable page/limit) |
+| `/api/qora/entry/:seq` | API | Full entry detail with payload, provenance, and chain prev/next |
+| `/qor/qora` (edit) | Page | Added Moltbook Ledger section + modal overlay |
+
+### Filesystem Files
+
+| File | Lines | Purpose |
+|------|-------|---------|
+| `qora/tests/ledger-api.test.ts` | 65 | Entry shape, chain integrity, pagination math |
+
+### Razor Compliance
+
+| Check | Status |
+|-------|--------|
+| Max function lines ≤ 40 | ✅ PASS (max ~15) |
+| Max file lines ≤ 250 | ✅ PASS (max ~65) |
+| Nesting depth ≤ 3 | ✅ PASS |
+| Nested ternaries = 0 | ✅ PASS |
+
+### Verification
+
+| Check | Result |
+|-------|--------|
+| `/api/qora/entries` HTTP 200 | ✅ Returns entries + pagination |
+| `/api/qora/entry/1` HTTP 200 | ✅ Full payload + provenance + chain |
+| `/api/qora/entry/99999` HTTP 404 | ✅ |
+| Modal renders on row click | ✅ Verified via screenshot |
+| Prev/Next chain navigation | ✅ Wired to `chain.prev`/`chain.next` |
+| ESC dismisses modal | ✅ |
+| `get_space_errors()` | ✅ 0 errors |
+
+### Test Summary
+
+| Suite | Tests | Status |
+|-------|-------|--------|
+| `qora/tests/ledger-api.test.ts` | 7 | ✅ ALL PASS |
+
+### Content Hash
+
+`impl-qora-transaction-detail-v1`
+
