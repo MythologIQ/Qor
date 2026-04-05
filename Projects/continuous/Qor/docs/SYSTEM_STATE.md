@@ -1,57 +1,80 @@
-# SYSTEM_STATE: QOR — Forge Build Transparency Seal
+# SYSTEM_STATE: QOR — Continuum Intelligence Layers Seal
 
-**Sealed**: 2026-04-05T01:45:00Z
-**Blueprint**: docs/plans/2026-04-05-forge-build-transparency.md
+**Sealed**: 2026-04-05T18:00:00Z
+**Blueprint**: docs/plans/2026-04-05-continuum-semantic-procedural-layers.md
 **Verdict**: PASS
 
 ---
 
-## Filesystem Tree (forge/)
+## Filesystem Tree (continuum/src/derive/)
 
 ```
-forge/
+continuum/
 ├── src/
-│   ├── api/
-│   │   ├── status.ts              (116 lines)
-│   │   ├── create-phase.ts        (80 lines)
-│   │   ├── update-task.ts         (65 lines)
-│   │   ├── record-evidence.ts     (40 lines)
-│   │   └── update-risk.ts         (40 lines)
-│   ├── mindmap/
-│   │   └── derive.ts              (168 lines)
-│   ├── projects/
-│   │   └── manager.ts             (116 lines)
-│   └── governance/
-│       └── ledger.ts              (42 lines)
+│   ├── derive/
+│   │   ├── types.ts                  (65 lines)
+│   │   ├── semantic-derive.ts        (173 lines)
+│   │   ├── semantic-cluster.ts       (185 lines)
+│   │   ├── procedural-mine.ts        (189 lines)
+│   │   └── layer-routes.ts           (83 lines)
+│   ├── service/
+│   │   ├── server.ts                 (129 lines, modified)
+│   │   └── graph-api.ts              (existing)
+│   ├── ingest/
+│   │   └── memory-to-graph.ts        (existing)
+│   ├── embed/
+│   │   └── embed.py                  (existing)
+│   └── scripts/
+│       └── batch-embed.ts            (existing)
 ├── tests/
-│   ├── status.test.ts             (128 lines)
-│   ├── derive.test.ts             (110 lines)
-│   ├── manager.test.ts            (118 lines)
-│   └── build-log.test.ts          (115 lines)
-├── docs/
-│   └── GOVERNANCE.md
-└── state.json
+│   ├── semantic-derive.test.ts       (115 lines, 14 tests)
+│   ├── semantic-cluster.test.ts      (142 lines, 12 tests)
+│   ├── procedural-mine.test.ts       (127 lines, 12 tests)
+│   ├── layer-routes.test.ts          (80 lines, 6 tests)
+│   ├── graph-api.test.ts             (existing)
+│   ├── memory-to-graph.test.ts       (existing)
+│   ├── auto-ingest.test.ts           (existing)
+│   ├── embed.test.ts                 (existing)
+│   ├── recall.test.ts                (existing)
+│   ├── entity-flatten.test.ts        (existing)
+│   └── service-integration.test.ts   (existing)
+├── package.json
+├── tsconfig.json
+└── CLAUDE.md
 ```
 
-**Source total**: 667 lines across 8 files
-**Test total**: 471 lines across 4 files
+**New source total**: 695 lines across 5 files
+**New test total**: 464 lines across 4 files
 
 ---
 
-## zo.space Routes
+## API Endpoints (port 4100)
 
-| Route | Type | HTTP | Auth | Notes |
-|-------|------|------|------|-------|
-| `/api/forge/status` | API | 200 | Public (read) | +buildLog, +nextPhase, +derivePhaseStatus |
-| `/api/forge/update-task` | API | 401 | Bearer |
-| `/api/forge/create-phase` | API | 401 | Bearer |
-| `/api/forge/record-evidence` | API | 401 | Bearer |
-| `/api/forge/update-risk` | API | 401 | Bearer |
-| `/qor/forge` | Page | 200 | — |
-| `/qor/forge/constellation` | Page | 200 | — |
-| `/qor/forge/projects` | Page | 200 | — |
-| `/qor/forge/roadmap` | Page | 200 | — |
-| `/qor/forge/risks` | Page | 200 | — |
+| Endpoint | Method | Purpose | New? |
+|----------|--------|---------|------|
+| `/api/continuum/health` | GET | Health check | — |
+| `/api/continuum/stats` | GET | Graph stats | — |
+| `/api/continuum/sync` | POST | Ingestion cycle | — |
+| `/api/continuum/timeline` | GET | Agent timeline | — |
+| `/api/continuum/cross-links` | GET | Cross-agent links | — |
+| `/api/continuum/entity` | GET | Entity network | — |
+| `/api/continuum/recall` | GET | Semantic recall | — |
+| `/api/continuum/query` | POST | Raw Cypher | — |
+| `/api/continuum/derive-semantic` | POST | Incremental co-occurrence | NEW |
+| `/api/continuum/cluster-semantic` | POST | Batch embedding clusters | NEW |
+| `/api/continuum/mine-procedures` | POST | Workflow mining pipeline | NEW |
+| `/api/continuum/layers` | GET | Layer summary counts | NEW |
+| `/api/continuum/semantic` | GET | List semantic nodes | NEW |
+| `/api/continuum/procedural` | GET | List procedural nodes | NEW |
+
+---
+
+## zo.space Routes Updated
+
+| Route | Type | Change |
+|-------|------|--------|
+| `/api/continuum/graph` | API | ALLOWED list expanded + POST method routing |
+| `/qor/continuum` | Page | Real layer counts, Semantic + Procedural tabs, Derive button |
 
 ---
 
@@ -59,11 +82,11 @@ forge/
 
 | Suite | Tests | Status |
 |-------|-------|--------|
-| forge/tests/status.test.ts | 16 | ✅ PASS |
-| forge/tests/derive.test.ts | 9 | ✅ PASS |
-| forge/tests/manager.test.ts | 7 | ✅ PASS |
-| forge/tests/build-log.test.ts | 10 | ✅ PASS |
-| **Total** | **42** | **✅ ALL PASS** |
+| tests/semantic-derive.test.ts | 14 | PASS |
+| tests/semantic-cluster.test.ts | 12 | PASS |
+| tests/procedural-mine.test.ts | 12 | PASS |
+| tests/layer-routes.test.ts | 6 | PASS |
+| **Total (new)** | **44** | **ALL PASS** |
 
 ---
 
@@ -71,21 +94,23 @@ forge/
 
 | Check | Limit | Actual | Status |
 |-------|-------|--------|--------|
-| Max function lines | 40 | 33 (buildSubProject) | ✅ |
-| Max file lines | 250 | 168 (derive.ts) | ✅ |
-| Nesting depth | 3 | 2 | ✅ |
-| Nested ternaries | 0 | 0 | ✅ |
-| console.log | 0 | 0 | ✅ |
+| Max function lines | 40 | 40 (handleGetLayers) | PASS |
+| Max file lines | 250 | 189 (procedural-mine.ts) | PASS |
+| Nesting depth | 3 | 3 (semantic-derive.ts) | PASS |
+| Nested ternaries | 0 | 0 | PASS |
+| console.log in derive/ | 0 | 0 | PASS |
 
 ---
 
-## Data Sovereignty
+## Graph Schema Extensions
 
-| Entity | Data Source | API |
-|--------|-----------|-----|
-| Forge | `Qor/.qore/projects/builder-console/` | `/api/forge/status` |
-| Victor | `Qor/.qore/projects/victor-resident/` | `/api/victor/project-state` |
-| Continuum | `.continuum/memory/` + Neo4j | `/api/continuum/status` |
+| Label | Type | New? |
+|-------|------|------|
+| `:Semantic:CoOccurrence` | Node | NEW |
+| `:Semantic:Cluster` | Node | NEW |
+| `:Procedural:Candidate` | Node | NEW |
+| `:Procedural:Validated` | Node | NEW |
+| `PARTICIPATES_IN` | Edge | NEW |
 
 ---
 
