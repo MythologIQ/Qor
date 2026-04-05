@@ -63,3 +63,38 @@ export interface EvidenceBundle {
   completeness: BundleCompleteness;
   generatedAt: string;
 }
+
+export type GovernedEvidenceLite = {
+  intent: string;
+  justification: string;
+  inputs: string[];
+  expectedOutcome: string;
+};
+
+export type GovernedEvidence = EvidenceBundle | GovernedEvidenceLite;
+
+export type EvidenceMode = "full" | "lite";
+
+export interface GovernedActionInput {
+  module: "forge" | "qora" | "victor" | "continuum";
+  action: string;
+  agentId: string;
+  payload: Record<string, unknown>;
+  evidence: GovernedEvidence;
+  resource?: string;
+  trustStage?: TrustStage;
+}
+
+export interface GovernanceDecision {
+  decisionId: string;
+  timestamp: string;
+  module: string;
+  action: string;
+  result: Decision;
+  evidenceMode: EvidenceMode;
+  riskScore: number;
+  riskCategory: RiskCategory;
+  confidence: number;
+  mitigation?: string;
+  agentId: string;
+}

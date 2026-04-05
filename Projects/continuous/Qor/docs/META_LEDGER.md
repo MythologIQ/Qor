@@ -1514,3 +1514,73 @@ Chain: sha256(evidence-layer-integration-v1 + content-hash + parent-commit-7ef19
 | Notes | All 6 audit passes passed (Security L3, Ghost UI, Razor, Dependency, Macro-Level, Orphan). 2 non-blocking flags: F1 (`any` types in buildDecision — use proper types at impl), F2 (record-evidence endpoint exemption — resolve at impl start). |
 
 **APPROVED** — Proceed to `/qor-implement` for Phase 1 Kernel execution.
+
+---
+
+## 2026-04-05T23:30:00Z — IMPLEMENTATION: Runtime Governance Gate
+
+| Field | Value |
+|-------|-------|
+| Phase | IMPLEMENT |
+| Blueprint | `docs/plans/2026-04-05-runtime-governance-gate.md` |
+| Risk Grade | L2 |
+| Gate | PASS (audited 2026-04-05) |
+| GitHub Issue | MythologIQ/Qor#1 |
+
+### Files Created
+
+| File | Lines | Purpose | Test Status |
+|------|-------|---------|-------------|
+| `evidence/contract.ts` | ~101 | Governance types (GovernedActionInput, GovernanceDecision, EvidenceMode, GovernedEvidenceLite) | N/A (types) |
+| `evidence/governance-gate.ts` | ~116 | Central governance enforcement: classifyEvidence, validateLite, validateFull, executeGovernedAction | ✅ 20/20 pass |
+| `evidence/tests/governance-gate.test.ts` | ~165 | TDD-Light validation (classifyEvidence, validateLite, validateFull, executeGovernedAction) | ✅ 20/20 pass |
+
+### Routes Gated (5/5)
+
+| Route | Module | Action | Gate Position |
+|-------|--------|--------|---------------|
+| `/api/forge/create-phase` | forge | phase.create | Before body validation |
+| `/api/forge/update-task` | forge | task.update | Before body validation |
+| `/api/forge/update-risk` | forge | risk.update | Before body validation |
+| `/api/qora/append-entry` | qora | ledger.append | Before body validation |
+| `/api/qora/record-veto` | qora | veto.record | Before body validation |
+
+### Fail-Closed Proof
+
+| Endpoint | No Evidence | Valid Lite Evidence |
+|----------|-------------|---------------------|
+| create-phase | 403 Block ✅ | 200 Allow ✅ |
+| update-task | 403 Block ✅ | 200 Allow ✅ |
+| update-risk | 403 Block ✅ | 200 Allow ✅ |
+| append-entry | 403 Block ✅ | 200 Allow ✅ |
+| record-veto | 403 Block ✅ | 200 Allow ✅ |
+
+### Audit Flag Resolution
+
+| # | Flag | Resolution |
+|---|------|-----------|
+| F1 | `any` types in buildDecision | Resolved: uses `Decision`, `EvidenceMode`, `RiskCategory` typed params |
+| F2 | record-evidence exemption | Confirmed: `/api/forge/record-evidence` exempt as evidence-ingestion primitive |
+
+### Razor Compliance
+
+| Check | Status |
+|-------|--------|
+| Max function lines ≤ 40 | ✅ PASS |
+| Max file lines ≤ 250 | ✅ PASS (~116 lines) |
+| Nesting depth ≤ 3 | ✅ PASS (max 2) |
+| Nested ternaries = 0 | ✅ PASS |
+
+### Evidence Ledger
+
+All governance decisions (Block and Allow) recorded to `evidence/ledger.jsonl` with `PolicyDecision` kind. Module ledger entries include `governanceDecisionId` for traceability.
+
+### Additional Fix: Auth Header Stripping
+
+Cloudflare proxy strips `Authorization` header from zo.space requests. All 6 authenticated routes updated to accept `X-Api-Key` header as fallback.
+
+### Content Hash
+
+`impl-runtime-governance-gate-v1`
+
+**SEALED** — Runtime governance gate operational. 5/5 write endpoints fail-closed. 20/20 unit tests pass. Evidence ledger records all decisions.
