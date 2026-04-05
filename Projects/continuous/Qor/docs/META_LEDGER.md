@@ -1210,3 +1210,76 @@ Chain: sha256(continuum-ingestion-hardening-v1-audit-v1 + impl-continuum-ingesti
 | GET `/qor/victor/audit` | 200 | ✅ |
 | POST `/api/forge/update-task` (no auth) | 401 | ✅ |
 | `get_space_errors()` | 0 errors | ✅ |
+
+---
+
+## 2026-04-05T14:15:00Z — SUBSTANTIATION (Evidence Layer Integration)
+
+| Field | Value |
+|-------|-------|
+| Phase | SUBSTANTIATE |
+| Blueprint | docs/plans/2026-04-05-evidence-layer-integration.md |
+| Verdict | **PASS** |
+| Risk Grade | L2 |
+| Seal Hash | `1cfee42b0c952746fc4cb66dba8d1e52387e8323d8b9eecc16f765c9847e5c8f` |
+
+### Reality = Promise
+
+| Planned | Delivered | Verdict |
+|---------|-----------|---------|
+| Phase 1: `evidence/contract.ts` (unified types) | ✅ 65 lines, 5 test cases | PASS |
+| Phase 1: `evidence/evaluate.ts` (evaluation engine) | ✅ 85 lines, 11 test cases | PASS |
+| Phase 1: `evidence/log.ts` (append-only JSONL) | ✅ 42 lines, 9 test cases | PASS |
+| Phase 1: `evidence/bundle.ts` (bundle materialization) | ✅ 48 lines, 8 test cases | PASS |
+| Phase 2: `/api/qor/evaluate` (POST, pure function) | ✅ 200 — Block/Allow based on trust stage | PASS |
+| Phase 2: `/api/qor/evidence` (GET public, POST auth) | ✅ 200 GET, 401 unauthed POST | PASS |
+| Phase 2: `/api/qor/evidence/bundle` (POST auth) | ✅ 401 unauthed | PASS |
+| Phase 3: Forge write APIs record evidence | ✅ 3 routes modified | PASS |
+| Phase 3: `/qor/victor/audit` rewired to unified evidence | ✅ Fetches from `/api/qor/evidence` | PASS |
+
+**9/9 planned deliverables exist. 0 missing. 0 unplanned.**
+
+### Test Verification
+
+| Suite | Tests | Status |
+|-------|-------|--------|
+| evidence/tests/contract.test.ts | 5 | ✅ PASS |
+| evidence/tests/evaluate.test.ts | 11 | ✅ PASS |
+| evidence/tests/log.test.ts | 9 | ✅ PASS |
+| evidence/tests/bundle.test.ts | 8 | ✅ PASS |
+| **Total** | **33** | **33/33 PASS (42ms)** |
+
+### Live Verification
+
+| Check | Result |
+|-------|--------|
+| POST `/api/qor/evaluate` (shell.execute @ CBT) | ✅ 200 — Block, risk 0.8, critical |
+| POST `/api/qor/evaluate` (file.read @ CBT) | ✅ 200 — Allow, risk 0.1 |
+| GET `/api/qor/evidence` | ✅ 200 — entries returned |
+| POST `/api/qor/evidence` (no auth) | ✅ 401 |
+| POST `/api/qor/evidence/bundle` (no auth) | ✅ 401 |
+| `get_space_errors()` | ✅ 0 errors |
+| console.log in evidence/ | ✅ 0 found |
+
+### Section 4 Final
+
+| Check | Limit | Actual | Status |
+|-------|-------|--------|--------|
+| Function lines | 40 | 20 | ✅ |
+| File lines | 250 | 85 | ✅ |
+| Nesting depth | 3 | 2 | ✅ |
+| Nested ternaries | 0 | 0 | ✅ |
+| console.log | 0 | 0 | ✅ |
+| Runtime errors | 0 | 0 | ✅ |
+
+### Session Seal
+
+```
+Content Hash: 17dae87c2bc6b8ddc76ffc243020031b1ae22083d343235bbf21baa5c47e726f
+Chain Hash: 1cfee42b0c952746fc4cb66dba8d1e52387e8323d8b9eecc16f765c9847e5c8f
+Chain: sha256(evidence-layer-integration-v1 + content-hash + parent-commit-7ef19a3)
+```
+
+### Verdict
+
+**SEALED** — Reality matches Promise. QOR now has a unified governance evidence layer: 4 TypeScript modules porting FailSafe-Pro's evaluation engine, 3 API endpoints with bearer auth on writes, append-only JSONL ledger, and existing Forge write APIs wired to emit evidence on every governance action. 33 tests passing across 4 suites.
