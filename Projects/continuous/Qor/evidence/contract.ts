@@ -20,7 +20,12 @@ export interface EvidenceEntry {
   module: "victor" | "qora" | "forge" | "continuum" | "qor";
   payload: Record<string, unknown>;
   confidence: number;
+  ingestionClass?: IngestionClass;
+  sourceRoute?: string;
+  actor?: string;
 }
+
+export type IngestionClass = "primitive" | "decision";
 
 export interface EvaluationRequest {
   action: string;

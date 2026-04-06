@@ -12,6 +12,12 @@ const ACTION_SCORES: Record<string, number> = {
   "task.update": 0.2,
   "evidence.record": 0.1,
   "risk.update": 0.3,
+  "quarantine.promote": 0.3,
+  "quarantine.reject": 0.2,
+  "cadence.change": 0.4,
+  "memory.write": 0.2,
+  "ledger.append": 0.2,
+  "veto.record": 0.3,
 };
 const DEFAULT_UNKNOWN_SCORE = 0.5;
 

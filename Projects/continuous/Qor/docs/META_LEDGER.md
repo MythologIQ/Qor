@@ -1635,3 +1635,123 @@ Chain Hash: 4a3b56a86a99ef5dbaa737c540899deb2f89624d2f3abc1b2c551e1ac5d37e11
 ```
 
 **SEALED** — Session substantiated. Reality = Promise. All 9 acceptance criteria verified live against zo.space endpoints.
+
+---
+
+## 2026-04-06T03:40:00Z — GATE TRIBUNAL
+
+| Field | Value |
+|-------|-------|
+| Phase | GATE |
+| Verdict | PASS |
+| Risk Grade | L2 |
+| Blueprint | docs/plans/2026-04-05-qor-dashboard-data-flow.md |
+| Content Hash | sha256:gov-gate-dashboard-trust-v1 |
+| Chain Hash | sha256:gov-gate-dashboard-trust-v1-audit-v1 |
+| Auditor | QoreLogic Judge |
+| Notes | 5/8 write endpoints verified gated; 3 ungated confirmed; evidence intake exemption validated; all 6 audit passes PASS; 3 non-blocking flags (F1: missing bearer auth on Victor/Continuum, F2: inline gate duplication, F3: dual-location action scores) |
+
+---
+
+## 2026-04-06T04:00:00Z — IMPLEMENTATION: Governance Gate Completion, Evidence Dashboard, and Trust Progression
+
+| Field | Value |
+|-------|-------|
+| Phase | IMPLEMENT |
+| Blueprint | docs/plans/2026-04-05-qor-dashboard-data-flow.md |
+| Risk Grade | L2 |
+| Gate | PASS (audited 2026-04-06T03:40:00Z) |
+| Implementor | QoreLogic Specialist |
+
+### Phase 1: Gate Remaining Write Endpoints + Ingestion Contract
+
+#### Routes Gated (3/3 — completing 8/8 total)
+
+| Route | Module | Action | Risk Score |
+|-------|--------|--------|------------|
+| `/api/victor/quarantine` | victor | quarantine.promote / quarantine.reject | 0.3 / 0.2 |
+| `/api/victor/heartbeat-cadence` | victor | cadence.change | 0.4 |
+| `/api/continuum/memory` | continuum | memory.write | 0.2 |
+
+#### Evidence Intake Routes (Ingestion Contract)
+
+| Route | Validation | Source Tag | 405 on PUT/PATCH/DELETE |
+|-------|-----------|-----------|------------------------|
+| `/api/qor/evidence` | kind (7 values), source (non-empty), module (5 values) | `ingestionClass: "primitive"`, `sourceRoute`, `actor` | ✅ |
+| `/api/forge/record-evidence` | sessionId (required), kind (7 values) | `ingestionClass: "primitive"`, `sourceRoute`, `actor: "forge"` | ✅ |
+
+#### Filesystem Changes
+
+| File | Change | Lines |
+|------|--------|-------|
+| `evidence/contract.ts` | Added `IngestionClass` type, `ingestionClass`, `sourceRoute`, `actor` fields to `EvidenceEntry` | +5 |
+| `evidence/evaluate.ts` | Added 6 new action scores (quarantine.promote/reject, cadence.change, memory.write, ledger.append, veto.record) | +6 |
+
+### Phase 2: Governance Dashboard
+
+#### Routes Created
+
+| Route | Type | Purpose |
+|-------|------|---------|
+| `/api/qor/governance-dashboard` | API | Read-only aggregation of governance decisions from evidence ledger |
+
+#### Routes Modified
+
+| Route | Type | Change |
+|-------|------|--------|
+| `/qor` | Page | Added govData fetch, per-module approval rate labels, governance summary bar (5 stats), trust stage badges on module cards |
+| `/qor/victor/governance` | Page | Added govData fetch, Decisions/Intake tabs, decision feed with color-coded status, intake statistics, trust profiles section |
+
+### Phase 3: Trust Stage Progression
+
+#### Files Created
+
+| File | Lines | Purpose |
+|------|-------|---------|
+| `evidence/trust-progression.ts` | 131 | Trust stage resolution: `resolveTrustStage()`, `getTrustProfile()`, `checkDemotion()` |
+| `evidence/tests/trust-progression.test.ts` | ~120 | 12 TDD tests (cbt default, kbt promotion, ibt promotion, demotion rules, profile) |
+| `evidence/tests/ingestion-contract.test.ts` | ~90 | 8 TDD tests (schema validation, source tagging, append-only) |
+
+#### Dynamic Trust Resolution (8/8 routes)
+
+All 8 gated routes now use inline `resolveTrustStage()` instead of hardcoded `"kbt"`:
+
+| Route | Module | Previous | Now |
+|-------|--------|----------|-----|
+| `/api/forge/update-task` | forge | `body.trustStage \|\| "kbt"` | `resolveTrustStage(agentId)` |
+| `/api/forge/create-phase` | forge | `body.trustStage \|\| "kbt"` | `resolveTrustStage(agentId)` |
+| `/api/forge/update-risk` | forge | `body.trustStage \|\| "kbt"` | `resolveTrustStage(agentId)` |
+| `/api/qora/record-veto` | qora | `body.trustStage \|\| "kbt"` | `resolveTrustStage(agentId)` |
+| `/api/qora/append-entry` | qora | `body.trustStage \|\| "kbt"` | `resolveTrustStage(agentId)` |
+| `/api/victor/quarantine` | victor | `"kbt"` | `resolveTrustStageInline()` |
+| `/api/victor/heartbeat-cadence` | victor | `"kbt"` | `resolveTrustStageInline()` |
+| `/api/continuum/memory` | continuum | `"kbt"` | `resolveTrustStageInline()` |
+
+Trust progression criteria:
+- **cbt** (default): <10 decisions
+- **kbt**: ≥10 decisions, ≥70% approval, 0 blocks in last 5
+- **ibt**: ≥50 decisions, ≥85% approval, 0 blocks in last 20, ≥5 full bundles
+- Demotion: ibt→kbt on any block, kbt→cbt on 3 blocks in 10
+
+### Test Summary
+
+| Suite | Tests | Status |
+|-------|-------|--------|
+| `evidence/tests/trust-progression.test.ts` | 12 | ✅ ALL PASS |
+| `evidence/tests/ingestion-contract.test.ts` | 8 | ✅ ALL PASS |
+| **Total (new)** | **20** | **✅ ALL PASS** |
+
+### Content Hash
+
+```
+evidence/trust-progression.ts  → 6dc1e73ce5ab79c47b16d4beaac86c97fb7595802d61f823619de2fe3cc8bad2
+evidence/contract.ts           → 9bea055017b6ee0daead2c15b38ff3f48f7468bac4bd4040df939c4c25499c6e
+evidence/evaluate.ts           → 43645a4a8964638a75a1a70cbbe3b951c23a7a61a73521278c0361afe7f826b0
+```
+
+`impl-gov-gate-dashboard-trust-v1`
+
+---
+
+**HANDOFF** → `/qor-substantiate` to verify Reality = Promise across all 3 phases.
+
