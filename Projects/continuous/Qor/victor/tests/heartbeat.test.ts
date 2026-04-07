@@ -14,6 +14,7 @@ import {
 
 const FORGE_TMP = "/tmp/forge-heartbeat-test";
 const FORGE_PHASES = `${FORGE_TMP}/phases.json`;
+const MISSING_FORGE_PHASES = `${FORGE_TMP}/missing-phases.json`;
 
 function writeForgePhases(phases: unknown[]) {
   mkdirSync(FORGE_TMP, { recursive: true });
@@ -28,6 +29,7 @@ function makeCtx(overrides: Partial<AgentContext> = {}): AgentContext {
     phase: { objective: "Test objective", name: "test-phase", status: "active" },
     progress: { completed: 0, total: 10 },
     blockers: [],
+    forgeQueuePath: MISSING_FORGE_PHASES,
     ...overrides,
   };
 }

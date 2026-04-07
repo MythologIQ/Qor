@@ -16,6 +16,7 @@ import {
   handleGetSemantic,
   handleGetProcedural,
 } from "../derive/layer-routes";
+import { materializeEvidenceBundle } from "./evidence-bundle";
 import { readdir } from "fs/promises";
 import { join } from "path";
 
@@ -47,7 +48,7 @@ async function syncCycle() {
   try {
     const result = await ingestAll();
     if (result.total > lastTotal) {
-      console.log(`Sync: ${result.total - lastTotal} new records (total: ${result.total})`);
+      process.stdout.write(`Sync: ${result.total - lastTotal} new records (total: ${result.total})\n`);
     }
     lastTotal = result.total;
     await persistHeartbeat();
@@ -95,6 +96,13 @@ async function handleGraphRoutes(path: string, url: URL, req: Request): Promise<
     if (!body.cypher) return Response.json({ error: "cypher field required" }, { status: 400 });
     return Response.json(await queryGraph(body.cypher, body.params ?? {}));
   }
+  if (path === "/api/continuum/evidence-bundle" && req.method === "POST") {
+    const body = await req.json();
+    if (!body.sessionId || !body.intentId || !Array.isArray(body.entries)) {
+      return Response.json({ error: "sessionId, intentId, and entries are required" }, { status: 400 });
+    }
+    return Response.json(materializeEvidenceBundle(body));
+  }
   return null;
 }
 
@@ -121,7 +129,7 @@ const server = Bun.serve({
 
 syncCycle();
 setInterval(syncCycle, SYNC_INTERVAL);
-console.log(`Continuum API listening on port ${PORT}`);
+process.stdout.write(`Continuum API listening on port ${PORT}\n`);
 
 process.on("SIGTERM", async () => {
   await closeDriver();
