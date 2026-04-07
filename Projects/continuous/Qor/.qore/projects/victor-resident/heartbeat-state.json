@@ -1,0 +1,10 @@
+{
+  "consecutiveSuccesses": 0,
+  "consecutiveFailures": 0,
+  "consecutiveBlocked": 0,
+  "totalTicks": 0,
+  "lastTickTimestamp": null,
+  "lastTickStatus": null,
+  "lastClaimedTaskId": null,
+  "lastCompletedTaskId": null
+}

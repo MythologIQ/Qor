@@ -4,8 +4,9 @@
  */
 
 import { readForgeQueue, type ForgeTask } from "./forge-queue";
+import { runHeartbeatTick, type RuntimeAgentContext } from "./runtime";
 
-const DEFAULT_FORGE_QUEUE_PATH =
+export const DEFAULT_FORGE_QUEUE_PATH =
   "/home/workspace/Projects/continuous/Qor/.qore/projects/builder-console/path/phases.json";
 
 export enum AutonomyLevel {
@@ -61,10 +62,11 @@ export interface HeartbeatResult {
   tasks?: Task[];
   provenanceHash?: string;
   error?: string;
+  executionStatus?: "completed" | "blocked" | "failed" | "quarantined";
 }
 
-export async function heartbeat(ctx: AgentContext): Promise<HeartbeatResult> {
-  return handleEmptyQueue(ctx);
+export async function heartbeat(ctx: RuntimeAgentContext): Promise<HeartbeatResult> {
+  return runHeartbeatTick(ctx);
 }
 
 export async function handleEmptyQueue(
@@ -161,14 +163,18 @@ const LIFECYCLE_TASKS: Record<LifecycleStage, (phase: PhaseContext) => Task | nu
   complete: () => null,
 };
 
+function toTaskUrgency(priority: number | undefined): Task["urgency"] {
+  if ((priority ?? 99) <= 2) return "high";
+  if ((priority ?? 99) <= 5) return "medium";
+  return "low";
+}
+
 export function forgeTaskToTask(ft: ForgeTask): Task {
-  const urgency: Task["urgency"] =
-    ft.priority <= 2 ? "high" : ft.priority <= 5 ? "medium" : "low";
   return {
     id: ft.taskId,
     title: ft.title,
     description: ft.description,
-    urgency,
+    urgency: toTaskUrgency(ft.priority),
     source: `forge:queue:${ft.phaseId}`,
   };
 }
