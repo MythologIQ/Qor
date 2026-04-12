@@ -1,5 +1,6 @@
 import { existsSync, readFileSync, writeFileSync, mkdirSync } from "fs";
 import { dirname } from "path";
+import type { HeartbeatRecord, HeartbeatRecordStatus } from "./types";
 
 export interface HeartbeatPersistentState {
   consecutiveSuccesses: number;
@@ -7,7 +8,7 @@ export interface HeartbeatPersistentState {
   consecutiveBlocked: number;
   totalTicks: number;
   lastTickTimestamp: string | null;
-  lastTickStatus: "completed" | "blocked" | "failed" | "quarantined" | null;
+  lastTickStatus: HeartbeatRecordStatus | null;
   lastClaimedTaskId: string | null;
   lastCompletedTaskId: string | null;
 }
@@ -44,9 +45,23 @@ export function saveHeartbeatState(
   writeFileSync(path, JSON.stringify(state, null, 2));
 }
 
+export function loadHeartbeatRecord(path: string): HeartbeatRecord | null {
+  try {
+    if (!existsSync(path)) return null;
+    return JSON.parse(readFileSync(path, "utf-8")) as HeartbeatRecord;
+  } catch {
+    return null;
+  }
+}
+
+export function saveHeartbeatRecord(path: string, record: HeartbeatRecord): void {
+  mkdirSync(dirname(path), { recursive: true });
+  writeFileSync(path, JSON.stringify(record, null, 2));
+}
+
 export function applyHeartbeatOutcome(
   state: HeartbeatPersistentState,
-  outcome: HeartbeatPersistentState["lastTickStatus"],
+  outcome: HeartbeatRecordStatus,
   tickTimestamp: string,
   taskId?: string | null,
 ): HeartbeatPersistentState {
@@ -66,10 +81,18 @@ export function applyHeartbeatOutcome(
   }
 
   next.consecutiveSuccesses = 0;
-  if (outcome === "blocked") next.consecutiveBlocked += 1;
+  if (outcome === "blocked") {
+    next.consecutiveFailures = 0;
+    next.consecutiveBlocked += 1;
+    return next;
+  }
   if (outcome === "failed" || outcome === "quarantined") {
     next.consecutiveFailures += 1;
     next.consecutiveBlocked = 0;
+    return next;
   }
+
+  next.consecutiveFailures = 0;
+  next.consecutiveBlocked = 0;
   return next;
 }

@@ -6,15 +6,19 @@ import {
   handleEmptyQueue,
   inferLifecycleStage,
   forgeTaskToTask,
+  heartbeat,
   AutonomyLevel,
   type AgentContext,
   type HeartbeatResult,
   type PhaseContext,
 } from "../src/heartbeat/mod";
+import type { RuntimeAgentContext } from "../src/heartbeat/runtime";
 
 const FORGE_TMP = "/tmp/forge-heartbeat-test";
 const FORGE_PHASES = `${FORGE_TMP}/phases.json`;
 const MISSING_FORGE_PHASES = `${FORGE_TMP}/missing-phases.json`;
+const HEARTBEAT_STATE_PATH = `${FORGE_TMP}/heartbeat-state.json`;
+const HEARTBEAT_RECORDS_DIR = `${FORGE_TMP}/heartbeat-records`;
 
 function writeForgePhases(phases: unknown[]) {
   mkdirSync(FORGE_TMP, { recursive: true });
@@ -30,6 +34,15 @@ function makeCtx(overrides: Partial<AgentContext> = {}): AgentContext {
     progress: { completed: 0, total: 10 },
     blockers: [],
     forgeQueuePath: MISSING_FORGE_PHASES,
+    ...overrides,
+  };
+}
+
+function makeRuntimeCtx(
+  overrides: Partial<RuntimeAgentContext> = {},
+): RuntimeAgentContext {
+  return {
+    ...makeCtx(),
     ...overrides,
   };
 }
@@ -261,6 +274,34 @@ describe("Forge-first task derivation", () => {
     }));
     expect(result.status).toBe("AUTO_DERIVED");
     expect(result.tasks![0].source).toStartWith("forge:queue:");
+  });
+});
+
+describe("runtime heartbeat record sealing", () => {
+  beforeEach(() => mkdirSync(FORGE_TMP, { recursive: true }));
+  afterEach(() => rmSync(FORGE_TMP, { recursive: true, force: true }));
+
+  it("returns no-op with a persisted record when observation succeeds without claim", async () => {
+    const result = await heartbeat(makeRuntimeCtx({
+      phase: makePhase({ hasPlan: false }),
+      heartbeatStatePath: HEARTBEAT_STATE_PATH,
+      heartbeatRecordsDir: HEARTBEAT_RECORDS_DIR,
+    }));
+
+    expect(result.status).toBe("AUTO_DERIVED");
+    expect(result.heartbeatStatus).toBe("no-op");
+    expect(result.heartbeatRecordPath).toContain("/heartbeat-records/");
+  });
+
+  it("does not report completed for empty-queue observation ticks", async () => {
+    const result = await heartbeat(makeRuntimeCtx({
+      phase: makePhase({ hasPlan: false }),
+      heartbeatStatePath: HEARTBEAT_STATE_PATH,
+      heartbeatRecordsDir: HEARTBEAT_RECORDS_DIR,
+    }));
+
+    expect(result.executionStatus).toBe("no-op");
+    expect(result.executionStatus).not.toBe("completed");
   });
 });
 

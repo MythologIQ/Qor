@@ -62,7 +62,9 @@ export interface HeartbeatResult {
   tasks?: Task[];
   provenanceHash?: string;
   error?: string;
-  executionStatus?: "completed" | "blocked" | "failed" | "quarantined";
+  executionStatus?: "completed" | "blocked" | "failed" | "quarantined" | "no-op";
+  heartbeatStatus?: "completed" | "blocked" | "failed" | "quarantined" | "no-op";
+  heartbeatRecordPath?: string;
 }
 
 export async function heartbeat(ctx: RuntimeAgentContext): Promise<HeartbeatResult> {
