@@ -15,7 +15,14 @@ import {
   type CompletionReceipt,
   type WriteBackConfig,
 } from "./forge-writeback";
-import { dispatchExecution, toExecutionIntent } from "./execution-dispatch";
+import {
+  dispatchExecution,
+  hasExecutionEvidence,
+  isImplementationSource,
+  toExecutionIntent,
+  type ExecutionRunner,
+} from "./execution-dispatch";
+import { createDirectiveExecutionRunner } from "./directive-runner";
 import {
   DEFAULT_FORGE_QUEUE_PATH,
   type AgentContext,
@@ -44,6 +51,7 @@ export interface RuntimeAgentContext extends AgentContext {
   heartbeatRecordsDir?: string;
   writeBackConfig?: WriteBackConfig;
   forgeApiKeyPath?: string;
+  executionRunner?: ExecutionRunner;
 }
 
 export function resolveWriteBackConfig(
@@ -57,6 +65,19 @@ export function resolveWriteBackConfig(
     forgeApiKey,
     agentId: "victor",
   };
+}
+
+export function resolveExecutionRunner(
+  ctx: RuntimeAgentContext,
+): ExecutionRunner {
+  return ctx.executionRunner ?? createDirectiveExecutionRunner();
+}
+
+function shouldRejectCompletedExecution(
+  task: Task,
+  executionResult: Awaited<ReturnType<typeof dispatchExecution>>,
+): boolean {
+  return isImplementationSource(task.source) && !hasExecutionEvidence(executionResult);
 }
 
 function buildExecutedResult(
@@ -220,8 +241,30 @@ export async function runHeartbeatTick(
   const claimedState = loadHeartbeatState(statePath);
   saveHeartbeatState(statePath, { ...claimedState, lastClaimedTaskId: queue.task.taskId });
 
-  const result = await dispatchExecution(toExecutionIntent(queue.task));
+  const result = await dispatchExecution(
+    toExecutionIntent(queue.task),
+    resolveExecutionRunner(ctx),
+  );
   if (result.status === "completed") {
+    if (shouldRejectCompletedExecution(task, result)) {
+      return finalizeTick(
+        statePath,
+        recordsDir,
+        {
+          status: "QUARANTINE",
+          error: "missing_execution_evidence",
+          tasks: [task],
+          executionStatus: "quarantined",
+        },
+        "quarantined",
+        startedAt,
+        ["observed", "claimed", "quarantined"],
+        `Heartbeat quarantined: completed status rejected for ${queue.task.taskId} because execution evidence was empty.`,
+        [{ kind: "task-writeback", target: queue.task.taskId, status: "failure", artifact: null }],
+        queue.task.taskId,
+      );
+    }
+
     const evidence = buildTaskEvidence(queue.task.taskId, queue.task.phaseId, writeBack.agentId, {
       testsPassed: result.testsPassed,
       filesChanged: result.filesChanged,

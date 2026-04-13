@@ -6,7 +6,12 @@ export interface ExecutionIntent {
   source: string;
   title: string;
   description: string;
+  acceptance: string[];
   urgency: "low" | "medium" | "high";
+}
+
+export interface ExecutionRunner {
+  run(intent: ExecutionIntent): Promise<ExecutionResult>;
 }
 
 export interface ExecutionResult {
@@ -16,6 +21,18 @@ export interface ExecutionResult {
   filesChanged?: string[];
   acceptanceMet?: string[];
   reason?: string;
+}
+
+export function isImplementationSource(source: string): boolean {
+  return source.startsWith("forge:queue:") || source === "lifecycle:implement";
+}
+
+export function hasExecutionEvidence(result: ExecutionResult): boolean {
+  return Boolean(
+    result.filesChanged?.length
+      || (result.testsPassed ?? 0) > 0
+      || result.acceptanceMet?.length,
+  );
 }
 
 function toUrgency(priority: number | undefined): ExecutionIntent["urgency"] {
@@ -31,12 +48,14 @@ export function toExecutionIntent(task: ForgeTask): ExecutionIntent {
     source: `forge:queue:${task.phaseId}`,
     title: task.title,
     description: task.description,
+    acceptance: task.acceptance ?? [],
     urgency: toUrgency(task.priority),
   };
 }
 
 export async function dispatchExecution(
   intent: ExecutionIntent,
+  runner?: ExecutionRunner,
 ): Promise<ExecutionResult> {
   if (intent.source === "blockers") {
     return {
@@ -46,23 +65,32 @@ export async function dispatchExecution(
     };
   }
 
-  if (intent.source.startsWith("forge:queue:")) {
-    return {
-      status: "completed",
-      summary: `Forge task executed: ${intent.title}`,
-      acceptanceMet: [intent.title],
-      filesChanged: [],
-      testsPassed: 0,
-    };
+  if (isImplementationSource(intent.source)) {
+    if (!runner) {
+      return {
+        status: "blocked",
+        summary: `Execution blocked: no implementation runner is wired for ${intent.source}.`,
+        reason: "execution_runner_missing",
+      };
+    }
+
+    const result = await runner.run(intent);
+    if (result.status === "completed" && !hasExecutionEvidence(result)) {
+      return {
+        status: "quarantined",
+        summary: `Execution quarantined: implementation runner returned completed without evidence for ${intent.source}.`,
+        reason: "execution_evidence_missing",
+      };
+    }
+
+    return result;
   }
 
   if (intent.source.startsWith("lifecycle:")) {
     return {
-      status: "completed",
-      summary: `Lifecycle task derived: ${intent.title}`,
-      acceptanceMet: [intent.source],
-      filesChanged: [],
-      testsPassed: 0,
+      status: "blocked",
+      summary: `Lifecycle task requires explicit operator execution: ${intent.title}`,
+      reason: "operator_execution_required",
     };
   }
 
