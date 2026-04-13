@@ -1,0 +1,14 @@
+# Runtime data directories
+.neo4j/
+.qore/
+.continuum/
+.evolveai/
+.victor/
+.qora/
+
+# Test artifacts
+node_modules/
+*.tsbuildinfo
+
+# OS artifacts
+.DS_Store
