@@ -23,6 +23,8 @@ const ACTION_SCORES: Record<string, number> = {
   "memory.write": 0.2,
   "ledger.append": 0.2,
   "veto.record": 0.3,
+  "chat.message": 0.1,
+  "chat.forge": 0.15,
 };
 const DEFAULT_UNKNOWN_SCORE = 0.5;
 

@@ -17,6 +17,7 @@ import {
   handleGetProcedural,
 } from "../derive/layer-routes";
 import { materializeEvidenceBundle } from "./evidence-bundle";
+import { route } from "./router";
 import { readdir } from "fs/promises";
 import { join } from "path";
 
@@ -36,7 +37,7 @@ async function persistHeartbeat() {
   }
 }
 
-const PORT = parseInt(process.env.CONTINUUM_PORT ?? "4100");
+const PORT = parseInt(process.env.QOR_PORT ?? process.env.CONTINUUM_PORT ?? "4100");
 const SYNC_INTERVAL = 5 * 60 * 1000;
 
 let lastTotal = 0;
@@ -119,17 +120,13 @@ async function handleLayerRoutes(path: string, req: Request): Promise<Response |
 const server = Bun.serve({
   port: PORT,
   async fetch(req) {
-    const url = new URL(req.url);
-    const path = url.pathname;
-    return (await handleGraphRoutes(path, url, req))
-      ?? (await handleLayerRoutes(path, req))
-      ?? Response.json({ error: "not found" }, { status: 404 });
+    return route(req, handleGraphRoutes, handleLayerRoutes);
   },
 });
 
 syncCycle();
 setInterval(syncCycle, SYNC_INTERVAL);
-process.stdout.write(`Continuum API listening on port ${PORT}\n`);
+process.stdout.write(`QOR Service listening on port ${PORT}\n`);
 
 process.on("SIGTERM", async () => {
   await closeDriver();
