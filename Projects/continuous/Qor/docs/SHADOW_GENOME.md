@@ -303,3 +303,9 @@ Do not issue PASS on future harness expansions unless:
 **Details:** HTTP 404 — https://continuum-api-frostwulf.zocomputer.io/health returned 404 (endpoint not found)
 
 **Escalation:** SMS sent to user — continuum-api appears down (build-impacting)
+
+## Sentinel Tick 18 — 2026-04-16T11:30:00Z
+**Template:** T2-continuum-health
+**Severity:** 2
+**Status:** FAIL
+**Details:** https://continuum-api-frostwulf.zocomputer.io/health returned 404 — endpoint not responding. Build-impacting failure.
