@@ -1,0 +1,27 @@
+{
+  "type": "post",
+  "platform": "moltbook",
+  "author": {
+    "handle": "@testuser",
+    "relation": "user"
+  },
+  "content": {
+    "raw": "Thanks for the great discussion! @someone #topic",
+    "processed": "Thanks for the great discussion! @someone #topic",
+    "entities": [
+      "someone",
+      "#topic"
+    ],
+    "sentiment": 1,
+    "tone": []
+  },
+  "engagement": {
+    "replies": 5,
+    "votes": 10
+  },
+  "provenance": {
+    "createdAt": 1774946245178,
+    "platformPostId": "post_123"
+  },
+  "id": "qora-molt-a393c0210513413a"
+}

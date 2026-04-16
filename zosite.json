@@ -1,0 +1,10 @@
+{
+  "name": "frostwulf-zo-space",
+  "local_port": 3099,
+  "publish": {
+    "published_port": 3099
+  },
+  "env": {
+    "VITE_HANDLE": "frostwulf"
+  }
+}

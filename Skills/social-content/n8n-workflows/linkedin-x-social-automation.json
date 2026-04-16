@@ -1,0 +1,248 @@
+{
+  "name": "Social Media Automation - MythologIQ",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours",
+              "hoursInterval": 1
+            }
+          ]
+        }
+      },
+      "name": "Schedule Trigger",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1,
+      "position": [
+        240,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "list"
+      },
+      "name": "List Posts Directory",
+      "type": "n8n-nodes-base.listFiles",
+      "typeVersion": 1,
+      "position": [
+        460,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Filter for scheduled posts that haven't been published\nconst files = $input.all();\nconst scheduledFiles = files.filter(file => {\n  // Check if it's a post file (.md)\n  if (!file.name.endsWith('.md')) return false;\n  \n  // Check if file is in posts directory\n  if (!file.path.includes('posts/')) return false;\n  \n  return true;\n});\n\nreturn scheduledFiles.map(file => ({ json: file }));"
+      },
+      "name": "Filter Scheduled Posts",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        680,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "filePath": "={{ $json.path }}",
+        "options": {}
+      },
+      "name": "Read Post Content",
+      "type": "n8n-nodes-base.readBinaryFile",
+      "typeVersion": 1,
+      "position": [
+        900,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "raw",
+        "options": {},
+        "jsCode": "// Parse markdown frontmatter and extract content\nconst content = $input.first().binary.data.toString('utf8');\n\n// Extract frontmatter (between ---)\nconst frontmatterMatch = content.match(/^---\\n(.*?)\\n---/s);\nif (!frontmatterMatch) {\n  return [{ json: { error: 'No frontmatter found' } }];\n}\n\nconst metadata = frontmatterMatch[1];\nconst body = content.slice(frontmatterMatch[0].length);\n\n// Parse YAML-like frontmatter\nconst lines = metadata.split('\\n');\nconst data = {};\nlet inArray = false;\nlet currentArray = [];\n\nfor (const line of lines) {\n  if (line.match(/^(title|type|status|scheduled_date|scheduled_time):/)) {\n    const [key, value] = line.split(':').map(s => s.trim().replace(/^\"|\"$/g, ''));\n    data[key] = value;\n  } else if (line.match(/^cross_post_to:/)) {\n    inArray = true;\n  } else if (line.match(/^\]/) {\n    inArray = false;\n  } else if (inArray && line.trim()) {\n    currentArray.push(line.trim().replace(/\"/g, ''));\n  }\n}\n\ndata.cross_post_to = currentArray;\n\n// Extract LinkedIn content\nconst linkedinMatch = body.match(/## LinkedIn\\n([\\s\\S]*?)(?=(##|$)/s);\ndata.linkedin_content = linkedinMatch ? linkedinMatch[1].trim() : '';\n\n// Extract X content  \nconst xMatch = body.match(/## X\\/Twitter \\(Thread\\)\\n([\\s\\S]*?)(?=##|$)/s);\ndata.x_content = xMatch ? xMatch[1].trim() : '';\n\n// Extract Facebook content\nconst fbMatch = body.match(/## Facebook\\n([\\s\\S]*?)(?=##|$)/s);\ndata.facebook_content = fbMatch ? fbMatch[1].trim() : '';\n\nreturn [{ json: data }];"
+      },
+      "name": "Parse Post Metadata",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1120,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "raw",
+        "options": {},
+        "jsCode": "// Check if post should be published now\nconst data = $input.first().json;\nconst now = new Date();\n\n// Parse scheduled time\nif (!data.scheduled_date) {\n  return [{ json: { ...data, should_publish: false, reason: 'No scheduled date' } }];\n}\n\nconst scheduledDate = new Date(`${data.scheduled_date}T${data.scheduled_time || '07:00'}`);\n\n// Check if within the last hour (to catch scheduled posts)\nconst diffHours = (now - scheduledDate) / (1000 * 60 * 60);\nconst shouldPublish = diffHours >= 0 && diffHours < 1 && data.status === 'draft';\n\nreturn [{ json: { ...data, should_publish, reason: shouldPublish ? 'Ready to publish' : `Scheduled for ${scheduledDate}, currently ${now}` } }];"
+      },
+      "name": "Check Schedule",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1340,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "should_publish_true",
+              "leftValue": "={{ $json.should_publish }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "name": "Only Publish If Ready",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        1560,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "create",
+        "resource": "status"
+      },
+      "name": "Post to X (Twitter)",
+      "type": "n8n-nodes-base.x",
+      "typeVersion": 1,
+      "position": [
+        1780,
+        200
+      ],
+      "credentials": {
+        "x": {
+          "id": "CONFIGURE_TWITTER_CREDENTIALS",
+          "name": "X (Twitter) credential"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "raw",
+        "options": {},
+        "jsCode": "// Post to log file for manual review\nconst data = $input.first().json;\n\nconst logEntry = {\n  timestamp: new Date().toISOString(),\n  post_title: data.title,\n  platforms: data.cross_post_to,\n  status: 'ready_for_manual_posting',\n  linkedin_content: data.linkedin_content.substring(0, 200) + '...',\n  x_content: data.x_content.substring(0, 200) + '...',\n  facebook_content: data.facebook_content.substring(0, 200) + '...'\n};\n\n// Log to file\nconst fs = require('fs');\nconst logPath = '/home/workspace/Skills/social-content/publishing-log.json';\n\nlet logs = [];\nif (fs.existsSync(logPath)) {\n  logs = JSON.parse(fs.readFileSync(logPath, 'utf8'));\n}\n\nlogs.unshift(logEntry);\nfs.writeFileSync(logPath, JSON.stringify(logs, null, 2));\n\nreturn [{ json: { success: true, logged: true, log_path: logPath } }];"
+      },
+      "name": "Log for Manual Posting",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1780,
+        400
+      ]
+    }
+  ],
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "List Posts Directory",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "List Posts Directory": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Filter Scheduled Posts",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Filter Scheduled Posts": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Read Post Content",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Read Post Content": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Parse Post Metadata",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Parse Post Metadata": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Check Schedule",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Check Schedule": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Only Publish If Ready",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Only Publish If Ready": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Post to X (Twitter)",
+            "type": "main"
+          }
+        ],
+        [
+          {
+            "index": 0,
+            "node": "Log for Manual Posting",
+            "type": "main"
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [],
+  "triggerCount": 1,
+  "updatedAt": "2026-01-30T01:57:28.000Z",
+  "versionId": "1"
+}

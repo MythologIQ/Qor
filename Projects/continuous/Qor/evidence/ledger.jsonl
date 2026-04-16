@@ -1,2 +1,1 @@
-{"kind":"TestResult","source":"a","module":"victor","payload":{},"confidence":1,"id":"a34dd691-ebad-4261-bba5-819b10cb4ad7","timestamp":"2026-04-13T15:58:25.127Z"}
-{"kind":"TestResult","source":"b","module":"victor","payload":{},"confidence":1,"id":"2e8abe3f-5e77-49d6-9d1d-c18816193444","timestamp":"2026-04-13T15:58:25.127Z"}
+{"kind":"PolicyDecision","source":"governance-gate/qora","module":"qora","payload":{"decisionId":"gov_123","result":"Allow"},"confidence":0.63,"ingestionClass":"decision","sourceRoute":"/api/qora/record-veto","id":"331bd082-17b3-4aaa-8692-aec8ef799b48","timestamp":"2026-04-15T22:27:17.255Z"}

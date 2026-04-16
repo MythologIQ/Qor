@@ -1,4 +1,8 @@
 import { staticRoutes } from "./static-routes";
+import { forgeRoutes } from "./api/forge-routes";
+import { qoraRoutes } from "./api/qora-routes";
+import { qorEvaluateRoutes } from "./api/qor-routes";
+import { qorEvidenceRoutes } from "./api/qor-evidence-routes";
 
 const API_PREFIXES = [
   "/api/continuum",
@@ -8,6 +12,8 @@ const API_PREFIXES = [
   "/api/qor",
   "/api/chat",
 ];
+
+const moduleRoutes = [forgeRoutes, qoraRoutes, qorEvaluateRoutes, qorEvidenceRoutes];
 
 export async function route(
   req: Request,
@@ -22,6 +28,10 @@ export async function route(
   }
 
   if (API_PREFIXES.some((p) => path.startsWith(p))) {
+    for (const handler of moduleRoutes) {
+      const res = await handler(path, url, req);
+      if (res) return res;
+    }
     const graphRes = await handleGraphRoutes(path, url, req);
     if (graphRes) return graphRes;
     const layerRes = await handleLayerRoutes(path, req);

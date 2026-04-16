@@ -1,0 +1,17 @@
+{
+  "entity": "qora",
+  "version": "1.0.0",
+  "lastUpdated": "2026-04-04T12:00:00Z",
+  "status": "active",
+  "dataSources": {
+    "ledger": "qora/data/ledger.jsonl",
+    "moltbook": "qora/src/moltbook/ledger.ts",
+    "connector": "qora/src/moltbook/connector.ts",
+    "governance": "qora/docs/GOVERNANCE.md"
+  },
+  "apiEndpoints": [
+    "/api/qora/status",
+    "/api/qora/append-entry",
+    "/api/qora/record-veto"
+  ]
+}

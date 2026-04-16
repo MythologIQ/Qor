@@ -1,0 +1,21 @@
+# Social Media Posts
+
+Each post is stored as a markdown file with frontmatter for metadata.
+
+## File Naming Convention
+`YYYY-MM-DD-slug.md`
+
+## Frontmatter Structure
+```yaml
+---
+title: "Post title"
+type: "contrarian|story|list|howto|promo"
+primary_platform: "linkedin"
+cross_post_to: ["x", "instagram", "facebook"]
+status: "draft|scheduled|published"
+scheduled_date: "2026-01-30"
+scheduled_time: "07:00"
+published_date: null
+engagement: {}
+---
+```

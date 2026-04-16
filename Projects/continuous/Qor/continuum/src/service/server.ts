@@ -5,8 +5,10 @@ import {
   getGraphStats,
   queryGraph,
   recallSimilar,
-  closeDriver,
 } from "./graph-api";
+import { getDriver, closeDriver } from "../memory/driver";
+import { initializeSchema } from "../memory/schema";
+import { startIpcServer, type IpcServerHandle } from "../ipc/server";
 import { ingestAll } from "../ingest/memory-to-graph";
 import {
   handleDeriveSemantic,
@@ -117,6 +119,16 @@ async function handleLayerRoutes(path: string, req: Request): Promise<Response |
   return null;
 }
 
+await initializeSchema(getDriver());
+
+let ipcHandle: IpcServerHandle | null = null;
+const IPC_TRANSPORT = process.env.CONTINUUM_IPC_TRANSPORT;
+const IPC_TOKEN_MAP = process.env.CONTINUUM_IPC_TOKEN_MAP;
+if (IPC_TRANSPORT && IPC_TOKEN_MAP) {
+  ipcHandle = await startIpcServer({ transport: IPC_TRANSPORT, tokenMapPath: IPC_TOKEN_MAP });
+  process.stdout.write(`Continuum IPC listening on ${ipcHandle.socketPath}\n`);
+}
+
 const server = Bun.serve({
   port: PORT,
   async fetch(req) {
@@ -129,6 +141,7 @@ setInterval(syncCycle, SYNC_INTERVAL);
 process.stdout.write(`QOR Service listening on port ${PORT}\n`);
 
 process.on("SIGTERM", async () => {
+  if (ipcHandle) await ipcHandle.stop();
   await closeDriver();
   server.stop();
 });

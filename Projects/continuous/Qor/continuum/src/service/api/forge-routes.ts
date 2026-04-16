@@ -1,16 +1,10 @@
-import { readFileSync, writeFileSync, existsSync, appendFileSync, mkdirSync } from "node:fs";
-import { auth, uid } from "./shared/forge-auth";
+import { readFileSync, writeFileSync, existsSync } from "node:fs";
+import { auth, uid } from "./shared/auth";
 import { resolveTrustStage } from "../../../../evidence/trust-progression";
+import { executeGovernedAction } from "../../../../evidence/governance-gate";
 
 const PHASES_PATH = "/home/workspace/Projects/continuous/Qor/.qore/projects/builder-console/path/phases.json";
 const LEDGER_PATH = "/home/workspace/Projects/continuous/Qor/.qore/projects/builder-console/ledger.jsonl";
-const EVIDENCE_LEDGER = "/home/workspace/Projects/continuous/Qor/evidence/ledger.jsonl";
-
-const ACTION_SCORES: Record<string, number> = {
-  "phase.create": 0.3, "task.update": 0.2, "risk.update": 0.3,
-  "ledger.append": 0.2, "veto.record": 0.3,
-};
-const TRUST_CEIL: Record<string, number> = { cbt: 0.3, kbt: 0.5, ibt: 0.7 };
 
 function readPhases() {
   try {
@@ -30,68 +24,14 @@ function appendLedger(entry: Record<string, unknown>) {
   writeFileSync(LEDGER_PATH, existing + line + "\n");
 }
 
-function classifyEvidence(e: unknown): "full" | "lite" | "invalid" {
-  if (!e || typeof e !== "object") return "invalid";
-  const o = e as Record<string, unknown>;
-  if ("entries" in o && "sessionId" in o && "intentId" in o) return "full";
-  if ("intent" in o && "justification" in o && "inputs" in o && "expectedOutcome" in o) return "lite";
-  return "invalid";
-}
-
-function validateEvidence(e: Record<string, unknown>, mode: string): boolean {
-  if (mode === "full") return Boolean(e.id && e.sessionId && e.intentId && Array.isArray(e.entries) && e.entries.length > 0);
-  const intent = e.intent, just = e.justification, inputs = e.inputs, outcome = e.expectedOutcome;
-  return Boolean(
-    typeof intent === "string" && intent.trim() &&
-    typeof just === "string" && just.trim() &&
-    Array.isArray(inputs) && inputs.length > 0 &&
-    typeof outcome === "string" && outcome.trim()
-  );
-}
-
-function recordDecision(d: Record<string, unknown>) {
-  const dir = EVIDENCE_LEDGER.replace(/\/[^/]+$/, "");
-  if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
-  const entry = {
-    id: uid(), timestamp: d.timestamp, kind: "PolicyDecision",
-    source: "governance-gate/" + String(d.module), module: d.module,
-    payload: {
-      decisionId: d.decisionId, action: d.action, result: d.result,
-      evidenceMode: d.evidenceMode, riskScore: d.riskScore,
-      confidence: d.confidence, agentId: d.agentId,
-    },
-    confidence: d.confidence,
-  };
-  appendFileSync(EVIDENCE_LEDGER, JSON.stringify(entry) + "\n");
-}
-
-function governanceGate(mod: string, action: string, agentId: string, evidence: unknown, trustStage = "kbt") {
-  const decisionId = uid();
-  const ts = new Date().toISOString();
-  const mode = classifyEvidence(evidence);
-  if (mode === "invalid" || !validateEvidence(evidence as Record<string, unknown>, mode)) {
-    const d = { decisionId, timestamp: ts, module: mod, action, result: "Block", evidenceMode: mode === "invalid" ? "lite" : mode, riskScore: 0, confidence: 0, mitigation: "Governance violation: missing or invalid evidence", agentId };
-    recordDecision(d);
-    return { decision: d, allowed: false };
-  }
-  const risk = ACTION_SCORES[action] ?? 0.5;
-  const allowed = risk < (TRUST_CEIL[trustStage] ?? 0.5);
-  const conf = mode === "full" ? 0.9 : 0.63;
-  const d = { decisionId, timestamp: ts, module: mod, action, result: allowed ? "Allow" : "Escalate", evidenceMode: mode, riskScore: risk, confidence: conf, mitigation: allowed ? undefined : `action '${action}' requires human approval`, agentId };
-  recordDecision(d);
-  return { decision: d, allowed };
-}
-
 export async function forgeRoutes(path: string, url: URL, req: Request): Promise<Response | null> {
   if (!path.startsWith("/api/forge")) return null;
 
-  // Status (read-only, no auth)
   if (path === "/api/forge/status" && req.method === "GET") {
     return handleStatus();
   }
 
-  // All write endpoints require auth
-  if (!auth(req)) return Response.json({ error: "Unauthorized" }, { status: 401 });
+  if (!auth(req, "forge")) return Response.json({ error: "Unauthorized" }, { status: 401 });
 
   if (path === "/api/forge/create-phase" && req.method === "POST") return handleCreatePhase(req);
   if (path === "/api/forge/update-task" && req.method === "POST") return handleUpdateTask(req);
@@ -121,7 +61,12 @@ async function handleCreatePhase(req: Request): Promise<Response> {
   const { name, objective, tasks } = body;
   if (!name || !objective) return Response.json({ error: "Missing name or objective" }, { status: 400 });
   const agentId = String(body.agentId || "operator");
-  const { decision, allowed } = governanceGate("forge", "phase.create", agentId, body.evidence, resolveTrustStage(agentId));
+  const { decision, allowed } = await executeGovernedAction({
+    module: "forge", action: "phase.create", agentId,
+    payload: body as Record<string, unknown>,
+    evidence: body.evidence as any,
+    trustStage: resolveTrustStage(agentId),
+  });
   if (!allowed) return Response.json({ error: "Governance violation", decision: decision.result, decisionId: decision.decisionId, mitigation: decision.mitigation }, { status: 403 });
   const taskList = Array.isArray(tasks) ? tasks : [];
   const phases = readPhases();
@@ -148,7 +93,12 @@ async function handleUpdateTask(req: Request): Promise<Response> {
   const valid = ["done", "active", "blocked", "pending", "complete", "in-progress"];
   if (!valid.includes(String(newStatus))) return Response.json({ error: "Invalid status" }, { status: 400 });
   const agentId = String(body.agentId || "operator");
-  const { decision, allowed } = governanceGate("forge", "task.update", agentId, body.evidence, resolveTrustStage(agentId));
+  const { decision, allowed } = await executeGovernedAction({
+    module: "forge", action: "task.update", agentId,
+    payload: body as Record<string, unknown>,
+    evidence: body.evidence as any,
+    trustStage: resolveTrustStage(agentId),
+  });
   if (!allowed) return Response.json({ error: "Governance violation", decision: decision.result, decisionId: decision.decisionId, mitigation: decision.mitigation }, { status: 403 });
   const phases = readPhases();
   for (const phase of phases) {
@@ -167,7 +117,12 @@ async function handleUpdateTask(req: Request): Promise<Response> {
 async function handleUpdateRisk(req: Request): Promise<Response> {
   const body = await req.json() as Record<string, unknown>;
   const agentId = String(body.agentId || "operator");
-  const { decision, allowed } = governanceGate("forge", "risk.update", agentId, body.evidence, resolveTrustStage(agentId));
+  const { decision, allowed } = await executeGovernedAction({
+    module: "forge", action: "risk.update", agentId,
+    payload: body as Record<string, unknown>,
+    evidence: body.evidence as any,
+    trustStage: resolveTrustStage(agentId),
+  });
   if (!allowed) return Response.json({ error: "Governance violation", decision: decision.result, decisionId: decision.decisionId, mitigation: decision.mitigation }, { status: 403 });
   const { title, severity, owner } = body;
   if (!title || !severity || !owner) return Response.json({ error: "Missing title, severity, or owner" }, { status: 400 });

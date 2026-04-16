@@ -1,26 +1,10 @@
-import neo4j, { type Driver, type Session } from "neo4j-driver";
+import neo4j from "neo4j-driver";
 import { join } from "path";
+import { getDriver, closeDriver } from "../memory/driver";
 
-const NEO4J_URI = process.env.NEO4J_URI ?? "bolt://localhost:7687";
-const NEO4J_USER = process.env.NEO4J_USER ?? "neo4j";
-const NEO4J_PASS = process.env.NEO4J_PASS ?? "victor-memory-dev";
 const EMBED_SCRIPT = join(import.meta.dir, "../embed/embed.py");
 
-let driver: Driver | null = null;
-
-export function getDriver(): Driver {
-  if (!driver) {
-    driver = neo4j.driver(NEO4J_URI, neo4j.auth.basic(NEO4J_USER, NEO4J_PASS));
-  }
-  return driver;
-}
-
-export async function closeDriver(): Promise<void> {
-  if (driver) {
-    await driver.close();
-    driver = null;
-  }
-}
+export { getDriver, closeDriver };
 
 export async function queryGraph(
   cypher: string,

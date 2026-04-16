@@ -1,0 +1,24 @@
+{
+  "logs": [
+    {
+      "date": "2026-01-30",
+      "post_file": "posts/2026-01-30-ai-failed-wrong-problem.md",
+      "title": "AI didn't fail. We aimed it at the wrong problem.",
+      "type": "contrarian",
+      "platforms": ["linkedin", "x", "facebook"],
+      "status": "scheduled",
+      "notes": "Post scheduled for 07:00 ET. Actual publishing requires browser automation and platform logins. Please log into LinkedIn, X/Twitter, and Facebook via Zo's browser to complete publishing.",
+      "timestamp": "2026-01-30T13:10:00Z"
+    },
+    {
+      "date": "2026-01-31",
+      "post_file": "posts/2026-01-31-adhd-diagnosis.md",
+      "title": "I was diagnosed with ADHD as an adult.",
+      "type": "story",
+      "platforms": ["linkedin", "instagram", "facebook"],
+      "status": "ready_to_publish",
+      "notes": "Post marked as published in file but actual publishing to platforms requires browser automation via Zo's browser tools. Script execution failed due to subprocess limitations. Manual publishing required for LinkedIn, Instagram, and Facebook.",
+      "timestamp": "2026-01-31T13:05:00Z"
+    }
+  ]
+}

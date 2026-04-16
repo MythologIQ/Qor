@@ -1,0 +1,15 @@
+{
+  "generatedAt": 1774466677933,
+  "conversations": [
+    {
+      "id": "con_nhgPMhYrvolw6GBE",
+      "uid": "Qor.Victor.governed-tick.20260324.cd0c3",
+      "system": "Qor",
+      "agent": "Victor",
+      "task": "governed-tick",
+      "timestamp": 1774456994157,
+      "messages": 22,
+      "valueScore": 0.5499999999999999
+    }
+  ]
+}

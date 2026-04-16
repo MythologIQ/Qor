@@ -1,18 +1,6 @@
-import { timingSafeEqual } from "node:crypto";
 import { appendEvidence, readEvidence, getChainLength } from "../../../../evidence/log";
 import type { EvidenceKind } from "../../../../evidence/contract";
-
-function requireAuth(req: Request): boolean {
-  const secret = process.env.QOR_EVIDENCE_SECRET;
-  if (!secret) return false;
-  const auth = req.headers.get("authorization");
-  if (!auth?.startsWith("Bearer ")) return false;
-  const token = auth.slice(7);
-  const a = Buffer.from(token);
-  const b = Buffer.from(secret);
-  if (a.length !== b.length) return false;
-  return timingSafeEqual(a, b);
-}
+import { auth } from "./shared/auth";
 
 export async function qorEvidenceRoutes(path: string, url: URL, req: Request): Promise<Response | null> {
   if (path !== "/api/qor/evidence") return null;
@@ -27,7 +15,7 @@ export async function qorEvidenceRoutes(path: string, url: URL, req: Request): P
   }
 
   if (req.method === "POST") {
-    if (!requireAuth(req)) {
+    if (!auth(req, "qor")) {
       return Response.json({ error: "Unauthorized" }, { status: 401 });
     }
     let body: Record<string, unknown>;

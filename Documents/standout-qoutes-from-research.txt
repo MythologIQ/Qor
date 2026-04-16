@@ -1,0 +1,4 @@
+ The Framework Enables Something Currently Impossible: Honest Failure
+Current AI coding tools have no graceful failure mode. They either succeed or they spiral. Aegis introduces a third outcome: bounded failure with preserved state. "I could not fix this within the allotted budget. Here is the original code, untouched. Here is the ledger of what I tried and what I learned. Here are the hypotheses ranked by posterior probability."
+
+The ultimate potential of this logic is the transition from AI Coding Assistants to AI Reliability Engines.

@@ -1,0 +1,138 @@
+{
+  "calendar": {
+    "2026-01-30": {
+      "platform": "facebook",
+      "type": "list",
+      "status": "scheduled",
+      "post_file": "posts/2026-02-03-5-reasons-ai-fails.md",
+      "time": "14:00",
+      "published": false
+    },
+    "2026-01-31": {
+      "platform": "linkedin",
+      "type": "story",
+      "status": "draft",
+      "published": false
+    },
+    "2026-02-03": {
+      "platform": "linkedin",
+      "type": "list",
+      "status": "draft",
+      "published": false
+    },
+    "2026-02-04": {
+      "platform": "linkedin",
+      "type": "howto",
+      "status": "draft",
+      "published": false
+    },
+    "2026-02-05": {
+      "platform": "linkedin",
+      "type": "promo",
+      "status": "draft",
+      "published": false
+    }
+  },
+  "content_types": {
+    "contrarian": {
+      "primary": "linkedin",
+      "cross_post": [
+        "x",
+        "facebook"
+      ],
+      "template": "contrarian"
+    },
+    "story": {
+      "primary": "linkedin",
+      "cross_post": [
+        "instagram",
+        "facebook"
+      ],
+      "template": "story"
+    },
+    "list": {
+      "primary": "linkedin",
+      "cross_post": [
+        "x",
+        "instagram"
+      ],
+      "template": "list"
+    },
+    "howto": {
+      "primary": "linkedin",
+      "cross_post": [
+        "x"
+      ],
+      "template": "howto"
+    },
+    "promo": {
+      "primary": "linkedin",
+      "cross_post": [
+        "facebook",
+        "instagram"
+      ],
+      "template": "promo"
+    }
+  },
+  "posting_schedule": {
+    "linkedin": {
+      "timezone": "America/New_York",
+      "optimal_times": [
+        "07:00",
+        "12:00",
+        "17:30"
+      ],
+      "frequency": "5_per_week",
+      "days": [
+        "Monday",
+        "Tuesday",
+        "Wednesday",
+        "Thursday",
+        "Friday"
+      ]
+    },
+    "x": {
+      "timezone": "America/New_York",
+      "optimal_times": [
+        "09:00",
+        "14:00",
+        "20:00"
+      ],
+      "frequency": "daily",
+      "days": [
+        "Monday",
+        "Tuesday",
+        "Wednesday",
+        "Thursday",
+        "Friday",
+        "Saturday",
+        "Sunday"
+      ]
+    },
+    "instagram": {
+      "timezone": "America/New_York",
+      "optimal_times": [
+        "11:00",
+        "19:00"
+      ],
+      "frequency": "3_per_week",
+      "days": [
+        "Monday",
+        "Wednesday",
+        "Friday"
+      ]
+    },
+    "facebook": {
+      "timezone": "America/New_York",
+      "optimal_times": [
+        "13:00"
+      ],
+      "frequency": "3_per_week",
+      "days": [
+        "Tuesday",
+        "Thursday",
+        "Saturday"
+      ]
+    }
+  }
+}

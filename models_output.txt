@@ -1,0 +1,2 @@
+STATUS: 200
+Error: All sessions are busy, cannot evict

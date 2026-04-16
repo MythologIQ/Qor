@@ -1,0 +1,24 @@
+{
+  "brand": {
+    "name": "MythologIQ Labs",
+    "one_liner": "A visionary lab building sovereign AI interfaces for real humans.",
+    "product_one_liner": "Hearthlink: A private, auditable AI workspace that adapts to how you think."
+  },
+  "company_pages": {
+    "linkedin": {
+      "url": "https://www.linkedin.com/company/107257933/admin/dashboard/",
+      "name": "MythologIQ Labs",
+      "id": "107257933"
+    },
+    "facebook": {
+      "url": "https://www.facebook.com/mythologiqlabs/",
+      "name": "MythologIQ Labs",
+      "handle": "mythologiqlabs"
+    }
+  },
+  "personal_accounts": {
+    "note": "Use personal accounts to log in, but publish as company page",
+    "linkedin_login": "https://www.linkedin.com",
+    "facebook_login": "https://www.facebook.com"
+  }
+}

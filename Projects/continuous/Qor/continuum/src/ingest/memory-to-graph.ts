@@ -1,10 +1,8 @@
-import neo4j, { type Driver, type Session } from "neo4j-driver";
+import { type Session } from "neo4j-driver";
 import { readdir, readFile } from "fs/promises";
 import { join, extname } from "path";
+import { getDriver } from "../memory/driver";
 
-const NEO4J_URI = process.env.NEO4J_URI ?? "bolt://localhost:7687";
-const NEO4J_USER = process.env.NEO4J_USER ?? "neo4j";
-const NEO4J_PASS = process.env.NEO4J_PASS ?? "victor-memory-dev";
 const MEMORY_ROOT = "/home/workspace/.continuum/memory";
 
 interface StructuredRecord {
@@ -301,74 +299,72 @@ export async function ingestAll(): Promise<{
   sessions: number;
   entities: number;
 }> {
-  const driver = neo4j.driver(
-    NEO4J_URI,
-    neo4j.auth.basic(NEO4J_USER, NEO4J_PASS)
-  );
+  const driver = getDriver();
 
   let totalRecords = 0;
 
-  try {
-    for (const agentName of ["victor", "qora"]) {
-      const agentDir = join(MEMORY_ROOT, agentName);
-      const { records, filenames } = await collectRecords(agentDir);
-      const session = driver.session();
-      try {
-        let skipped = 0;
-        for (let i = 0; i < records.length; i++) {
-          try {
-            await ingestRecord(session, records[i], filenames[i]);
-            totalRecords++;
-            if (totalRecords % 100 === 0) {
-              console.log(`Ingested ${totalRecords} records...`);
-            }
-          } catch (err) {
-            skipped++;
-            console.error(`Skip record ${i} in ${agentName}: ${(err as Error).message}`);
-          }
-        }
-        if (skipped > 0) console.log(`Skipped ${skipped} bad records for ${agentName}`);
-      } finally {
-        await session.close();
-      }
-    }
-
+  for (const agentName of ["victor", "qora"]) {
+    const agentDir = join(MEMORY_ROOT, agentName);
+    const { records, filenames } = await collectRecords(agentDir);
     const session = driver.session();
     try {
-      console.log("Building temporal chains...");
-      await buildTemporalChains(session);
-      console.log("Building cross-agent links...");
-      await buildCrossAgentLinks(session);
-
-      const stats = await session.run(
-        `MATCH (n) RETURN labels(n)[0] AS label, count(n) AS cnt
-         ORDER BY cnt DESC`
-      );
-      const counts: Record<string, number> = {};
-      for (const r of stats.records) {
-        counts[r.get("label")] = r.get("cnt").toNumber();
+      let skipped = 0;
+      for (let i = 0; i < records.length; i++) {
+        try {
+          await ingestRecord(session, records[i], filenames[i]);
+          totalRecords++;
+          if (totalRecords % 100 === 0) {
+            console.log(`Ingested ${totalRecords} records...`);
+          }
+        } catch (err) {
+          skipped++;
+          console.error(`Skip record ${i} in ${agentName}: ${(err as Error).message}`);
+        }
       }
-
-      return {
-        total: totalRecords,
-        agents: counts["Agent"] ?? 0,
-        sessions: counts["Session"] ?? 0,
-        entities: counts["Entity"] ?? 0,
-      };
+      if (skipped > 0) console.log(`Skipped ${skipped} bad records for ${agentName}`);
     } finally {
       await session.close();
     }
+  }
+
+  const session = driver.session();
+  try {
+    console.log("Building temporal chains...");
+    await buildTemporalChains(session);
+    console.log("Building cross-agent links...");
+    await buildCrossAgentLinks(session);
+
+    const stats = await session.run(
+      `MATCH (n) RETURN labels(n)[0] AS label, count(n) AS cnt
+       ORDER BY cnt DESC`
+    );
+    const counts: Record<string, number> = {};
+    for (const r of stats.records) {
+      counts[r.get("label")] = r.get("cnt").toNumber();
+    }
+
+    return {
+      total: totalRecords,
+      agents: counts["Agent"] ?? 0,
+      sessions: counts["Session"] ?? 0,
+      entities: counts["Entity"] ?? 0,
+    };
   } finally {
-    await driver.close();
+    await session.close();
   }
 }
 
 if (import.meta.main) {
+  const { closeDriver } = await import("../memory/driver");
   console.log("Starting memory ingestion into Neo4j...");
-  const result = await ingestAll();
-  console.log(`\nIngestion complete:`);
-  console.log(`  Records: ${result.total}`);
-  console.log(`  Agents:  ${result.agents}`);
-  console.log(`  Sessions: ${result.sessions}`);
-  console.log(`  Entities: ${result.entities}`);
+  try {
+    const result = await ingestAll();
+    console.log(`\nIngestion complete:`);
+    console.log(`  Records: ${result.total}`);
+    console.log(`  Agents:  ${result.agents}`);
+    console.log(`  Sessions: ${result.sessions}`);
+    console.log(`  Entities: ${result.entities}`);
+  } finally {
+    await closeDriver();
+  }
 }

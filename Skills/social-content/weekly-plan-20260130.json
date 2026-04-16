@@ -1,0 +1,125 @@
+[
+  {
+    "day": "Monday",
+    "date": "2026-02-02",
+    "type": "contrarian",
+    "pillar": "Industry critique",
+    "platforms": [
+      "linkedin",
+      "x",
+      "facebook"
+    ],
+    "time": "07:00",
+    "suggested_topics": [
+      "AI bubble narrative analysis",
+      "Contrarian take on industry trend",
+      "Why AI projects fail (reframed)",
+      "The problem with 'average user' design"
+    ]
+  },
+  {
+    "day": "Tuesday",
+    "date": "2026-02-03",
+    "type": "story",
+    "pillar": "Neurodiversity thesis",
+    "platforms": [
+      "linkedin",
+      "instagram",
+      "facebook"
+    ],
+    "time": "12:00",
+    "suggested_topics": [
+      "ADHD origin story",
+      "Tool frustration moment",
+      "Design epiphany",
+      "Personal workflow discovery"
+    ]
+  },
+  {
+    "day": "Wednesday",
+    "date": "2026-02-04",
+    "type": "list",
+    "pillar": "Industry critique",
+    "platforms": [
+      "linkedin",
+      "x",
+      "instagram"
+    ],
+    "time": "07:00",
+    "suggested_topics": [
+      "5 reasons AI fails in business",
+      "7 UX patterns that exclude neurodiverse users",
+      "3 design principles for human-centered AI",
+      "10 things I learned building Hearthlink"
+    ]
+  },
+  {
+    "day": "Thursday",
+    "date": "2026-02-05",
+    "type": "howto",
+    "pillar": "Solution preview",
+    "platforms": [
+      "linkedin",
+      "x"
+    ],
+    "time": "07:00",
+    "suggested_topics": [
+      "How to identify AI that adapts to you",
+      "Designing for neurodiversity in AI",
+      "Building tools that respect cognitive patterns",
+      "Evaluating AI tools for human-centered design"
+    ]
+  },
+  {
+    "day": "Friday",
+    "date": "2026-02-06",
+    "type": "promo",
+    "pillar": "Solution preview",
+    "platforms": [
+      "linkedin",
+      "facebook",
+      "instagram"
+    ],
+    "time": "07:00",
+    "suggested_topics": [
+      "What if AI learned your thinking patterns?",
+      "Hearthlink: AI that adapts to how you think",
+      "The end of one-size-fits-all AI",
+      "Preview: Sovereign AI interfaces"
+    ]
+  },
+  {
+    "day": "Saturday",
+    "date": "2026-02-07",
+    "type": "story",
+    "pillar": "Behind-the-scenes",
+    "platforms": [
+      "x",
+      "instagram"
+    ],
+    "time": "10:00",
+    "suggested_topics": [
+      "Building journey update",
+      "Product development milestone",
+      "User feedback moment",
+      "Design iteration story"
+    ]
+  },
+  {
+    "day": "Sunday",
+    "date": "2026-02-08",
+    "type": "story",
+    "pillar": "Behind-the-scenes",
+    "platforms": [
+      "x",
+      "facebook"
+    ],
+    "time": "19:00",
+    "suggested_topics": [
+      "Weekly reflection",
+      "Lesson learned this week",
+      "Industry observation",
+      "Looking forward to next week"
+    ]
+  }
+]

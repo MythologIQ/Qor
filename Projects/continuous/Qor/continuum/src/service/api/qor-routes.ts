@@ -1,11 +1,16 @@
 import { evaluate } from "../../../../evidence/evaluate";
 import type { EvaluationRequest } from "../../../../evidence/contract";
+import { auth } from "./shared/auth";
 
 export async function qorEvaluateRoutes(path: string, url: URL, req: Request): Promise<Response | null> {
   if (path !== "/api/qor/evaluate") return null;
 
   if (req.method !== "POST") {
     return Response.json({ error: "Method not allowed. Use POST." }, { status: 405 });
+  }
+
+  if (!auth(req, "qor")) {
+    return Response.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   let body: EvaluationRequest;

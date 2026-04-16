@@ -1,6 +1,0 @@
-{
-  "$schema": "./services.schema.json",
-  "version": "1.0.0",
-  "comment": "All Victor functionality is now built directly into qore-runtime",
-  "services": {}
-}

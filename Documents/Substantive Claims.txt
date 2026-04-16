@@ -1,0 +1,236 @@
+Reliability Law: Reduce Before Repair
+
+It is always easier to reduce the size of a failing system than to fix a failing system of unchanged size.
+
+Repair difficulty grows with the size of the failing state space. Therefore the first action is always larger impact than any fix:
+
+Minimize the state first. Diagnose second. Repair last.
+
+No reasoning or patching should begin until a minimal reproducer exists.
+
+Universal Repair Order
+
+All successful recovery systems follow the same sequence:
+
+Contain
+
+Isolate
+
+Reproduce
+
+Diagnose
+
+Fix
+
+Validate
+
+Skipping or reordering increases cost and uncertainty.
+
+Core Principle: State Space Reduction
+
+Given a failing system S with failure predicate F(S):
+
+Find the smallest subset S' such that:
+F(S') is still true
+
+All reasoning and repair happens only on S'.
+
+This converts an intractable problem into a tractable one.
+
+Unifying Insight
+
+Most “different” debugging or reliability techniques are the same operation applied along different axes:
+
+ddmin reduces inputs
+
+HDD reduces structure (trees/ASTs/configs)
+
+bisect reduces time/history
+
+slicing reduces dependencies
+
+counterfactuals reduce causes
+
+symbolic execution reduces paths
+
+They are all forms of state-space pruning.
+
+Treat them as one class of operator: reduction.
+
+Operational Rules
+
+Rule 1
+If you cannot revert safely, do not experiment.
+All repair attempts must be reversible (snapshots, transactions, rollback).
+
+Rule 2
+If you cannot reproduce the failure deterministically, you are not ready to debug.
+Fix nondeterminism first.
+
+Rule 3
+If the failing case is still large or complex, you have not reduced enough.
+Continue shrinking.
+
+Rule 4
+Only apply minimal changes.
+Large patches hide causes and increase risk.
+
+Implementation Policy (drop-in ready)
+
+Before any automated or manual repair:
+
+Capture snapshot or checkpoint
+
+Create deterministic replay
+
+Produce minimal reproducer
+
+Restrict reasoning to the reduced state
+
+Test fixes in isolation
+
+Commit only after validation
+
+Roll back on any uncertainty
+
+This policy is mandatory, not optional.
+
+--------------------------------------------
+
+1. “Unbounded iteration is the root failure mode”
+
+Clear in:
+
+Core idea:
+
+“iterate until it works” = unbounded search in a huge state space.
+
+That is not philosophy. That is computational complexity.
+
+Formally:
+
+If you let an agent mutate code freely without memory or bounds:
+
+Expected cost → ∞
+Failure probability → increases over time (state drift)
+
+So:
+
+Autonomous repair must be:
+
+bounded
+
+reversible
+
+evidence-driven
+
+2. Treat debugging as search, not generation
+
+Repeated across multiple files.
+
+Core idea:
+
+Repair is not “write better code”.
+
+It is:
+
+search(state space) subject to constraints.
+
+This reframes everything correctly:
+
+You’re solving:
+
+Find a ∈ A
+such that T(S, a) ∈ I
+with minimal cost
+
+That is optimization / planning / control theory.
+
+Not prompting cleverness.
+
+This is a very important mental model shift for LLM systems.
+
+Definitely keep.
+
+3. Resource budgets must be first-class (tokens/time/compute)
+
+Appears in many variants.
+
+Core claim:
+
+Without budgets, autonomous systems will:
+
+thrash
+
+overfit
+
+hallucinate patches
+
+burn tokens forever
+
+So:
+
+All loops must be:
+
+budgeted search loops
+
+Meaning:
+
+max attempts
+
+max tokens
+
+max wall clock
+
+rollback on exhaustion
+
+This turns repair into a guaranteed-termination algorithm.
+
+4. Determinism before diagnosis
+
+Repeated theme:
+
+If you can’t reproduce the bug on demand, don’t debug yet.
+
+This is classic, but still deeply correct.
+
+Without determinism:
+
+Your search function is stochastic noise.
+
+Which means:
+
+No learning signal
+No Bayesian update
+No convergence
+
+So:
+
+Step zero must be:
+
+stabilize + replay
+
+
+5. Safe experimentation via snapshots / transactions
+
+Across almost every file.
+
+Core invariant:
+
+Every action must be reversible.
+
+So repair becomes:
+
+pure exploration
+
+instead of:
+
+risky mutation
+
+This changes the problem class from:
+
+dangerous live surgery
+
+to:
+
+sandboxed optimization
