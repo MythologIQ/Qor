@@ -1,4 +1,5 @@
 import { Hono } from "hono";
+import { mount } from "./router.js";
 
 const app = new Hono();
 
@@ -15,18 +16,7 @@ app.get("/health", (c) =>
   }),
 );
 
-app.get("/api/arena/status", (c) =>
-  c.json({
-    ok: true,
-    service: "arena",
-    version: SERVICE_VERSION,
-    phase: "scaffold",
-    matches_active: 0,
-    matches_total: 0,
-    agents_connected: 0,
-    ts: new Date().toISOString(),
-  }),
-);
+mount(app);
 
 app.get("/", (c) => c.text("arena service online — awaiting engine build"));
 
