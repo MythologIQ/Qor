@@ -309,3 +309,21 @@ Do not issue PASS on future harness expansions unless:
 **Severity:** 2
 **Status:** FAIL
 **Details:** https://continuum-api-frostwulf.zocomputer.io/health returned 404 — endpoint not responding. Build-impacting failure.
+
+## Sentinel Alert — tick 23 — T7-service-health — severity=2 — 2026-04-16T12:46:00Z
+
+**Status:** FAIL
+**Template:** T7-service-health
+**Details:** continuum-api /health returns HTTP 404; neo4j and arena healthy
+
+**Impact:** continuum-api health endpoint missing. Services neo4j and arena respond correctly.
+
+---
+
+**SENTINEL ESCALATION | Severity: 2 | Tick: 26 | 2026-04-16T13:30:00Z**
+
+**Probe:** T2-continuum-health  
+**Status:** FAIL  
+**Details:** HTTP 404 — https://continuum-api-frostwulf.zocomputer.io/health returned not-found  
+**Action:** Health endpoint missing from continuum-api. Services neo4j and arena respond correctly.
+
