@@ -327,3 +327,12 @@ Do not issue PASS on future harness expansions unless:
 **Details:** HTTP 404 — https://continuum-api-frostwulf.zocomputer.io/health returned not-found  
 **Action:** Health endpoint missing from continuum-api. Services neo4j and arena respond correctly.
 
+
+---
+
+**SENTINEL ESCALATION | Severity: 2 | Tick: 42 | 2026-04-16T17:45:00Z**
+
+**Probe:** T2-continuum-health  
+**Status:** FAIL  
+**Details:** HTTP 404 — https://continuum-api-frostwulf.zocomputer.io/health returned not-found  
+**Action:** Health endpoint missing from continuum-api. Services neo4j and arena respond correctly.
