@@ -1,10 +1,38 @@
 # META_LEDGER: Deterministic Automation
 
-**Chain Version**: 1.0.4  
-**Genesis Hash**: `QOR-ENCODE-v1.0`  
+**Chain Version**: 1.0.4
+**Genesis Hash**: `QOR-ENCODE-v1.0`
 **Final Ledger Hash**: `16cf664dccdd56a367973e51133b16d2888b5faf387751cf42c372eef1485a1e`
 **Phase**: EXECUTE → COMPLETE → JUDGE → RESTRUCTURE
 **Status**: SEALED — Victor full execution path substantiated
+
+---
+
+## 2026-04-16T06:58:00Z — PLAN SEAL: HexaWars Arena Autonomous 48h Build
+
+| Field | Value |
+|-------|-------|
+| Phase | PLAN → EXECUTE (one-shot, user override of review gate) |
+| Plan ID | `hexawars-arena-v1` |
+| Planner | claude-opus-4-6 |
+| Plan File | docs/plans/2026-04-16-hexawars-arena-autonomous-build.md |
+| Plan Hash | `sha256:659ea88ff119671491447b5e7777cd908109a4fd77c7a5329dac42c06b029822` |
+| Contract File | docs/arena/AGENT_CONTRACT.md (FROZEN v1) |
+| Contract Hash | `sha256:411b177bb44376f2ac9c9a0affbbf9c7043a6175df5c37cc0eff231aca8b9616` |
+| Queue Manifest | /home/workspace/.continuum/queues/manifest.yaml |
+| Manifest Hash | `sha256:6b9dc5343bebfea8453b0ab74b913ce9a552efdbb07cbd102b649891a07cbcb3` |
+| Queue Chain Hash | `sha256:133071d2e7b8db98117fbbacba28f5e7c0bc77b4ffe056841efd096ffa823e23` |
+| Builder Tasks | 96 YAML specs, hash-chained from GENESIS |
+| Sentinel Schedule | 192 ticks, 8 rotating templates, 15-min cadence |
+| Review Schedule | 24 ticks, 2-hour cadence |
+| Arena Service | `svc_cy6YJPiuo9I` @ https://arena-frostwulf.zocomputer.io (port 4200, public) |
+| Builder Agent | `8028654a-febf-4f4b-87aa-89c10c1857fe` model=`vercel:minimax/minimax-m2.7` rrule=`FREQ=MINUTELY;INTERVAL=30` |
+| Sentinel Agent | `99bcae02-de68-45d9-a4c0-b26eb31bc4b8` model=`vercel:minimax/minimax-m2.7` rrule=`FREQ=MINUTELY;INTERVAL=15` |
+| Review Agent | `90a24eb6-5253-42ad-a570-a16e250864e3` model=`byok:f85af18a-f587-4762-a498-213eb3b0f0f7` (Codex GPT 5.4) rrule=`FREQ=HOURLY;INTERVAL=2` |
+| Kill Switch | `touch /home/workspace/.continuum/queues/state/HALT` |
+| Next Builder Tick | 2026-04-16T03:27:33-04:00 (tick 1 / 96) |
+| Release Gate | 8 acceptance tests (see plan §Acceptance Tests) |
+| Notes | User explicitly authorized single-pass planning with no review gate. Execution begins at next 30-min boundary, not the original 09:00 ET anchor. Entries between ledger HEAD and this seal were added in a concurrent session; this seal follows append-only convention by inserting after the header block. |
 
 ---
 
