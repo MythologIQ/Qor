@@ -63,6 +63,9 @@ async function syncCycle() {
 }
 
 async function handleGraphRoutes(path: string, url: URL, req: Request): Promise<Response | null> {
+  if (path === "/health") {
+    return Response.json({ status: "ok" });
+  }
   if (path === "/api/continuum/health") {
     return Response.json({ status: "ok", ts: Date.now(), lastSync: lastTotal });
   }

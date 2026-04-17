@@ -39,6 +39,10 @@ export async function route(
     return Response.json({ error: "not found" }, { status: 404 });
   }
 
+  if (path === "/health") {
+    return Response.json({ status: "ok" });
+  }
+
   if (req.headers.get("upgrade") === "websocket") {
     return Response.json({ error: "not found" }, { status: 404 });
   }
