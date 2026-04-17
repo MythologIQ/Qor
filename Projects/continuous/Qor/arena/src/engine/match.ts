@@ -17,6 +17,9 @@ export interface MatchEvent {
 
 const BOARD_SIZE = 7;
 
+/** Fixed milliseconds per turn deadline. Used instead of Date.now() for determinism. */
+const DEADLINE_TURN_MS = 120000;
+
 function seededRandom(seed: string): () => number {
   let h = 2166136261;
   for (let i = 0; i < seed.length; i++) {
@@ -81,7 +84,7 @@ export function createMatch(seed: string, sideA: string, sideB: string): MatchSt
     units,
     visible,
     score: { A: 0, B: 0 },
-    deadline: Date.now() + 120000,
+    deadline: DEADLINE_TURN_MS,
   };
 }
 
@@ -108,13 +111,15 @@ export function stepMatch(
 export function computeMatchHash(state: MatchState): string {
   const canonical: MatchState = {
     ...state,
-    units: [...state.units].sort((a, b) => a.id.localeCompare(b.id)),
+    units: [...state.units].sort((a, b) => {
+      if (a.position.q !== b.position.q) return a.position.q - b.position.q;
+      if (a.position.r !== b.position.r) return a.position.r - b.position.r;
+      return a.position.s - b.position.s;
+    }),
     visible: [...state.visible].sort((a, b) => {
-      const aq = a.position.q, ar = a.position.r, as = a.position.s;
-      const bq = b.position.q, br = b.position.r, bs = b.position.s;
-      const ak = aq * 10000 + ar * 100 + as;
-      const bk = bq * 10000 + br * 100 + bs;
-      return ak - bk;
+      if (a.position.q !== b.position.q) return a.position.q - b.position.q;
+      if (a.position.r !== b.position.r) return a.position.r - b.position.r;
+      return a.position.s - b.position.s;
     }),
   };
   return createHash("sha256").update(JSON.stringify(canonical)).digest("hex");
