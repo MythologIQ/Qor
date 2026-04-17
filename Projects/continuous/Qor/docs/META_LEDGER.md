@@ -1,10 +1,32 @@
 # META_LEDGER: Deterministic Automation
 
-**Chain Version**: 1.0.4
+**Chain Version**: 1.0.5
 **Genesis Hash**: `QOR-ENCODE-v1.0`
 **Final Ledger Hash**: `16cf664dccdd56a367973e51133b16d2888b5faf387751cf42c372eef1485a1e`
 **Phase**: EXECUTE → COMPLETE → JUDGE → RESTRUCTURE
 **Status**: SEALED — Victor full execution path substantiated
+
+---
+
+## 2026-04-17T19:55:00Z — DEBUG: Phase 3 Residual Sweep (qor-debug Phase 1+2 direct fixes)
+
+| Field | Value |
+|-------|-------|
+| Phase | DEBUG — Fixer, Phase 1 root-cause + direct fixes |
+| Issue | #36 — Continuum Memory Service with IPC kernel boundary |
+| Scope | Phase 3 delta residual sweep (4-layer Dijkstra/Hamming/Turing/Zeller) |
+| Findings | 0 critical, 5 high, 9 medium, 6 low/nit |
+| Direct Fixes Applied | 6 of 6 planned |
+| F1 (2.2) | `auth.ts` `safeEqual` — zero-length buffer guard + doc-comment precision |
+| F2 (AC2) | `entity-flatten.test.ts` — removed hardcoded `"victor-memory-dev"` test-cred fallback; now fails-closed on missing `NEO4J_PASS` |
+| F3 (4.5) | `execution-events.ts` `createExecutionEvent` — id entropy from 31-bit `Math.random` → full-UUID via `node:crypto randomUUID` |
+| F4 (1.5) | `search.ts` — removed unused `export { neo4j }` re-export and narrowed import to `type { Session }` only (single-driver-owner invariant tightened) |
+| F5 (3.3) | `ipc/client.ts` — reconnect backoff gets ±25% jitter + exponent cap at 20 to prevent fleet stampede on restart |
+| F6 (4.2) | `ipc/server.test.ts` — added end-to-end cross-partition IPC test: Victor-auth client crafting event for `agent-private:qora` is rejected with `access_denied` wire code (closes AC4 integration gap flagged by Fixer) |
+| Tests | 88/88 pass across 13 files (ipc + memory ops + victor phase-3 suites); cross-partition test: 1 pass, 2 expect calls |
+| Arch Handoffs Deferred | 6 (see #38 — IPC hardening follow-on): pure-factory extraction for `createExecutionEvent`, shared `ErrorCode` enum + AC5 wire-code spec alignment, `dispatchOp` reject-not-throw, bootstrap lifecycle + `server.stop(true)` drain, agent-id validator, cursor pagination for `events.execution.query` |
+| AC Verification Post-Fix | AC1-AC8 all ✅; AC4 now verified end-to-end through IPC boundary (was unit-level only) |
+| Regression Risk | LOW — all fixes are local, no interface changes, no new dependencies |
 
 ---
 

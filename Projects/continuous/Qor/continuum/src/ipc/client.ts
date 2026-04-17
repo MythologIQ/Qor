@@ -102,7 +102,10 @@ export class IpcClient {
     this.reader = new FrameReader();
     if (this.closed) return;
     this.failAll(new IpcClientError("disconnected", "server closed connection"));
-    const delay = Math.min(this.maxMs, this.baseMs * 2 ** this.reconnectAttempts);
+    // Exponential backoff with ±25% jitter to avoid fleet-wide stampedes on service restart.
+    const base = Math.min(this.maxMs, this.baseMs * 2 ** Math.min(this.reconnectAttempts, 20));
+    const jitter = base * 0.25 * (Math.random() * 2 - 1);
+    const delay = Math.max(this.baseMs, Math.floor(base + jitter));
     this.reconnectAttempts++;
     setTimeout(() => { if (!this.closed) void this.connect().catch(() => undefined); }, delay);
   }

@@ -3,7 +3,7 @@
  * Plus cache entry ops (fresh load + stale mark + upsert) since they pair with cache reads.
  */
 
-import neo4j, { type Session } from "neo4j-driver";
+import type { Session } from "neo4j-driver";
 import { getDriver } from "../driver";
 import { assertCanRead, assertCanWrite, type AgentContext } from "../access-policy";
 
@@ -184,5 +184,3 @@ export const searchOps = {
   "graph.upsertCacheEntries": upsertCacheEntries,
   "graph.markCacheEntriesStale": markCacheEntriesStale,
 } as const;
-
-export { neo4j };

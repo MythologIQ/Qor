@@ -4,7 +4,11 @@ import { flattenEntity, getEntities, ensureEntity } from "../src/ingest/memory-t
 
 const URI = process.env.NEO4J_URI ?? "bolt://localhost:7687";
 const USER = process.env.NEO4J_USER ?? "neo4j";
-const PASS = process.env.NEO4J_PASS ?? "victor-memory-dev";
+const PASS = (() => {
+  const v = process.env.NEO4J_PASS;
+  if (!v) throw new Error("NEO4J_PASS required for entity-flatten integration test");
+  return v;
+})();
 let driver: Driver;
 let session: Session;
 

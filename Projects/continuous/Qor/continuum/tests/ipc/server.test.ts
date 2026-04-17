@@ -90,4 +90,30 @@ describe("IPC dispatch round-trip", () => {
       await client.close();
     }
   });
+
+  it("cross-partition write is denied end-to-end (AC4)", async () => {
+    // Victor authenticates then crafts an ExecutionEvent targeting qora's private partition.
+    // Server must reject via access-policy before any DB write — error code 'access_denied'.
+    const client = new IpcClient({ socketPath, token: VICTOR_TOKEN });
+    await client.connect();
+    try {
+      const hostileEvent = {
+        id: "exec-xp-test-1",
+        agentId: "victor",
+        partition: "agent-private:qora",
+        taskId: "t-xp",
+        source: "cross-partition-test",
+        status: "completed",
+        timestamp: Date.now(),
+      };
+      let caught: unknown = null;
+      try {
+        await client.call("events.execution.record", { event: hostileEvent });
+      } catch (err) { caught = err; }
+      expect(caught).toBeInstanceOf(IpcClientError);
+      expect((caught as IpcClientError).code).toBe("access_denied");
+    } finally {
+      await client.close();
+    }
+  });
 });

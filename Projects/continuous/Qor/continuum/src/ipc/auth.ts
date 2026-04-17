@@ -51,10 +51,14 @@ export async function loadAgentTokenMap(path: string): Promise<AgentTokenMap> {
 }
 
 function safeEqual(a: string, b: string): boolean {
+  // Empty inputs are rejected upstream by resolveAgent; double-guard here so a
+  // future caller can't trigger timingSafeEqual's RangeError on zero-length bufs.
+  if (a.length === 0 || b.length === 0) return false;
   const ba = Buffer.from(a, "utf8");
   const bb = Buffer.from(b, "utf8");
   if (ba.byteLength !== bb.byteLength) {
-    // Still perform a comparison of same-length buffers to avoid length-based timing leaks.
+    // Perform a same-length compare to keep work roughly constant w.r.t. input length;
+    // note this does NOT hide the final success-vs-fail branch (see resolveAgent loop).
     const filler = Buffer.alloc(ba.byteLength);
     timingSafeEqual(ba, filler);
     return false;

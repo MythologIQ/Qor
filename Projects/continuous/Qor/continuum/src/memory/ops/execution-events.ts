@@ -4,6 +4,7 @@
  * LearningPacket contract is untouched; this is an entirely separate shape.
  */
 
+import { randomUUID } from "node:crypto";
 import type { Session } from "neo4j-driver";
 import { getDriver } from "../driver";
 import { agentPrivate, type Partition } from "../partitions";
@@ -102,7 +103,7 @@ export function createExecutionEvent(
 ): ExecutionEvent {
   const agentId = resolveAgent(intent);
   const event: ExecutionEvent = {
-    id: `exec-${intent.taskId}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    id: `exec-${intent.taskId}-${Date.now()}-${randomUUID()}`,
     agentId,
     partition: agentPrivate(agentId),
     taskId: intent.taskId,
