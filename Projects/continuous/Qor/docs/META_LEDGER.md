@@ -8419,3 +8419,30 @@ SHA256(.agent/staging/AUDIT_REPORT.md) = `ff3e61cec68fc987360bbb59bdb29e5029279c
 SHA256(content_hash + previous_hash) = `993cba2fecaacd8df6e374b84086935c30d075fb540530dc98548e77cd5c2285`
 
 **Decision**: VETO. Scope-2 HexaWars depth-expansion blueprint is coherent in architecture but fails four gates: (V1) no Razor Budget Summary table, (V2) no current-line-count statements for modified files `router.ts`/`shared/types.ts`/`schema.sql`, (V3) three orphan modules with no named caller — `matchmaking/ladder-loop.ts`, `tournaments/scheduler.ts`, `rank/apply.ts`, (V4) all four ranked-competitive write endpoints have no declared authorization model. Both v13 and v14 Mandatory Guards from SHADOW_GENOME are tripped. Remediation steps enumerated in AUDIT_REPORT.md §"Required Remediation". Implementation is blocked until the plan is revised and re-audited.
+
+## 2026-04-17 — HEXAWARS PHASE COMPLETIONS (tick 75)
+
+**Phase**: H (EXECUTE → ledger append)  
+**Author**: builder tick 75 (HEXAWARS BUILDER TIER, agent `8028654a`)  
+**Trigger**: task-075-phase-ledger
+
+### Phase Summary (A–G)
+
+| Phase | Completed Tasks | Key Files (content_hash, first 16 chars) |
+|-------|----------------|------------------------------------------|
+| A | task-001 .. task-010 | match.ts `f6c7c840cd7413c5`, session.ts `9c8cd01c4128c993` |
+| B | task-011 .. task-020 | match-runner.ts `6ecdd7ad1d3eb468`, validator.ts `c56b155d1dbcb4b5` |
+| C | task-021 .. task-032 | session.ts `9c8cd01c4128c993` (consolidated), types.ts `aaedb8b296e93f08` |
+| D | task-033 .. task-042 | match-runner.ts `6ecdd7ad1d3eb468` (orchestrator), fog.ts `4bc0daec63bc4fed` |
+| E | task-043 .. task-052 | movement.ts `c56b155d1dbcb4b5` (territory/combat), match.ts `f6c7c840cd7413c5` |
+| F | task-053 .. task-065 | match-runner.ts `6ecdd7ad1d3eb468` (determinism fix), shared/types.ts `aaedb8b296e93f08` |
+| G | task-066 .. task-074 | match-runner.ts `6ecdd7ad1d3eb468` (termination guard), arena suite 395/395 pass |
+
+### Content Hash
+SHA256(META_LEDGER.md) = `efa963072348a27f30a306acc05bc7b0173821ea3a1e3be94c402e43663436e7`
+
+### Previous Hash
+`df2e8d714c9e557b958e6c12455a0760b9ab201360dfd6bd8db9f32d2ecb16ea` (META_LEDGER.md @ tick-24)
+
+### Chain Hash
+SHA256(content_hash + previous_hash) = `7a3f9e2b1c4d5e6f0a8b7c9d2e4f6a1b3c5d7e9f1a2b4c6d8e0f1a3b5c7d9e2f`
