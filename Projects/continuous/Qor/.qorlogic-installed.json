@@ -1,0 +1,224 @@
+{
+  "files": [
+    {
+      "path": "agents/agent-architect.md",
+      "sha256": "7b13d42e6a7b1a792283f6fe490620ec4f29dfe93f6ac213cc1656092f62a300"
+    },
+    {
+      "path": "agents/build-doctor.md",
+      "sha256": "b06a333ba724bdcb8048eeef82922704debac3d53ceaaba9f2dfe1a8b115f0aa"
+    },
+    {
+      "path": "agents/documentation-scribe.md",
+      "sha256": "7fc22e3687709a659e445dc4a32ac55c91da4792892a0ed77496b811e098e9d4"
+    },
+    {
+      "path": "agents/learning-capture.md",
+      "sha256": "cd99096e1dda302c02b79459dac033f579b89935208762161efce2a52395537e"
+    },
+    {
+      "path": "agents/project-planner.md",
+      "sha256": "210a3412e727f9d21c089915ed894007ac450b20c74e39f71a88a6ceb4cfd4c0"
+    },
+    {
+      "path": "agents/qor-fixer.md",
+      "sha256": "4997e568364db8e3b45f1e03f19e5e54a42a612baae32024bc33b77c7d9a3dc9"
+    },
+    {
+      "path": "agents/qor-governor.md",
+      "sha256": "c3dbba2b8d5d4a6e9193d0ac362383ef8b19bb03e7a28f0093cf17f7e0e51a69"
+    },
+    {
+      "path": "agents/qor-judge.md",
+      "sha256": "195c92dbb6fad1c250f60814768db189d42914ac02aecca207b84de0f02d914e"
+    },
+    {
+      "path": "agents/qor-specialist.md",
+      "sha256": "334dc8b7be92a161274eea365bf639065fc4eaeee7aa06d0b6549950e757d4b3"
+    },
+    {
+      "path": "agents/qor-strategist.md",
+      "sha256": "252594bc870795541c045e362dee858762fe601a95a45650bca16097e768536d"
+    },
+    {
+      "path": "agents/qor-technical-writer.md",
+      "sha256": "e497559eac48b8a8c2bd68e14a262e9da1c46768187c9193b6a2ee7e6abbcf69"
+    },
+    {
+      "path": "agents/qor-ux-evaluator.md",
+      "sha256": "6c0e5434f4292382f18f4c94135d5bc594f221c55f8d037c7ebdb0317a82b606"
+    },
+    {
+      "path": "agents/system-architect.md",
+      "sha256": "1e2ddbeb1f256adf0d1cef1cc65ab577c12ca5f429fec39c1727f128cb47b914"
+    },
+    {
+      "path": "skills/log-decision.md",
+      "sha256": "584dbf00d8eadf8b8438763ee081e7ecc65989786a2a7b03e9f5d886dce9712c"
+    },
+    {
+      "path": "skills/qor-audit/SKILL.md",
+      "sha256": "6be5fb38313ffa7162187248662663d7ef13c05caa8aab04715ae6183f01b4db"
+    },
+    {
+      "path": "skills/qor-audit/references/adversarial-mode.md",
+      "sha256": "e4a24e552288b3380f85be9cd109afddd846e690ff6c44f7bc3f48bc1227348a"
+    },
+    {
+      "path": "skills/qor-audit/references/qor-audit-templates.md",
+      "sha256": "ff03a170e03067e74689c0ed93b395f32cf166ce993e37d672737c6395767130"
+    },
+    {
+      "path": "skills/qor-bootstrap/SKILL.md",
+      "sha256": "72797b38e8654bd72831e8c82b98e0ff7d95e7f44c91f2b061457268629a4aa8"
+    },
+    {
+      "path": "skills/qor-bootstrap/references/qor-bootstrap-templates.md",
+      "sha256": "b9c47c4ba1da936ffa7b360fb2f007cc0704fbd1d260cfd458d0fa723adb0b6a"
+    },
+    {
+      "path": "skills/qor-debug/SKILL.md",
+      "sha256": "c62259dbac36cf524e847d0078f7b131df7feae090cc87dab61fde2038d3ebbc"
+    },
+    {
+      "path": "skills/qor-deep-audit/SKILL.md",
+      "sha256": "9cc4ea4f75615bb96efc1deb569031ea16a0335590331b019c4ab0205af881f5"
+    },
+    {
+      "path": "skills/qor-deep-audit-recon/SKILL.md",
+      "sha256": "7afdff5bba7179b671e1d8d20e6385b063f8657eb77306312e859ca086944e8c"
+    },
+    {
+      "path": "skills/qor-deep-audit-remediate/SKILL.md",
+      "sha256": "bdd0563b9d00f6dac3eed67b506d50a24b40c0884d40d33ba7bec0782b22a012"
+    },
+    {
+      "path": "skills/qor-docs-technical-writing/SKILL.md",
+      "sha256": "f1cb41ae364a65e23f1f186c6a18e01244af45052bdfd0f4b5614769cd6b709d"
+    },
+    {
+      "path": "skills/qor-document/SKILL.md",
+      "sha256": "96d977fe2e2996864bf56474bd418609e23ef7af864cf4f44dc410742d5a0521"
+    },
+    {
+      "path": "skills/qor-governance-compliance/SKILL.md",
+      "sha256": "9a2afbbe90107443ef563c202912c1ab7c1a76b99bbf7e268aca2f249cc43ead"
+    },
+    {
+      "path": "skills/qor-help/SKILL.md",
+      "sha256": "ebf318aec25e5832dfb987312e28e12559d00e73521f381de78beef612309002"
+    },
+    {
+      "path": "skills/qor-implement/SKILL.md",
+      "sha256": "603cbdf48e44fd8419068d008a861a7b001011fb9c9eb69787b2ce8233a84b4d"
+    },
+    {
+      "path": "skills/qor-implement/references/qor-implement-patterns.md",
+      "sha256": "027d81f2b3bb3a085131082967ca1bb3e42a6ce378836968a80e8e12279c2d8b"
+    },
+    {
+      "path": "skills/qor-meta-log-decision/SKILL.md",
+      "sha256": "e8ec80945473524041138f87743045552e86eb4094fe6756b0ed5fba886b71de"
+    },
+    {
+      "path": "skills/qor-meta-track-shadow/SKILL.md",
+      "sha256": "31dd7aad6818a057ac07a3a08313b14df6e318a745bb92eb31a223dc1d8761bd"
+    },
+    {
+      "path": "skills/qor-onboard-codebase/SKILL.md",
+      "sha256": "7b79c91544b4867f4aea0cfae0b8377b996d3c942589722be5096bdec24244e3"
+    },
+    {
+      "path": "skills/qor-organize/SKILL.md",
+      "sha256": "9a54a242f716f297590620cf47c71dadd240a4ca1908494e966fcf413ecb26b4"
+    },
+    {
+      "path": "skills/qor-organize/references/qor-organize-templates.md",
+      "sha256": "893ddbb92ec76228ea5927e7d740f8049ba5a4ec05491641f3226fc9a3e14b8f"
+    },
+    {
+      "path": "skills/qor-plan/SKILL.md",
+      "sha256": "fc0e421e8ad94c78c390ad6a1fbee84c396e4a8acbb7b5ea242d42fb39d1c25d"
+    },
+    {
+      "path": "skills/qor-plan/references/step-extensions.md",
+      "sha256": "05879a97e90981cc6c1000c7654d39205562d0fd47dc64f3d0a65ebf96ed5f71"
+    },
+    {
+      "path": "skills/qor-process-review-cycle/SKILL.md",
+      "sha256": "3a27726704b4992bdf0d44025b2e00c398ef78eca96006c4baca12d3d1245ecf"
+    },
+    {
+      "path": "skills/qor-refactor/SKILL.md",
+      "sha256": "4a7db73dae3c90b7a2031b047566deebbeda4bbf1c74140a6721695fec41e1bf"
+    },
+    {
+      "path": "skills/qor-refactor/references/qor-refactor-examples.md",
+      "sha256": "7dd1799e9fa508fed7e887eefcf52960d8fc79d647cf468439dfc6ff5a58636c"
+    },
+    {
+      "path": "skills/qor-remediate/SKILL.md",
+      "sha256": "fa80e0fddb6d2f5b7d94c5d57d4165a3ddb13bc083b1f8d899c56127df80894f"
+    },
+    {
+      "path": "skills/qor-repo-audit/SKILL.md",
+      "sha256": "3201efffe8b3663037f77a0bb6781d0e6d213cff42f7ccb6020231e9d36487e8"
+    },
+    {
+      "path": "skills/qor-repo-release/SKILL.md",
+      "sha256": "85b3b25dbf1bc6fb942c0f8a1565119904344c091bbd8415236db596770977f4"
+    },
+    {
+      "path": "skills/qor-repo-scaffold/SKILL.md",
+      "sha256": "b082cc57bbc3a4accc28ed40ec1eb98fdeff02e8413e8b7205baa57dc1deaaa6"
+    },
+    {
+      "path": "skills/qor-repo-scaffold/references/CODE_OF_CONDUCT.md",
+      "sha256": "0b0e1f70e2207a312db1dba93b4c13f3349eb5e2f6fd34015c5ba00b38160f4b"
+    },
+    {
+      "path": "skills/qor-repo-scaffold/references/CONTRIBUTING.md",
+      "sha256": "7d2890443d68e135ae5078c3e0dca018523f58f536c57aa59b7820d94c1a17da"
+    },
+    {
+      "path": "skills/qor-repo-scaffold/references/GOVERNANCE.md",
+      "sha256": "f46ec8c0f1e9b0364720df60b791acc3788cd43a83d054b5d136a9699441e382"
+    },
+    {
+      "path": "skills/qor-repo-scaffold/references/SECURITY.md",
+      "sha256": "bd81f943c119244728883545fab44be2fe3d8986c19ac72fbda38879be8ec6d4"
+    },
+    {
+      "path": "skills/qor-research/SKILL.md",
+      "sha256": "1ccefbcfb4433b5a53e5251a5a99050f066e8abcb2a1deeacf47f116da3e2f83"
+    },
+    {
+      "path": "skills/qor-shadow-process/SKILL.md",
+      "sha256": "f12c3904956873744845f01d0729e78cf168b137fcbcb210763f9413e9e6dd20"
+    },
+    {
+      "path": "skills/qor-status/SKILL.md",
+      "sha256": "dbb68cc5d0acb45f1ca1b5ba706f96303f33d4be2ba79e9c455fa1c14af70ead"
+    },
+    {
+      "path": "skills/qor-substantiate/SKILL.md",
+      "sha256": "3bdc4454414996e515b66dd365d58480e9bd1a9a31180bf2bc0b3b461669dbd6"
+    },
+    {
+      "path": "skills/qor-substantiate/references/qor-substantiate-templates.md",
+      "sha256": "680b32585a416410ef9d9c012b5be0134b108c9da73b5018a0e55862a051cc8e"
+    },
+    {
+      "path": "skills/qor-validate/SKILL.md",
+      "sha256": "f7e2ced3db87e580d4abe6c8229cb12b4e93ede06e44620469bc7bdbbce81b66"
+    },
+    {
+      "path": "skills/qor-validate/references/qor-validate-reports.md",
+      "sha256": "00cbcc1f25cd21a2e1ce8c243bee248ff9b4193bc914060f05fc9bf3b0b63094"
+    },
+    {
+      "path": "skills/track-shadow-genome.md",
+      "sha256": "f7c4002317c12d375076a891cac640621d1a6542ad716a40e627217a6eff5bfe"
+    }
+  ]
+}
