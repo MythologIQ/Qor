@@ -77,8 +77,8 @@ export class AgentSessionManager {
     const nextIdx = order.indexOf(status);
 
     if (session.status === 'forfeit') return false;
-    // Allow playing→ended and playing→forfeit (match conclusion transitions)
-    if (session.status === 'playing' && (status === 'ended' || status === 'forfeit')) {
+    // Allow playing→ended (match conclusion); forfeit must use forfeit() method directly
+    if (session.status === 'playing' && status === 'ended') {
       session.status = status;
       session.lastActionAt = Date.now();
       return true;

@@ -233,8 +233,11 @@ export async function runMatch(
   } else {
     const ready = await waitReady(sessionA, sessionB);
     if (!ready) {
-      asm.transition(sessionA, "forfeit");
-      asm.transition(sessionB, "forfeit");
+      // Use forfeit() directly — it bypasses transition validation so it works
+      // from any pre-playing state (connected, ready). transition("forfeit") would
+      // silently fail because the state machine only allows forward transitions.
+      asm.forfeit(sessionA, "ready-timeout");
+      asm.forfeit(sessionB, "ready-timeout");
       return zeroMetrics(Date.now() - startMs);
     }
     asm.transition(sessionA, "playing");
@@ -333,9 +336,21 @@ export async function runMatch(
 
   publishEnd(sessionA, sessionB, winner, finalMetrics, bus);
 
-  // Winner → 'ended', loser → 'forfeit'; on draw both get 'ended'
-  asm.transition(sessionA, winner === "A" ? "ended" : "forfeit");
-  asm.transition(sessionB, winner === "B" ? "ended" : "forfeit");
+  // Winner → 'ended', loser → 'forfeit'; on draw both → 'ended'.
+  // Use forfeit() directly for loser instead of transition("forfeit") so it
+  // bypasses the playing→forfeit block. transition("ended") works for the winner.
+  if (winner === "A") {
+    asm.transition(sessionA, "ended");
+    asm.forfeit(sessionB, "match-lost");
+  } else if (winner === "B") {
+    asm.forfeit(sessionA, "match-lost");
+    asm.transition(sessionB, "ended");
+  } else {
+    // Draw — both sessions terminate via direct forfeit (playing→forfeit
+    // is blocked in transition(), so we must use the direct method)
+    asm.forfeit(sessionA, "draw");
+    asm.forfeit(sessionB, "draw");
+  }
 
   if (metricsBus) {
     metricsBus.recordEnd(finalMetrics);
