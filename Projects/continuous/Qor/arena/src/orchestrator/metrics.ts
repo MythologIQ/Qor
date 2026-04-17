@@ -31,13 +31,14 @@ export class Metrics {
   }
 
   finalize(): MatchMetrics {
-    const totalActions = this.turns.length;
-    const totalMs = this.turns.reduce((sum, t) => sum + t.actionMs, 0);
+    const validTurns = this.turns.filter(t => t.valid);
+    const totalActions = validTurns.length + this.invalidCount;
+    const totalMs = validTurns.reduce((sum, t) => sum + t.actionMs, 0);
     return {
-      totalActions: totalActions + this.invalidCount,
-      avgDecisionMs: totalActions > 0 ? Math.round(totalMs / totalActions) : 0,
+      totalActions,
+      avgDecisionMs: validTurns.length > 0 ? Math.round(totalMs / validTurns.length) : 0,
       invalidActions: this.invalidCount,
-      turnsPlayed: this.turns.length,
+      turnsPlayed: validTurns.length,
       durationMs: this.endMs > 0 && this.startMs > 0 ? this.endMs - this.startMs : 0,
     };
   }
