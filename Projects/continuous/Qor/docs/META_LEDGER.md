@@ -8644,3 +8644,57 @@ SHA256(bundle of 7 files above, ordered: schema.sql, db.ts, types.ts, router.ts,
 
 ### Chain Hash
 SHA256(content_hash + previous_hash) = `757334d9fc31bcc6ccad60b02d560dd633a3de9bd232b7006e83847645c68e1c`
+
+## 2026-04-17 — SESSION SEAL hexawars-scope-2-plan-a-v2 Phase 1 (2026-04-17T23:59:30Z)
+
+**Phase**: SUBSTANTIATE
+**Skill**: /qor-substantiate
+**Persona**: The QoreLogic Judge
+**Target**: Phase 1 seal of `docs/plans/2026-04-17-hexawars-scope-2-plan-a-v2-identity-substrate.md`
+**Risk Grade**: L2
+
+### Verdict: ✅ SEALED — Reality = Promise (Phase 1)
+
+### Reality Audit
+
+All 7 planned Phase-1 artifacts exist with matching intent; no MISSING, no UNPLANNED. Deviations from LOC estimates are all *under* budget (e.g., schema.sql 65L vs 75L planned, db.ts 36L vs 75L planned) except `server.ts` at +2L over estimate (mkdirSync to ensure `.arena/` exists on first boot — defensible maintenance cost).
+
+| Artifact | Planned | Actual | Status |
+|---|---:|---:|:---:|
+| schema.sql | 75L | 65L | ✅ |
+| db.ts | 75L | 36L | ✅ |
+| shared/types.ts | 80L | 80L | ✅ (exact) |
+| router.ts | 20L | 17L | ✅ |
+| server.ts | 38L | 40L | ⚠️ +2L (mkdirSync; documented) |
+| db.test.ts | — | 83L / 6 tests | ✅ |
+| schema.test.ts | — | 122L / 8 tests | ✅ |
+
+### Functional Verification
+
+- `bun test arena/tests/persistence/` — **14 pass / 0 fail / 33 expects**
+- Full arena suite — **409 pass / 1 fail** (pre-existing ui-smoke threshold; no Phase-1 regression)
+- No `console.log` in new production files
+- No new external dependencies (`bun:sqlite` + `node:crypto`|`node:fs`|`node:path` only)
+
+### Razor Final Check
+
+All files ≤ 122L (vs 250L limit); all functions ≤ ~14L (vs 40L limit); nesting depth ≤ 2 (vs 3 limit); zero nested ternaries. ✅
+
+### Version Validation
+
+No semver tag collision possible (latest tag `backup/pre-filter-repo-2026-04-17` is backup, not release). Blueprint versioned via META_LEDGER hash chain.
+
+### Authorizations Advanced
+
+- Phase 1 is now formally **sealed**. Phase 2 (`/qor-implement`) builder tasks are unlocked.
+- Plan B drafting may proceed in parallel (Phase 1 substrate fixed).
+- Phases 2 & 3 each require their own seal before the next queues.
+
+### Content Hash
+SHA256(bundle: schema.sql, db.ts, types.ts, router.ts, server.ts, db.test.ts, schema.test.ts, SYSTEM_STATE.md) = `306e555a2c44985fa81363479b3271616ace813ab02218b41526b87d239fe012`
+
+### Previous Hash
+`757334d9fc31bcc6ccad60b02d560dd633a3de9bd232b7006e83847645c68e1c` (Phase-1 IMPL chain hash)
+
+### MERKLE SEAL (Chain Hash)
+SHA256(content_hash + previous_hash) = `1b1defc7f794b38bd33a643722a87ecd86e7357b13d098307eba200b7a92c0b3`
