@@ -10,9 +10,7 @@ export interface ValidationResult {
 
 function isOnBoard(coord: { q: number; r: number; s: number }): boolean {
   return (
-    coord.q >= 0 && coord.q <= 8 &&
-    coord.r >= 0 && coord.r <= 8 &&
-    coord.s >= 0 && coord.s <= 8
+    Math.max(Math.abs(coord.q), Math.abs(coord.r), Math.abs(coord.s)) <= 8
   );
 }
 
