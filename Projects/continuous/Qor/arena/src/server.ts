@@ -1,5 +1,6 @@
 import { Hono } from "hono";
 import { mount } from "./router.js";
+import { serveStatic } from "./static-routes.js";
 
 const app = new Hono();
 
@@ -17,6 +18,7 @@ app.get("/health", (c) =>
 );
 
 mount(app);
+serveStatic(app);
 
 app.get("/", (c) => c.text("arena service online — awaiting engine build"));
 
