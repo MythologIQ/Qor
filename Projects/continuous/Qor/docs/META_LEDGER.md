@@ -8,6 +8,30 @@
 
 ---
 
+## 2026-04-17T18:55:00Z — SUBSTANTIATE: Continuum IPC Phase 3 — Victor Kernel Cutover
+
+| Field | Value |
+|-------|-------|
+| Phase | IMPLEMENT → SUBSTANTIATE |
+| Issue | #36 — Continuum Memory Service with IPC kernel boundary |
+| Blueprint | docs/plans/2026-04-16-continuum-memory-service-ipc-v3.md |
+| Status | **PHASE 3 COMPLETE** (Victor kernel consumes ContinuumClient via IPC) |
+| AC1 | ✅ `grep -r "from 'neo4j-driver'" victor/src/` → 0 matches |
+| AC2 | ✅ fail-closed driver; enforcement test guards against `NEO4J_PASS \|\| "..."` fallbacks |
+| AC3 | ✅ socket chmod 0600; parent dir enforced 0700 (`ipc/server.ts`) |
+| AC4 | ✅ cross-partition isolation verified (`access-policy.test.ts`: Qora token cannot read `agent-private:victor`) |
+| AC5 | ✅ unknown op → `UnknownOpError` (`registry.test.ts`) |
+| AC6 | ✅ execution-dispatch emits `ExecutionEvent` with `partition: agent-private:<agentId>` via injected `ExecutionEventStore`; fail-open on emit error |
+| AC7 | ✅ `curl http://localhost:4100/health` → `{"status":"ok"}` |
+| AC8 | ✅ all new modules ≤250L (max: `execution-events.ts` 210L, `execution-dispatch.ts` 181L) |
+| New Tests | victor/tests/execution-dispatch-emit.test.ts (6/6 pass), victor/tests/continuum-store.test.ts (6/6 pass), victor/tests/no-neo4j-store.test.ts (2/2 pass) |
+| Regression | victor/tests/execution-dispatch.test.ts (8/8 pass) — legacy positional runner signature preserved |
+| Pre-Existing Failures | 37 live-Neo4j integration tests failing (database transaction start error, supervisor) — unrelated to Phase 3 cutover |
+| Files Added | victor/tests/execution-dispatch-emit.test.ts, victor/tests/continuum-store.test.ts, victor/tests/no-neo4j-store.test.ts |
+| Files Modified | victor/src/heartbeat/execution-dispatch.ts (added `DispatchOptions`, event emission, back-compat positional runner) |
+
+---
+
 ## 2026-04-16T07:30:00Z — GATE TRIBUNAL: Continuum Memory Service IPC v3
 
 | Field | Value |
@@ -8327,3 +8351,29 @@ phase: meta
 
 **Expected effect on next review tick (02:46 ET, Review-A / Codex 5.4):** shadow_genome_severity_sum should drop from 7 to ~5 immediately (excluding tick 84 T4 entry); after rem-015 lands, the RESOLUTION section is ignored too, so verdict flips toward GREEN unless new real drift appears.
 
+## 2026-04-17 — REVIEW TICK 22 (2026-04-17T14:45:00Z)
+verdict: RED
+builder_success_rate: 3/3
+sentinel_warn_fail: 1
+shadow_genome_severity_sum: 9
+test_suite_status: fail
+remediation_injected: 2
+notes: Builder throughput in the canonical window is healthy but sparse, with only three builder success entries available in `status.jsonl`; the median gap between those successes is 142.5 minutes, so latency telemetry is still thin. RED is forced by the remaining `arena` quick-suite failure (`AgentSessionManager` rejects playing → forfeit) and by stale queue-drift entries still contributing 9 points in the review shadow window even after the filename-normalization fixes landed.
+
+## 2026-04-17 — REVIEW TICK 23 (2026-04-17T15:50:00Z)
+verdict: RED
+builder_success_rate: 1/1
+sentinel_warn_fail: 0
+shadow_genome_severity_sum: 9
+test_suite_status: fail
+remediation_injected: 2
+notes: Builder tick 59 succeeded cleanly (1/1, unit-render complete). All 7 latest sentinel probes are green; the T4-ledger-integrity warn (tick 156) is excluded per the 1cfee42b false-positive resolution. RED is forced by (1) the single pre-existing arena test failure (AgentSessionManager rejects playing→forfeit transition) and (2) shadow_genome_severity_sum at 9 from stale spec_defect entries (ticks 33, 47) that are superseded by later builder progress. Remediation: rem-016 targets the test fix, rem-017 prunes stale shadow-genome entries.
+
+## 2026-04-17 — REVIEW TICK 24 (2026-04-17T16:55:55Z)
+verdict: RED
+builder_success_rate: 2/2
+sentinel_warn_fail: 0
+shadow_genome_severity_sum: 9
+test_suite_status: pass
+remediation_injected: 1
+notes: Builder ticks 60 and 61 both succeeded, and rem-016 restored arena quick-suite health to 390/390 per the latest builder status entry. All 8 sentinel probes are effectively green after excluding the known `1cfee42b` T4 false positive. RED remains driven only by stale queue-drift shadow entries (ticks 31, 33, 47) that still sit inside the review window despite the underlying filename-normalization fixes already landing.
