@@ -1,5 +1,31 @@
 # SHADOW_GENOME
 
+## 2026-04-17T23:15:00Z — audit-v17-hexawars-scope-2-plan-a-veto
+
+**Verdict**: VETO
+**Chain Hash**: `sha256:29ec432c102fa055cdb6bc77a3ee2b818f8e1800ac77bad172b20a728efd893f`
+
+### Failure Pattern
+
+Plan A is a surgical, disciplined split of the v16-vetoed Scope-2 plan: it restores the Razor Budget Summary with verifiable current line counts, defers every file v16 flagged as orphan to a future Plan B, and wires every proposed file to an explicit named caller rooted at `server.ts`. Razor, Orphan, Ghost-UI, Dependency, and Macro-Architecture all clear. The plan fails Security on two v16-bound guard clauses that are **directly in Plan A's charter** (identity issuance is Plan A's primary surface): the `POST /api/arena/operators` endpoint declares no "who can invoke this" stance, and the stored-token protection is `sha256(token)` — the exact scheme v16's Mandatory Guard calls out by name as unacceptable for L2. The plan author correctly remediated Razor + Orphan but treated the Security guard as advisory rather than binding, and defaulted Open Question Q2 to a scheme the shadow genome already forbids.
+
+### Bound Violations
+
+- **V5 (V-SECURITY-L2, v16-bound)**: `POST /api/arena/operators` (Phase 2) declares no answer to "who can invoke this." v16 Mandatory Guard requires one of: open-with-rate-limit / operator-token-authenticated / admin-gated-by-handle-list / admin-gated-by-table. For an identity-issuance endpoint on a ranked-competitive system, this is the Sybil surface and must be declared in the plan.
+- **V6 (V-SECURITY-L2, v16-bound)**: Stored auth-token protection specified as `sha256(token)` (Phase 2 `identity/operator.ts`; Open Question Q2 default). v16 Mandatory Guard is explicit and binary: *"SHA256-without-salt is unacceptable for L2."* Acceptable set: `{bcrypt, argon2id, sha256+salt}`. That the input is 32 bytes of `crypto.randomBytes` entropy is an engineering argument; the guard is not a judgment call, it is a bound constraint.
+
+### Mandatory Guard
+
+Do not issue PASS on future plans that issue, register, or rotate auth tokens or credentials unless:
+
+- The plan's Open Questions do not default any auth-storage decision to a scheme outside the acceptable set `{bcrypt, argon2id, sha256+salt}`. "Defaulted in Open Question" is not an escape from the v16 guard; the guard binds defaults too.
+- Every identity-issuance endpoint (`POST .../operators`, `POST .../accounts`, `POST .../users`, `POST .../register`) has a declared "who can invoke" stance AND a named enforcement site (rate-limit module filename / invite-ticket verifier filename / admin-handle-list source). Any new module introduced to implement that stance is listed in the Razor Budget Summary and in the phase's affected-files section.
+- Salted-hash schemes specify the salt column in the schema DDL (or equivalent storage), the per-row salt length, and the lookup pattern (scan-and-verify with constant-time compare, or token-id-prefix indexed lookup + verify).
+
+### Remediation Attempted
+
+Not yet. Plan author (Claude Opus 4.6, interactive, qor-plan) was notified of VETO via AUDIT_REPORT.md with 2 enumerated remediation steps. Plan A must be revised and re-submitted via `/qor-audit` before Plan B is drafted or any builder queue is populated.
+
 ## 2026-04-17T19:56:00Z — audit-v16-hexawars-scope-2-veto
 
 **Verdict**: VETO
@@ -454,9 +480,13 @@ Do not issue PASS on future harness expansions unless:
 | Auto-Resolution | Requires manual ledger reconciliation |
 
 ## Builder Failures
+**Tick 79** `task-079-release-note` tests_failed severity=2 | 2026-04-17T22:35:00Z | Pre-existing ui-smoke test failure (screenshot >10KB check) caused tests_failed even though RELEASE.md content was valid (3605 bytes). Screenshot test is external dependency unrelated to task spec. |
+
 - **2026-04-17T02:51:58Z** — Severity 2 — rem-008-ledger-integrity-root-cause: META_LEDGER.md 8285-line doc with repeating SUBSTANTIATION pattern-blocks (each showing stored seal 1cfee42b but different chain hash); stored seal refers to gated section whose hash was never computed correctly at creation — no live fix needed, false positive from sentinel not re-computing per-section hashes. Diagnosed.
 
 ## Builder Failures
+**Tick 79** `task-079-release-note` tests_failed severity=2 | 2026-04-17T22:35:00Z | Pre-existing ui-smoke test failure (screenshot >10KB check) caused tests_failed even though RELEASE.md content was valid (3605 bytes). Screenshot test is external dependency unrelated to task spec. |
+
 
 - 2026-04-17T03:02:20Z | severity=1 | blocked_on_deps | tick=31 | task-031-validator-tests | task-030 (validator-impl) has no status.jsonl success entry — validator tests cannot run until task-030 commits its implementation
 - 2026-04-17T04:35:21Z | severity=4 | spec_defect | tick=33 | task-033.yaml missing from builder queue (0-padded task file task-033.yaml does not exist; only 001-096 numbered without zero-padding)
@@ -478,6 +508,8 @@ Do not issue PASS on future harness expansions unless:
 - **2026-04-17T18:59:50Z** | severity=3 | escalation | Sentinel T5-shadow-genome probe: tail-20 severity sum=16 (>=10 threshold). Entries: task-033 (sev4), task-047 (sev4), task-068 (sev4×2). Escalation threshold breached. Queue remediation request.
 
 ## Builder Failures
+**Tick 79** `task-079-release-note` tests_failed severity=2 | 2026-04-17T22:35:00Z | Pre-existing ui-smoke test failure (screenshot >10KB check) caused tests_failed even though RELEASE.md content was valid (3605 bytes). Screenshot test is external dependency unrelated to task spec. |
+
 - 2026-04-17T19:05:00Z | builder | tick=68 | task-068-ui-smoke | blocked_on_deps | blocked_by=task-067 | severity=1
 
 - **2026-04-17T20:07:20Z** builder tick=68 `task-068-ui-smoke` **blocked_on_deps** severity=1 — depends on task-067 which has sentinel-proxy success entry but no canonical builder status.jsonl entry. Sentinel proxies filled in ticks 65-67. Pointer not advanced.

@@ -1,6 +1,8 @@
 import type { Hono } from "hono";
+import type { Database } from "bun:sqlite";
 
-export function mount(app: Hono): void {
+export function mount(app: Hono, db: Database): void {
+  void db; // reserved for Phase-2 identity + Phase-3 match routes
   app.get("/api/arena/status", (c) =>
     c.json({ stub: true, path: "/api/arena/status" }),
   );

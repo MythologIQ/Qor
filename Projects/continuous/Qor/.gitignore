@@ -5,6 +5,7 @@
 .evolveai/
 .victor/
 .qora/
+.arena/
 
 # Test artifacts
 node_modules/

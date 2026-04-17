@@ -8514,3 +8514,133 @@ SHA256(META_LEDGER.md) = `747dbd1f39c73e76d531d009d0a5c67f0db374416da030b149de96
 ### Chain Hash
 SHA256(content_hash + previous_hash) = `394322954526fab64bc28a8201a155d9a5e49b693ac168eae840d8fc5dba72e7`
 
+## 2026-04-17 — GATE TRIBUNAL audit-v17-hexawars-scope-2-plan-a (2026-04-17T23:15:00Z)
+
+**Phase**: GATE
+**Skill**: /qor-audit
+**Persona**: The QorLogic Judge
+**Target**: `docs/plans/2026-04-17-hexawars-scope-2-plan-a-identity-substrate.md`
+**Predecessor Audit**: audit-v16-hexawars-scope-2 (VETO)
+**Risk Grade**: L2
+
+### Verdict: ❌ VETO
+
+### Summary
+
+Plan A cleanly remediates the v16 Razor-Budget and Orphan vetoes: budget table present with independently-verified current LOC (`router.ts=15`, `server.ts=32`, `types.ts=60`), all orphaned background modules deferred to Plan B, every proposed file traces to a named caller rooted at `server.ts`. Passes Razor, Ghost-UI, Dependency, Orphan, and Macro-Architecture. Fails Security Pass 1 on two v16-bound guard clauses: (V5) `POST /api/arena/operators` has no declared answer to "who can invoke this"; (V6) stored-token protection is `sha256(token)` without salt, explicitly outside v16's acceptable set `{bcrypt, argon2id, sha256+salt}`.
+
+### Violations
+
+- **V5** (V-SECURITY-L2, v16-bound): `POST /api/arena/operators` declares no "who can invoke" stance. Required: one of open-with-rate-limit / operator-token-authenticated / admin-gated-by-handle-list / admin-gated-by-table, with named enforcement site.
+- **V6** (V-SECURITY-L2, v16-bound): Auth-token stored as `sha256(token)` without salt. v16 Mandatory Guard explicitly names this unacceptable for L2.
+
+### Remediation Required
+
+1. Declare "who can invoke" for operator registration (rate-limit / invite-ticket / admin-bootstrap); name the enforcement site; if a new module is introduced, add it to Razor Budget + affected-files.
+2. Upgrade stored-token protection to sha256+salt (with schema + LOC delta updates) or argon2id/bcrypt (with dependency row added to Dependency Audit & Razor Budget).
+
+### Artifacts
+
+- `.agent/staging/AUDIT_REPORT.md` — full tribunal report
+- `docs/SHADOW_GENOME.md` — v17 failure pattern appended
+
+### Content Hash
+SHA256(.agent/staging/AUDIT_REPORT.md) = `78a042e0f334548a4af6e171f07e37904be2a84a9247e6c9cc006dce8b065424`
+
+### Previous Hash
+`394322954526fab64bc28a8201a155d9a5e49b693ac168eae840d8fc5dba72e7` (tick 78 validate chain hash)
+
+### Chain Hash
+SHA256(content_hash + previous_hash) = `29ec432c102fa055cdb6bc77a3ee2b818f8e1800ac77bad172b20a728efd893f`
+
+## 2026-04-17 — GATE TRIBUNAL audit-v18-hexawars-scope-2-plan-a-v2 (2026-04-17T23:50:00Z)
+
+**Phase**: GATE
+**Skill**: /qor-audit
+**Persona**: The QorLogic Judge
+**Target**: `docs/plans/2026-04-17-hexawars-scope-2-plan-a-v2-identity-substrate.md`
+**Predecessor Audit**: audit-v17-hexawars-scope-2-plan-a (VETO)
+**Risk Grade**: L2
+
+### Verdict: ✅ PASS
+
+### Summary
+
+Plan A v2 precisely remediates v17's two security violations without disturbing the Razor, Orphan, Ghost-UI, Dependency, or Macro-Architecture surfaces that v17 already passed. V5 is closed by declaring "who can invoke" for `POST /api/arena/operators` (open + rate-limit + handle-reservation) with enforcement site named (`arena/src/identity/rate-limit.ts`). V6 is closed by upgrading stored-token protection to `sha256(salt ‖ secret)` with a 16-byte per-row salt and an O(1) indexed `token_id` prefix lookup, verified via `crypto.timingSafeEqual` — firmly inside v16 Mandatory Guard's acceptable set `{bcrypt, argon2id, sha256+salt}`. Additionally the plan introduces a Security Surface Summary table and promotes `model_id` to a first-class NOT NULL CHECK-constrained column (no incognito agents). Current LOC re-verified (router=15, server=32, types=60). Per-phase arithmetic verified (router Δ 5+35+25=65, types Δ 20+15+5=40, server Δ +6). All six tribunal passes clear.
+
+### Authorizations
+
+- Implementation may proceed on Plan A v2.
+- Plan B drafting MAY begin in parallel once Plan A v2 Phase 1 is sealed via `/qor-substantiate`.
+- Per-phase seal gate: each phase must seal via `/qor-substantiate` before next phase's builder tasks queue.
+
+### Artifacts
+
+- `.agent/staging/AUDIT_REPORT.md` — full tribunal report (v18 PASS)
+- `docs/plans/2026-04-17-hexawars-scope-2-plan-a-v2-identity-substrate.md` — approved blueprint
+- `docs/SHADOW_GENOME.md` — unchanged (no new failure pattern on PASS)
+
+### Content Hash
+SHA256(.agent/staging/AUDIT_REPORT.md) = `ebc666a1da11fa51bde0a3ab61c814b0727ef7ba5ae36f142d93af998b69819b`
+
+### Previous Hash
+`29ec432c102fa055cdb6bc77a3ee2b818f8e1800ac77bad172b20a728efd893f` (v17 VETO chain hash)
+
+### Chain Hash
+SHA256(content_hash + previous_hash) = `ef6ba02b7d4c286ab7b782ec93d2b1d215aa4c6d3c2eeeedf675c8155fed0c6e`
+
+## 2026-04-17 — IMPLEMENTATION hexawars-scope-2-plan-a-v2 Phase 1 — Persistence Skeleton (2026-04-17T23:59:00Z)
+
+**Phase**: IMPLEMENT
+**Skill**: /qor-implement
+**Persona**: The QoreLogic Specialist
+**Target**: Phase 1 of `docs/plans/2026-04-17-hexawars-scope-2-plan-a-v2-identity-substrate.md`
+**Gate**: v18 PASS (chain hash `ef6ba02b…0c6e`)
+**Risk Grade**: L2
+
+### Summary
+
+Phase 1 (Persistence Skeleton) of Plan A v2 implemented. `bun:sqlite` substrate now boots with WAL mode on disk and an idempotent schema covering `operators` (handle + handle_normalized + token_id + token_salt + token_hash + created_at), `agent_versions` (with first-class NOT NULL CHECK-constrained `model_id`), `matches`, and `match_events`. Single `db` instance is created in `server.ts` and closure-injected into `mount(app, db)`. No singletons.
+
+### Files Created
+
+- `arena/src/persistence/schema.sql` (65L) — SHA256 `fb0649f37b765067ccc9c41f4de13eafea40f0fd97fddf961808cbee1761b70d`
+- `arena/src/persistence/db.ts` (36L) — SHA256 `2e72a3400a87c0fd00c1ea2845521c83561a71c994959a86eb3b370dbcbb2db7`
+- `arena/tests/persistence/db.test.ts` — SHA256 `f607283daf95975f3c615bbc53cdc3d7ffa3eda40e8bc06a1addd38fd1dc2be9`
+- `arena/tests/persistence/schema.test.ts` — SHA256 `689df5c959735f24dfbdc092aaf99deb9e8a3379c07e6bcdce4fb10ea3cce0a4`
+
+### Files Modified
+
+- `arena/src/shared/types.ts` (60L → 80L) — SHA256 `97f094c71cc6d51e59a930c822aa68f5ab747a6796aff5503c4130d4f1fd61e7`
+- `arena/src/router.ts` (15L → 17L) — SHA256 `be5c3a83d3b40696c170e971fbc0b1fe3030b0b19bfe5332054e38239e6f9d08`
+- `arena/src/server.ts` (32L → 40L) — SHA256 `023b3979d04b967ff26660ec24f60ba80c83276b6570491e5273e69200db6887`
+
+### Razor Self-Check
+
+All files within Section-4 limits: largest file `shared/types.ts` at 80/250L; no function over 25L; no nesting beyond 2; no nested ternaries.
+
+### Test Results
+
+- `bun test tests/persistence/`: **14 pass / 0 fail / 33 expect() calls**
+- Full arena suite: **409 pass / 1 fail** (pre-existing `ui-smoke.test.ts` threshold issue documented in tick 77 substantiation; no Phase-1 regressions).
+
+### Phase 1 Exit Criteria
+
+- [x] `bun test arena/tests/persistence/` green
+- [x] Schema idempotency verified (`initDb` × 2 → identical)
+- [x] WAL mode asserted for disk-backed DB
+- [x] `model_id` NOT NULL + length range asserted
+- [x] No orphan modules (all new files reachable from `server.ts`)
+
+### Next Action
+
+Phase 1 is sealed pre-substantiation. Run `/qor-substantiate` to formally seal Phase 1 before queuing Phase 2 builder tasks per authorization gate in v18 audit.
+
+### Content Hash
+SHA256(bundle of 7 files above, ordered: schema.sql, db.ts, types.ts, router.ts, server.ts, db.test.ts, schema.test.ts) = `3950e1f78f805512558721f4d7f0efb5d93b1deafb90fafc789861ed9a7c45de`
+
+### Previous Hash
+`ef6ba02b7d4c286ab7b782ec93d2b1d215aa4c6d3c2eeeedf675c8155fed0c6e` (v18 PASS chain hash)
+
+### Chain Hash
+SHA256(content_hash + previous_hash) = `757334d9fc31bcc6ccad60b02d560dd633a3de9bd232b7006e83847645c68e1c`

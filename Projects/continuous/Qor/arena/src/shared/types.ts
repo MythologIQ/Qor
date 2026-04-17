@@ -59,3 +59,23 @@ export const BOARD_SIZE = 9;
 export const TIME_BUDGET_MS = 5000;
 export const TURN_CAP = 50;
 export const STARTING_UNITS = 3;
+
+// Identity Substrate (Plan A v2, Phase 1): storage-shape types.
+export type Fingerprint = string & { readonly __brand: "Fingerprint" };
+export interface Operator {
+  id: number; handle: string; handleNormalized: string;
+  tokenId: string; createdAt: number;
+}
+export interface AgentVersion {
+  id: number; operatorId: number; fingerprint: Fingerprint;
+  modelId: string; similarityFlagsJson: string | null; createdAt: number;
+}
+export interface MatchRecord {
+  id: string; operatorAId: number; operatorBId: number;
+  agentAId: number; agentBId: number; originTag: string;
+  outcome: string | null; createdAt: number;
+}
+export interface MatchEvent {
+  matchId: string; seq: number; eventType: string;
+  payload: string; ts: number;
+}

@@ -1,135 +1,150 @@
-# AUDIT REPORT — audit-v16-hexawars-scope-2
+# AUDIT REPORT — audit-v18-hexawars-scope-2-plan-a-v2
 
-**Tribunal Date**: 2026-04-17T19:56:00Z
-**Target**: `docs/plans/2026-04-17-hexawars-scope-2-depth-expansion.md`
-**Blueprint Hash**: `sha256:5fd9c751b527f70d22fb700deb8b705c7363e81f10624ef25e1b5cd75b96d473`
-**Risk Grade**: **L2** (architecture change + ranked-competitive write surface)
+**Tribunal Date**: 2026-04-17T23:50:00Z
+**Target**: `docs/plans/2026-04-17-hexawars-scope-2-plan-a-v2-identity-substrate.md`
+**Blueprint Hash**: `sha256:hexawars-scope-2-plan-a-v2`
+**Risk Grade**: **L2** (persistence + identity + auth token issuance + rate-limit)
 **Auditor**: The QorLogic Judge
-**Supersedes**: `audit-v15-continuum-memory-ipc-v3` (PASS)
+**Supersedes**: `audit-v17-hexawars-scope-2-plan-a` (VETO)
 
 ---
 
-## VERDICT: ❌ **VETO**
+## VERDICT: ✅ **PASS**
 
 ---
 
 ### Executive Summary
 
-The blueprint proposes three-phase depth expansion for HexaWars (identity + matchmaking + ranking) with a coherent simple-made-easy decomposition and well-scoped test coverage. However, it fails two of this project's standing Mandatory Guards (v13 and v14 shadow genome entries) by omitting the Razor Budget Summary table and by naming three existing files for modification without stating their current line counts. It further introduces three new runtime modules with no named caller in any phase's affected-files list, and its ranked-competitive write endpoints define no authorization model. These are load-bearing defects in a ranked system whose ledger must be credible; the plan cannot proceed to implementation until remediated.
+Plan A v2 precisely remediates v17's two security violations without disturbing the Razor, Orphan, Ghost-UI, Dependency, or Macro-Architecture surfaces that v17 already passed. V5 is closed by declaring "who can invoke" for `POST /api/arena/operators` (open + rate-limit + handle-reservation) and naming the enforcement site (`arena/src/identity/rate-limit.ts`). V6 is closed by upgrading stored-token protection to `sha256(salt ‖ secret)` with a 16-byte per-row salt and an O(1) indexed `token_id` prefix lookup, verified via `crypto.timingSafeEqual` — firmly inside v16 Mandatory Guard's acceptable set `{bcrypt, argon2id, sha256+salt}`. The plan additionally introduces a Security Surface Summary table enumerating every endpoint's enforcement site, invocation stance, and token-at-rest scheme, and promotes `model_id` to a first-class NOT NULL CHECK-constrained column on `agent_versions` (closing a discretionary-data gap: no incognito agents). Current LOC independently verified (`router.ts=15L`, `server.ts=32L`, `shared/types.ts=60L`). Per-phase LOC arithmetic checks (router Δ 5+35+25=65, types Δ 20+15+5=40). All six tribunal passes clear.
 
 ### Audit Results
 
 #### Pass 1 — Security (L2 Scrutiny)
-**Result**: ❌ **FAIL**
+**Result**: ✅ **PASS**
 
-- **V4 trigger**: Write endpoints `POST /api/arena/operators`, `POST /api/arena/agent-versions`, `POST /api/arena/tournaments`, `POST /api/arena/tournaments/:id/signup` have no declared authorization model. Who can create an operator — any anonymous HTTP client, or does registration require a signed ticket? Can any operator create a tournament, or is that admin-gated? A ranked-competitive system's ledger credibility depends on answering these.
+Bound guard (SHADOW_GENOME v16, 2026-04-17T19:56:00Z):
+> *"Every write endpoint on a system that produces a public ranking has a declared authorization enforcement site, a declared auth-token hash algorithm, and a declared answer to 'who can invoke this'."*
+
+Bound guard (SHADOW_GENOME v17, 2026-04-17T23:15:00Z): Open-Question defaults must not fall outside `{bcrypt, argon2id, sha256+salt}`; identity-issuance endpoints must name enforcement site + stance; salted-hash schemes must specify salt column, length, and lookup pattern.
+
+| v16/v17 Guard Clause | v2 Satisfaction |
+|---|---|
+| Enforcement site for every write endpoint | `rate-limit.ts` (operators POST); per-route `getOperatorByToken()` (agent-versions POST) — both explicitly named in Security Surface Summary |
+| Auth-token hash algorithm declared | `sha256(salt ‖ secret)`, 16-byte per-row salt — inside v16 acceptable set |
+| "Who can invoke" stance declared | operators: open + rate-limit + handle-reservation; agent-versions: operator-token-authenticated |
+| Salt column in schema DDL | `operators.token_salt BLOB NOT NULL`, explicitly added in Phase 1 schema.sql |
+| Salt length | 16 bytes (`crypto.randomBytes(16)`) |
+| Lookup pattern | O(1) indexed on `operators.token_id` (8-byte random prefix), then `crypto.timingSafeEqual` on hashed secret |
+| Open-Question defaults safe | Q2 v2 is about rate-limit store durability, NOT auth-storage; auth-storage is locked (not an open question) |
+| New identity-issuance modules listed in Razor Budget | `rate-limit.ts` added as Phase-2 NEW file, 55L, in budget table |
+
 - No hardcoded credentials. ✅
 - No placeholder auth stubs. ✅
 - No `// security: disabled`. ✅
-- Auth token generation path stated (generated on create, shown once, stored hashed) — ✅ concept — but hash algorithm, iteration count, and enforcement site (middleware vs per-route check) are unspecified.
+- No mock authentication returns. ✅
+- Handle-reservation normalization (NFKC + lowercase + strip zero-width/control + unique index on `handle_normalized`) is a genuine defense in addition to `handle` uniqueness. ✅
+- `model_id` is schema-enforced NOT NULL with `CHECK(LENGTH(model_id) BETWEEN 1 AND 128)` — registration-without-model cannot reach persistence. ✅
+
+Note: the XFF-trust posture for rate-limit keying is documented (proxy-set header with remoteAddr fallback and `unknown` conservative bucket). Hardening the trust path (e.g., allowlist of upstream proxy IPs, `CF-Connecting-IP`, or TCP-remote-only) is an implementation tuning concern for `rate-limit.ts`, not a guard-level gap. No VETO trigger.
 
 #### Pass 2 — Ghost UI
-**Result**: ✅ PASS
+**Result**: ✅ **PASS**
 
-Every zo.space route in Phase 3 connects to a named arena API endpoint. Replay scrubber is a client-side control over server-streamed `match_events` — data path is defined. No "coming soon" or placeholder UI. Tournament signup is API-only for Scope-2 (no UI in this plan), which is a product-scope decision, not a ghost path.
+Plan A v2 introduces **no UI**. All routes are HTTP/JSON; UI is explicitly deferred to Plan B/C.
 
 #### Pass 3 — Section 4 Razor
-**Result**: ❌ **FAIL**
+**Result**: ✅ **PASS**
 
-- **V1 trigger**: No Razor Budget Summary table exists anywhere in the plan. v14 Mandatory Guard: *"The Razor Budget Summary table enumerates every file the plan modifies, not only files it creates."*
-- **V2 trigger**: Current line counts for files named for modification are not stated. Actual (verified now): `arena/src/router.ts` = 15L, `arena/src/shared/types.ts` = 60L, `arena/src/server.ts` = 32L. v14 Mandatory Guard: *"Every existing file named for modification has a current-line-count fact stated in the plan (not inferred)."*
-- Per-file projected sizes for the ~17 new files are absent. "Pure functions," "single transaction" prose is not a size target.
-- No file is at-ceiling today, so V-RAZOR-GUARD-2 (decomposition-before-addition) does not itself fire — but the absence of the budget table means the auditor cannot verify that it won't fire after Phase 3 (router.ts absorbs ~12 new route dispatches across three phases and is modified in every phase).
-
-| Razor Check | Limit | Blueprint States | Status |
+| Check | Limit | Blueprint Proposes | Status |
 |---|---|---|---|
-| Max function lines | 40 | not stated per-fn | FAIL |
-| Max file lines | 250 | not stated per-file | FAIL |
-| Max nesting depth | 3 | not stated | FAIL |
-| Nested ternaries | 0 | not stated | FAIL |
-| Budget table present | required | absent | FAIL |
+| Max function lines | 40 | 32 (highest stated per-file cap: `operator.ts`) | OK |
+| Max file lines | 250 | 130 (largest: `match-store.ts`, 52% of ceiling) | OK |
+| Max nesting depth | 3 | 2 (highest stated) | OK |
+| Nested ternaries | 0 | 0 (not used) | OK |
+| Budget table present | required | 10 rows, current+Δ+final+limits columns | OK |
+
+Current-LOC verification (Judge independently measured):
+
+| File | Plan Claims | Measured | Match? |
+|---|---:|---:|:---:|
+| `arena/src/router.ts` | 15 | 15 | ✅ |
+| `arena/src/server.ts` | 32 | 32 | ✅ |
+| `arena/src/shared/types.ts` | 60 | 60 | ✅ |
+
+Per-phase arithmetic verification:
+
+| File | Phase 1 Δ | Phase 2 Δ | Phase 3 Δ | Total | Plan Total | Match? |
+|---|---:|---:|---:|---:|---:|:---:|
+| `router.ts` | +5 | +35 | +25 | +65 | +65 | ✅ |
+| `shared/types.ts` | +20 | +15 | +5 | +40 | +40 | ✅ |
+| `server.ts` | +6 | 0 | 0 | +6 | +6 | ✅ |
+
+v14 + v17 Mandatory Razor Guards satisfied.
 
 #### Pass 4 — Dependency
-**Result**: ✅ PASS
+**Result**: ✅ **PASS**
 
-- SQLite: Bun has first-party `bun:sqlite`. No new package required. Plan does not explicitly state this — a minor documentation gap but not a dependency violation.
-- No hallucinated packages. No packages proposed whose capability is < 10 lines of vanilla code.
-- All new logic (ELO, Swiss pairing, knockout, fingerprint normalization, Jaccard similarity) is in-tree, no library pulls.
-
-| Package | Justification | < 10 Lines Vanilla? | Verdict |
+| Package | Justification | <10 Lines Vanilla? | Verdict |
 |---|---|---|---|
-| `bun:sqlite` | Phase-1 persistence | No (full RDBMS) | PASS |
-| (no new external deps) | — | — | PASS |
+| `bun:sqlite` | Phase-1 persistence; Bun first-party, no npm dep | No (full RDBMS) | PASS |
+| `node:crypto` | `randomBytes`, `createHash('sha256')`, `timingSafeEqual` | Node built-in | PASS |
+| (no new external deps) | rate-limit is in-memory `Map`; token hash is `node:crypto` | — | PASS |
+
+Plan v2 explicitly declares `bun:sqlite` as the driver (closing the v17 "minor documentation gap"). No hallucinated packages. No `better-sqlite3`, no ORM, no JWT, no password-hash library, no rate-limit framework. The in-memory rate-limit bucket map is under 60 lines — well inside the `<10-lines-vanilla` heuristic's spirit for "don't import what you can inline."
 
 #### Pass 5 — Orphan / Build Path
-**Result**: ❌ **FAIL**
+**Result**: ✅ **PASS**
 
-- **V3 trigger**: Three new runtime modules have no **named** caller in their phase's affected-files list:
+| Proposed File | Entry Point Connection | Status |
+|---|---|:---:|
+| `arena/src/persistence/db.ts` | `server.ts` boot; `match-store.ts`; `operator.ts` (named) | Connected |
+| `arena/src/persistence/schema.sql` | `db.ts:initDb` (named) | Connected |
+| `arena/src/persistence/match-store.ts` | `router.ts` match routes (named) | Connected |
+| `arena/src/identity/operator.ts` | `router.ts` operator + agent-version routes (named) | Connected |
+| `arena/src/identity/fingerprint.ts` | `router.ts` agent-version handler (named) | Connected |
+| `arena/src/identity/similarity.ts` | `router.ts` agent-version handler (named) | Connected |
+| `arena/src/identity/rate-limit.ts` | `router.ts` POST `/api/arena/operators` handler (named) | Connected |
+| `arena/src/router.ts` (MOD) | `server.ts:mount(app, db)` (named) | Connected |
+| `arena/src/server.ts` (MOD) | entry point; listed in Phase-1 affected files | Connected |
+| `arena/src/shared/types.ts` (MOD) | imported by all new files (named) | Connected |
 
-| Proposed File | Declared Role | Named Caller | Status |
-|---|---|---|---|
-| `arena/src/matchmaking/ladder-loop.ts` | "runs every 30s" | none (server.ts not in affected files) | ORPHAN |
-| `arena/src/tournaments/scheduler.ts` | "cron-style check every 60s" | none (server.ts not in affected files) | ORPHAN |
-| `arena/src/rank/apply.ts` | "the only place that writes rank" | none — match-completion caller unnamed | ORPHAN |
-| `arena/src/persistence/db.ts` | repo wiring | (router handlers, implicitly) | Connected (indirect) |
-| `arena/src/persistence/match-store.ts` | match CRUD | router handlers (listed) | Connected |
-| `arena/src/identity/*` | identity ops | router handlers (listed) | Connected |
-| `arena/src/matchmaking/presence.ts` | WS-presence registry | gateway (named) | Connected |
-| `arena/src/matchmaking/pairing.ts` | pure pairing fn | `ladder-loop.ts` (itself orphan) | Transitive orphan |
-| `arena/src/tournaments/swiss.ts` | pure pairing fn | `runner.ts` | Connected |
-| `arena/src/tournaments/knockout.ts` | pure pairing fn | `runner.ts` | Connected |
-| `arena/src/tournaments/runner.ts` | orchestrator | `scheduler.ts` (itself orphan) | Transitive orphan |
-
-v13 Mandatory Guard: *"Every new runtime module has at least one **named** caller in the plan's affected-files list."* "Implicit server bootstrap" does not satisfy.
+No background/scheduled modules in Plan A v2 (those remain deferred to Plan B). v13 + v16 + v17 Mandatory Orphan Guards all satisfied.
 
 #### Pass 6 — Macro-Level Architecture
-**Result**: ✅ PASS (with note)
+**Result**: ✅ **PASS**
 
-- Layering is clean and unidirectional: zo.space UI → arena HTTP/WS → repo → SQLite. No reverse imports implied.
-- Shared types centralized in `arena/src/shared/types.ts`. ✅
-- No cyclic dependency graph implied by the import topology.
-- One-ELO-stream discipline with origin-tagged matches is a genuine simple-made-easy win (single rank writer).
-- Fingerprint is pure and deterministic. ✅
-- **Note (not a VETO)**: cross-cutting auth is not centralized — Pass 1's finding means there is no named auth middleware or per-route check pattern. Pass 6 would flag this if the plan proposed per-route ad-hoc auth; since auth is entirely unspecified, the failure lives in Pass 1.
+- [x] Clear module boundaries: `persistence/` owns DB + schema; `identity/` owns operators + fingerprint + similarity + rate-limit; `shared/types.ts` is sole shared-types site.
+- [x] No cyclic dependencies: `identity/rate-limit.ts` imports nothing from `persistence/` (memory-only); `identity/operator.ts` imports `persistence/db.ts`; `persistence/` imports nothing from `identity/`.
+- [x] Layering direction enforced: `server.ts` → `router.ts` → (`identity/*` | `persistence/*`) → `db.ts`. Unidirectional.
+- [x] Single source of truth for shared types (`shared/types.ts`).
+- [x] Cross-cutting concerns: rate-limit, auth, fingerprint, similarity each have a single named home module. Auth remains inline per-route (YAGNI, documented).
+- [x] No duplicated domain logic: `fingerprint()` pure, single site; `similarity()` pure, single site; `RateLimiter.check()` single site; DB instance single, closure-injected.
+- [x] Build path is intentional: single entry `server.ts`, closure-injected `db`, single `mount(app, db)` call.
+
+Macro-architectural simplicity preserved from v1. Addition of `rate-limit.ts` to the `identity/` domain is the correct co-location (identity owns both the issuance gate and the issuance primitive).
 
 ---
 
 ### Violations Found
 
-| ID | Category | Location | Description |
-|---|---|---|---|
-| **V1** | V-RAZOR-GUARD-3 | Plan-wide | No Razor Budget Summary table. Mandatory per v14 shadow genome guard. |
-| **V2** | V-RAZOR-GUARD-1 | Phase 1/2/3 modify of `arena/src/router.ts`; Phase 1 modify of `arena/src/shared/types.ts`; Phase 2 modify of `arena/src/persistence/schema.sql` | Current line counts for files named for modification are not stated in plan. Actual verified: router.ts=15L, shared/types.ts=60L, server.ts=32L. Mandatory per v14 shadow genome guard. |
-| **V3** | V-ORPHAN (v13) | Phase 2 `matchmaking/ladder-loop.ts`, `tournaments/scheduler.ts`; Phase 3 `rank/apply.ts` | New runtime modules have no named caller in affected-files list. v13 Mandatory Guard requires named caller. Transitive: `pairing.ts` and `runner.ts` are reached only through orphaned modules. |
-| **V4** | V-SECURITY-L2 | Phase 1 routes `POST /api/arena/operators`, `POST /api/arena/agent-versions`; Phase 2 routes `POST /api/arena/tournaments`, `POST /api/arena/tournaments/:id/signup` | Write endpoints on a ranked-competitive system define no authorization model. Who can register, who can create tournaments, how operator-token-authenticated requests are enforced (middleware vs per-route) is unspecified. Hash algorithm for stored auth tokens is unspecified. |
+**None.** All six passes clear. v16 and v17 Mandatory Guards satisfied in full.
 
-### Required Remediation (to re-submit for PASS)
+### Remediation
 
-1. **Add Razor Budget Summary table** enumerating every file the plan creates or modifies, with current-line-count (for modifies; 0 for creates) and projected-size-at-phase-exit. Include at minimum:
-   - `arena/src/router.ts` — current 15L, projected ≤ X L after Phase 3 additions of ~12 route dispatches.
-   - `arena/src/shared/types.ts` — current 60L, projected ≤ X L after new type exports.
-   - `arena/src/server.ts` — current 32L, projected ≤ X L after mounting loops (see V3 remediation).
-   - `arena/src/persistence/schema.sql` — 0L Phase 1, projected ≤ X L after Phase 2 tournament tables.
-   - Each of the ~17 new files with a projected ≤ X L target under the 250L ceiling.
+N/A — PASS.
 
-2. **State current line counts in-line in each Phase's Affected Files section** for every modified file, not only in the summary table.
+### Authorizations
 
-3. **Name the caller of every orphaned module explicitly:**
-   - Add `arena/src/server.ts` to Phase-2 affected files and spec the modification: "mount ladder loop via `startLadderLoop(registry, store)` at boot; mount tournament scheduler via `startTournamentScheduler(store)` at boot." State current 32L and projected size.
-   - Add the match-completion caller for `rank/apply.ts`. Either `arena/src/engine/match.ts` or the ladder/tournament runner must name `applyMatchResult(matchRecord)` as its post-match hook — list that file in Phase-3 affected files with its modification described.
-   - `pairing.ts` becomes non-orphan once `ladder-loop.ts` has a named caller. `runner.ts` becomes non-orphan once `scheduler.ts` does.
-
-4. **Specify the authorization model for every write endpoint.** At minimum:
-   - Operator registration: either (a) open with aggressive rate-limit and handle-reservation policy, (b) admin-bootstrap only with signed invite tickets, or (c) captcha/challenge-gated. Pick one and state the enforcement site (middleware name, route-level check, or external gate).
-   - Agent-version registration: must require the operator's auth token; specify the header (`Authorization: Bearer <token>`) and the verification module (e.g., `identity/auth-middleware.ts`).
-   - Tournament creation: admin-only vs operator-self-service. If admin-only, state how admins are designated (env var handle list, separate table, etc.).
-   - Tournament signup: operator-token authenticated; specify enforcement site.
-   - Auth token hash: state algorithm (e.g., bcrypt cost=12, argon2id default params, or sha256 with per-row salt). SHA256-without-salt is unacceptable for L2.
-   - List `arena/src/identity/auth-middleware.ts` (or equivalent) as a new Phase-1 file if the enforcement site is middleware.
+- Implementation may proceed on Plan A v2.
+- Plan B drafting **MAY begin in parallel** once Plan A v2 Phase 1 is sealed, since Plan B's substrate dependency is Phase 1's schema + db.ts. Plan B audit will treat v2's persistence surface as fixed.
+- Phase gate: each phase must seal via `/qor-substantiate` before the next phase's builder tasks are queued.
 
 ### Verdict Hash
 
 This report sealed pre-write; chain hash computed by ledger entry.
+
+**Content Hash**: `sha256:audit-v18-hexawars-scope-2-plan-a-v2`
+**Previous Chain Hash**: `sha256:29ec432c102fa055cdb6bc77a3ee2b818f8e1800ac77bad172b20a728efd893f` (v17 VETO)
 
 ---
 _This verdict is binding._
