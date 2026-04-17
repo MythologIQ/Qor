@@ -8,3 +8,13 @@ dist/
 .DS_Store
 *.tgz
 bun.lock
+
+# Neo4j runtime data (must never be committed — binary store files are huge and ephemeral)
+.neo4j/
+Projects/continuous/Qor/data/neo4j/
+Projects/continuous/Qor/continuum/.neo4j/
+
+# Local DBs and runtime session dumps
+data/zoqore.duckdb*
+forge/.codex/
+**/.codex/sessions/
