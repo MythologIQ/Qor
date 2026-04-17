@@ -1,5 +1,34 @@
 # SHADOW_GENOME
 
+## 2026-04-17T19:56:00Z — audit-v16-hexawars-scope-2-veto
+
+**Verdict**: VETO
+**Chain Hash**: `sha256:993cba2fecaacd8df6e374b84086935c30d075fb540530dc98548e77cd5c2285`
+
+### Failure Pattern
+
+Scope-2 blueprint for HexaWars (identity + matchmaking + rank) is architecturally coherent and proposes clean layering, but repeats two failure modes already coded into this project's Mandatory Guards (v13 and v14), adds a new orphan-caller failure for scheduled background loops, and ships a ranked-competitive write surface with no declared authorization model. The core pattern: plan author treats "new file" as exempt from the Razor Budget table and treats "runs on a schedule" as exempt from the named-caller rule. Neither exemption exists.
+
+### Bound Violations
+
+- **V1 (V-RAZOR-GUARD-3)**: No Razor Budget Summary table anywhere in the plan. Directly violates v14 Mandatory Guard: *"The Razor Budget Summary table enumerates every file the plan modifies, not only files it creates."*
+- **V2 (V-RAZOR-GUARD-1)**: `arena/src/router.ts` (actual 15L), `arena/src/shared/types.ts` (actual 60L), `arena/src/persistence/schema.sql` (Phase-2 modify of Phase-1 created file) — no current-line-count statement. Violates v14 Mandatory Guard: *"Every existing file named for modification has a current-line-count fact stated in the plan (not inferred)."*
+- **V3 (V-ORPHAN)**: `matchmaking/ladder-loop.ts`, `tournaments/scheduler.ts`, and `rank/apply.ts` have no named caller. `server.ts` (actual 32L) is never added to affected files despite being the implicit boot site for the two scheduled loops. `rank/apply.ts` is declared "the only place that writes rank" but the match-completion hook site is unnamed. Violates v13 Mandatory Guard: *"Every new runtime module has at least one **named** caller in the plan's affected-files list."* Transitive orphans: `pairing.ts` (only reached via `ladder-loop.ts`), `runner.ts` (only reached via `scheduler.ts`).
+- **V4 (V-SECURITY-L2)**: Four ranked-competitive write endpoints (`POST /api/arena/operators`, `POST /api/arena/agent-versions`, `POST /api/arena/tournaments`, `POST /api/arena/tournaments/:id/signup`) declare no authorization model. Who can register, who can create tournaments, how operator-token auth is enforced (middleware or per-route), and which hash algorithm protects stored tokens are all unspecified. For a system whose ledger-sealed rank output is the product, this is load-bearing.
+
+### Mandatory Guard
+
+Do not issue PASS on future plans that introduce matchmaking, ranking, tournament, identity, or any ranked-competitive write surface unless:
+
+- The Razor Budget Summary table is present, enumerates every file the plan creates or modifies (not only creates), and states current-line-count (0 for creates) and projected-size-at-phase-exit for each row.
+- Every scheduled/background runtime module (`*-loop.ts`, `*-scheduler.ts`, `*-worker.ts`, `*-cron.ts`) has `server.ts` — or whatever the actual boot file is — listed in the phase's affected-files section, with the exact mount-point function call specified (e.g., "invoke `startLadderLoop(registry, store)` at boot").
+- Every "single writer" module (ranking, score, rating, stat-update) has a named post-event caller in the plan's affected-files list. "Triggered on match completion" without naming the file that does the triggering is an orphan.
+- Every write endpoint on a system that produces a public ranking has a declared authorization enforcement site (middleware filename OR per-route check pattern), a declared auth-token hash algorithm (bcrypt / argon2id / sha256+salt), and a declared answer to "who can invoke this" (open-with-rate-limit / operator-token-authenticated / admin-gated-by-handle-list / admin-gated-by-table).
+
+### Remediation Attempted
+
+Not yet. Plan author (Claude Opus 4.6, interactive) was notified of VETO via AUDIT_REPORT.md with 4 enumerated remediation steps. Plan must be revised and re-submitted via `/qor-audit` before entering any builder queue.
+
 ## 2026-04-16T05:20:00Z — audit-v14-continuum-memory-ipc-v2-veto
 
 **Verdict**: VETO
@@ -440,3 +469,17 @@ Do not issue PASS on future harness expansions unless:
 **Root cause:** Sentinel's T4 probe recomputes the full META_LEDGER hash chain but the stored Merkle seal at the 2026-04-05 SUBSTANTIATION section was never computed over the canonical chain at creation time. The seal is a historical artifact, not a drift signal. Confirmed by review tick 11 diagnosis (2026-04-17T03:45:00Z).
 **Future behavior:** Review tier MUST exclude T4-ledger-integrity FAIL entries with the `1cfee42b` seal string from `shadow_genome_severity_sum`. These are explicitly pre-resolved and carry severity=0 for scoring purposes.
 **Ledger entry:** This resolution is canonical. Do not revive unless a NEW T4 failure with a different seal hash appears.
+
+- **tick=68** | spec_defect | severity=4 | task-068-ui-smoke | Arena /arena returns 302→404 because static-routes.ts rewriting is outside task writes scope (task requires only ui-smoke.test.ts creation; root cause is pre-existing server routing mismatch)
+
+- tick=68 | severity=4 | spec_defect | task-068-ui-smoke | 2026-04-17T18:47:35Z | arena server serves /arena.html as static but static-routes.ts rewrites /arena to /arena.html and serves from /public/arena.html which returns 404 (path mismatch). The arena server process appears to not be the one registered to port 4200. 2 tests still failing: session rejects playing→forfeit, match-runner timeout paths.
+
+## Sentinel Escalation T5 — tick=181
+- **2026-04-17T18:59:50Z** | severity=3 | escalation | Sentinel T5-shadow-genome probe: tail-20 severity sum=16 (>=10 threshold). Entries: task-033 (sev4), task-047 (sev4), task-068 (sev4×2). Escalation threshold breached. Queue remediation request.
+
+## Builder Failures
+- 2026-04-17T19:05:00Z | builder | tick=68 | task-068-ui-smoke | blocked_on_deps | blocked_by=task-067 | severity=1
+
+- **2026-04-17T20:07:20Z** builder tick=68 `task-068-ui-smoke` **blocked_on_deps** severity=1 — depends on task-067 which has sentinel-proxy success entry but no canonical builder status.jsonl entry. Sentinel proxies filled in ticks 65-67. Pointer not advanced.
+## Sentinel Escalation T5 — tick=189
+- **2026-04-18T08:00:00Z** | severity=2 | escalation | Sentinel T5-shadow-genome probe: tail-20 severity sum=13 (>=10 threshold). Escalation threshold breached. Queue remediation request.

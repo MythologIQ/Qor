@@ -1,237 +1,135 @@
-# AUDIT_REPORT — audit-v15-continuum-memory-ipc-v3
+# AUDIT REPORT — audit-v16-hexawars-scope-2
 
-**Date**: 2026-04-16T07:30:00Z
-**Blueprint**: `docs/plans/2026-04-16-continuum-memory-service-ipc-v3.md`
-**Supersedes Audit**: `audit-v14-continuum-memory-ipc-v2` (VETO)
-**Risk Grade**: L3
-**Auditor**: QoreLogic Judge
-**Verdict**: ✅ **PASS**
-
----
-
-## Pass Summary
-
-| Pass | Result |
-|---|---|
-| Security (L3) | PASS |
-| Ghost UI | N/A (no UI) |
-| Section 4 Razor | PASS |
-| Dependency | PASS |
-| Macro-Level Architecture | PASS |
-| Orphan Detection | PASS |
-| v13 Mandatory Guard | PASS |
-| v14 Mandatory Guard | PASS (intent-satisfied; see F-v3-1) |
+**Tribunal Date**: 2026-04-17T19:56:00Z
+**Target**: `docs/plans/2026-04-17-hexawars-scope-2-depth-expansion.md`
+**Blueprint Hash**: `sha256:5fd9c751b527f70d22fb700deb8b705c7363e81f10624ef25e1b5cd75b96d473`
+**Risk Grade**: **L2** (architecture change + ranked-competitive write surface)
+**Auditor**: The QorLogic Judge
+**Supersedes**: `audit-v15-continuum-memory-ipc-v3` (PASS)
 
 ---
 
-## v14 Remediation Verification
-
-| v14 Violation | v3 Remediation | Verified |
-|---|---|---|
-| V-ARCH-6 (LearningPacket contract mismatch) | NEW `ExecutionEventSchema` in `memory/ops/execution-events.ts`. Does not touch `LearningPacket`. `events.execution.record` is the new op. | ✅ `LearningPacket` schema untouched (v3 never lists `learning-schema.ts` in affected files). Zod-validated `ExecutionEvent` is a distinct shape. Factory `createExecutionEvent(intent, result)` is the only construction path. |
-| V-RAZOR-2 (runtime.ts over ceiling, 333L) | Extract `runtime/dependencies.ts` (~80L) + `runtime/tick-persistence.ts` (~100L). `runtime.ts` drops to ~200L. New IPC-client/store wiring lands in `dependencies.ts`, not `runtime.ts`. | ✅ Extraction math: 333 − 80 − 100 + ~5 (wiring delta) ≈ 158–200L, under 250L ceiling. `runtime.ts` now enumerated in Razor Budget Summary (line 250). |
-| F1 (continuum-store.ts budget inflated) | Corrected: 23 one-line delegators × ~3L ≈ 70L. Budget set to 100L (67%). | ✅ Arithmetic consistent: 2 imports + class header + 21 learning delegators + 2 execution delegators, each 3L = ~75L. 100L budget leaves realistic headroom. |
-| F2 (schema.ts caller unnamed) | `continuum/src/service/server.ts` startup invokes `initializeSchema()`. Added to Phase 1 affected files (plan line 47). | ✅ Server.ts is current 134L, modification adds ~15L (~+11%). Init before IPC listen (fail-closed). |
-| F3 (≤95% ceiling self-violation) | `semantic-graph.ts` drops to 180L/72% via extraction of `semantic-helpers.ts` (~80L). `continuum-store.ts` corrected to 100L/67% per F1. | ✅ All files ≤95%; max is `ipc/server.ts` at 88% (decomposition target `ipc/dispatch-loop.ts` pre-declared). |
+## VERDICT: ❌ **VETO**
 
 ---
 
-## Pass 1: Security (L3 Scrutiny)
+### Executive Summary
 
-| Control | Status |
-|---|---|
-| Driver credentials fail-closed on missing env | ✅ (`memory/driver.ts` throws `MissingEnvError`) |
-| Zero hardcoded credential fallbacks in runtime code | ✅ (`graph-api.ts` `"victor-memory-dev"` deleted; test `graph-api-no-fallback.test.ts` scans for zero occurrences) |
-| IPC auth via first-frame token (not query param; not post-connection) | ✅ (plan line 144; 2s deadline) |
-| `timingSafeEqual` for token comparison | ✅ (plan line 134; dedicated test `auth-timing-safe.test.ts`) |
-| UDS-only transport (no TCP) | ✅ (plan line 142; test `server-unix-only.test.ts` asserts TCP binding panics) |
-| Socket permissions (0600 + 0700 parent dir) | ✅ (test `server-socket-permissions.test.ts`) |
-| Agent ID server-resolved from token (never client-supplied) | ✅ (plan line 144) |
-| Default-deny ACL with structured AccessDeniedError | ✅ (no silent denials) |
-| Partition single-source stamping (server-side, from `agentCtx.agentId`) | ✅ (plan line 92; resolves v14 dual-stamping concern) |
-| `audit` partition append-only enforcement | ✅ (test `access-policy.test.ts`) |
+The blueprint proposes three-phase depth expansion for HexaWars (identity + matchmaking + ranking) with a coherent simple-made-easy decomposition and well-scoped test coverage. However, it fails two of this project's standing Mandatory Guards (v13 and v14 shadow genome entries) by omitting the Razor Budget Summary table and by naming three existing files for modification without stating their current line counts. It further introduces three new runtime modules with no named caller in any phase's affected-files list, and its ranked-competitive write endpoints define no authorization model. These are load-bearing defects in a ranked system whose ledger must be credible; the plan cannot proceed to implementation until remediated.
 
-**Security: PASS** (F-v3-2 below)
+### Audit Results
 
----
+#### Pass 1 — Security (L2 Scrutiny)
+**Result**: ❌ **FAIL**
 
-## Pass 2: Ghost UI
+- **V4 trigger**: Write endpoints `POST /api/arena/operators`, `POST /api/arena/agent-versions`, `POST /api/arena/tournaments`, `POST /api/arena/tournaments/:id/signup` have no declared authorization model. Who can create an operator — any anonymous HTTP client, or does registration require a signed ticket? Can any operator create a tournament, or is that admin-gated? A ranked-competitive system's ledger credibility depends on answering these.
+- No hardcoded credentials. ✅
+- No placeholder auth stubs. ✅
+- No `// security: disabled`. ✅
+- Auth token generation path stated (generated on create, shown once, stored hashed) — ✅ concept — but hash algorithm, iteration count, and enforcement site (middleware vs per-route check) are unspecified.
 
-No UI surfaces in this plan. **N/A — PASS**
+#### Pass 2 — Ghost UI
+**Result**: ✅ PASS
 
----
+Every zo.space route in Phase 3 connects to a named arena API endpoint. Replay scrubber is a client-side control over server-streamed `match_events` — data path is defined. No "coming soon" or placeholder UI. Tournament signup is API-only for Scope-2 (no UI in this plan), which is a product-scope decision, not a ghost path.
 
-## Pass 3: Section 4 Razor
+#### Pass 3 — Section 4 Razor
+**Result**: ❌ **FAIL**
 
-### Proposed (new) Files
+- **V1 trigger**: No Razor Budget Summary table exists anywhere in the plan. v14 Mandatory Guard: *"The Razor Budget Summary table enumerates every file the plan modifies, not only files it creates."*
+- **V2 trigger**: Current line counts for files named for modification are not stated. Actual (verified now): `arena/src/router.ts` = 15L, `arena/src/shared/types.ts` = 60L, `arena/src/server.ts` = 32L. v14 Mandatory Guard: *"Every existing file named for modification has a current-line-count fact stated in the plan (not inferred)."*
+- Per-file projected sizes for the ~17 new files are absent. "Pure functions," "single transaction" prose is not a size target.
+- No file is at-ceiling today, so V-RAZOR-GUARD-2 (decomposition-before-addition) does not itself fire — but the absence of the budget table means the auditor cannot verify that it won't fire after Phase 3 (router.ts absorbs ~12 new route dispatches across three phases and is modified in every phase).
 
-| File | Budget | Ceiling | % | Status |
-|---|---|---|---|---|
-| `memory/driver.ts` | 60 | 80 | 75% | OK |
-| `memory/partitions.ts` | 40 | 60 | 67% | OK |
-| `memory/access-policy.ts` | 100 | 150 | 67% | OK |
-| `memory/schema.ts` | 90 | 120 | 75% | OK |
-| `memory/ops/learning-events.ts` | 180 | 250 | 72% | OK |
-| `memory/ops/execution-events.ts` | 120 | 200 | 60% | OK |
-| `memory/ops/semantic-graph.ts` | 180 | 250 | 72% | OK (was 96%) |
-| `memory/ops/semantic-helpers.ts` | 80 | 150 | 53% | OK |
-| `memory/ops/search.ts` | 200 | 250 | 80% | OK |
-| `memory/ops/registry.ts` | 90 | 150 | 60% | OK |
-| `ipc/protocol.ts` | 70 | 100 | 70% | OK |
-| `ipc/auth.ts` | 60 | 80 | 75% | OK |
-| `ipc/server.ts` | 220 | 250 | 88% | Near-ceiling; decomposition target pre-declared |
-| `ipc/client.ts` | 200 | 250 | 80% | OK |
-| `continuum/client/index.ts` | 40 | 60 | 67% | OK |
-| `victor/kernel/memory/continuum-store.ts` | 100 | 150 | 67% | OK (was 96%) |
-| `victor/heartbeat/runtime/dependencies.ts` | 80 | 150 | 53% | OK |
-| `victor/heartbeat/runtime/tick-persistence.ts` | 100 | 150 | 67% | OK |
+| Razor Check | Limit | Blueprint States | Status |
+|---|---|---|---|
+| Max function lines | 40 | not stated per-fn | FAIL |
+| Max file lines | 250 | not stated per-file | FAIL |
+| Max nesting depth | 3 | not stated | FAIL |
+| Nested ternaries | 0 | not stated | FAIL |
+| Budget table present | required | absent | FAIL |
 
-### Modified Files
+#### Pass 4 — Dependency
+**Result**: ✅ PASS
 
-| File | Current | Target | Ceiling | Δ | Status |
-|---|---|---|---|---|---|
-| `continuum/src/service/server.ts` | 134 | ~149 | 250 | +15 | OK |
-| `continuum/src/ingest/memory-to-graph.ts` | 374 | ~200 | 250 | −174 | OK (reduces) |
-| `continuum/src/derive/semantic-derive.ts` | 172 | ~150 | 250 | −22 | OK |
-| `continuum/src/derive/procedural-mine.ts` | 188 | ~160 | 250 | −28 | OK |
-| `continuum/src/service/graph-api.ts` | 159 | ~120 | 250 | −39 | OK |
-| `victor/src/kernel/memory/store.ts` | 38 | ~70 | 250 | +32 | OK |
-| `victor/src/heartbeat/runtime.ts` | **333** | **~200** | 250 | −133 | ✅ Decomposition brings under ceiling |
-| `victor/src/heartbeat/execution-dispatch.ts` | 102 | ~140 | 250 | +38 | OK |
+- SQLite: Bun has first-party `bun:sqlite`. No new package required. Plan does not explicitly state this — a minor documentation gap but not a dependency violation.
+- No hallucinated packages. No packages proposed whose capability is < 10 lines of vanilla code.
+- All new logic (ELO, Swiss pairing, knockout, fingerprint normalization, Jaccard similarity) is in-tree, no library pulls.
 
-### Deleted Files
+| Package | Justification | < 10 Lines Vanilla? | Verdict |
+|---|---|---|---|
+| `bun:sqlite` | Phase-1 persistence | No (full RDBMS) | PASS |
+| (no new external deps) | — | — | PASS |
 
-| File | Current | Justification |
-|---|---|---|
-| `victor/src/kernel/memory/neo4j-store.ts` | 962 | Dead code, grep-confirmed zero runtime consumers |
+#### Pass 5 — Orphan / Build Path
+**Result**: ❌ **FAIL**
 
-**All files ≤95% of ceiling.** Max is `ipc/server.ts` at 88% with pre-declared decomposition target (`ipc/dispatch-loop.ts`). ≤95% rule satisfied.
+- **V3 trigger**: Three new runtime modules have no **named** caller in their phase's affected-files list:
 
-**Razor: PASS** (F-v3-3 pre-existing function ceiling violation disclosed)
+| Proposed File | Declared Role | Named Caller | Status |
+|---|---|---|---|
+| `arena/src/matchmaking/ladder-loop.ts` | "runs every 30s" | none (server.ts not in affected files) | ORPHAN |
+| `arena/src/tournaments/scheduler.ts` | "cron-style check every 60s" | none (server.ts not in affected files) | ORPHAN |
+| `arena/src/rank/apply.ts` | "the only place that writes rank" | none — match-completion caller unnamed | ORPHAN |
+| `arena/src/persistence/db.ts` | repo wiring | (router handlers, implicitly) | Connected (indirect) |
+| `arena/src/persistence/match-store.ts` | match CRUD | router handlers (listed) | Connected |
+| `arena/src/identity/*` | identity ops | router handlers (listed) | Connected |
+| `arena/src/matchmaking/presence.ts` | WS-presence registry | gateway (named) | Connected |
+| `arena/src/matchmaking/pairing.ts` | pure pairing fn | `ladder-loop.ts` (itself orphan) | Transitive orphan |
+| `arena/src/tournaments/swiss.ts` | pure pairing fn | `runner.ts` | Connected |
+| `arena/src/tournaments/knockout.ts` | pure pairing fn | `runner.ts` | Connected |
+| `arena/src/tournaments/runner.ts` | orchestrator | `scheduler.ts` (itself orphan) | Transitive orphan |
 
----
+v13 Mandatory Guard: *"Every new runtime module has at least one **named** caller in the plan's affected-files list."* "Implicit server bootstrap" does not satisfy.
 
-## Pass 4: Dependency
+#### Pass 6 — Macro-Level Architecture
+**Result**: ✅ PASS (with note)
 
-| Package | Justification | Verdict |
-|---|---|---|
-| `neo4j-driver` | Existing dep, no change | PASS |
-| `zod` | Existing dep (already used in `learning-schema.ts`) | PASS |
-| `node:crypto.timingSafeEqual` | Stdlib | PASS |
-| `Bun.listen()` (UDS) | Runtime built-in | PASS |
-
-No new npm packages. **Dependency: PASS**
+- Layering is clean and unidirectional: zo.space UI → arena HTTP/WS → repo → SQLite. No reverse imports implied.
+- Shared types centralized in `arena/src/shared/types.ts`. ✅
+- No cyclic dependency graph implied by the import topology.
+- One-ELO-stream discipline with origin-tagged matches is a genuine simple-made-easy win (single rank writer).
+- Fingerprint is pure and deterministic. ✅
+- **Note (not a VETO)**: cross-cutting auth is not centralized — Pass 1's finding means there is no named auth middleware or per-route check pattern. Pass 6 would flag this if the plan proposed per-route ad-hoc auth; since auth is entirely unspecified, the failure lives in Pass 1.
 
 ---
 
-## Pass 5: Macro-Level Architecture
+### Violations Found
 
-| Check | Status |
-|---|---|
-| Clear module boundaries | ✅ |
-| No cyclic dependencies | ✅ |
-| Layering direction (kernel → ipc/client → ipc/server → ops/registry → ops/* → driver) | ✅ |
-| Single source of truth (`OP_TABLE` in `memory/ops/registry.ts`) | ✅ |
-| Cross-cutting centralized (auth in `ipc/auth.ts`, ACL in `memory/access-policy.ts`) | ✅ |
-| No duplicated domain logic | ✅ |
-| Build path intentional (factory pattern via `createLearningStore` / `createExecutionEventStore`) | ✅ |
-| **Type contract coherence** | ✅ `LearningPacket` untouched; `ExecutionEvent` is a distinct Zod schema; `OriginPhase` / `TriggerType` enums not forced to absorb execution-dispatch semantics |
-| Phase ordering (no forward refs) | ✅ Plan §Phase Ordering Verified |
-| Partition-stamping single-site | ✅ Server-side op handler from `agentCtx` |
-| Fail-open on memory (per doctrine), fail-closed on governance | ✅ `execution-dispatch` logs+swallows memory errors; governance never loosened |
+| ID | Category | Location | Description |
+|---|---|---|---|
+| **V1** | V-RAZOR-GUARD-3 | Plan-wide | No Razor Budget Summary table. Mandatory per v14 shadow genome guard. |
+| **V2** | V-RAZOR-GUARD-1 | Phase 1/2/3 modify of `arena/src/router.ts`; Phase 1 modify of `arena/src/shared/types.ts`; Phase 2 modify of `arena/src/persistence/schema.sql` | Current line counts for files named for modification are not stated in plan. Actual verified: router.ts=15L, shared/types.ts=60L, server.ts=32L. Mandatory per v14 shadow genome guard. |
+| **V3** | V-ORPHAN (v13) | Phase 2 `matchmaking/ladder-loop.ts`, `tournaments/scheduler.ts`; Phase 3 `rank/apply.ts` | New runtime modules have no named caller in affected-files list. v13 Mandatory Guard requires named caller. Transitive: `pairing.ts` and `runner.ts` are reached only through orphaned modules. |
+| **V4** | V-SECURITY-L2 | Phase 1 routes `POST /api/arena/operators`, `POST /api/arena/agent-versions`; Phase 2 routes `POST /api/arena/tournaments`, `POST /api/arena/tournaments/:id/signup` | Write endpoints on a ranked-competitive system define no authorization model. Who can register, who can create tournaments, how operator-token-authenticated requests are enforced (middleware vs per-route) is unspecified. Hash algorithm for stored auth tokens is unspecified. |
 
-**Macro Architecture: PASS**
+### Required Remediation (to re-submit for PASS)
 
----
+1. **Add Razor Budget Summary table** enumerating every file the plan creates or modifies, with current-line-count (for modifies; 0 for creates) and projected-size-at-phase-exit. Include at minimum:
+   - `arena/src/router.ts` — current 15L, projected ≤ X L after Phase 3 additions of ~12 route dispatches.
+   - `arena/src/shared/types.ts` — current 60L, projected ≤ X L after new type exports.
+   - `arena/src/server.ts` — current 32L, projected ≤ X L after mounting loops (see V3 remediation).
+   - `arena/src/persistence/schema.sql` — 0L Phase 1, projected ≤ X L after Phase 2 tournament tables.
+   - Each of the ~17 new files with a projected ≤ X L target under the 250L ceiling.
 
-## Pass 6: Orphan Detection
+2. **State current line counts in-line in each Phase's Affected Files section** for every modified file, not only in the summary table.
 
-| Proposed/Modified File | Named Caller | Status |
-|---|---|---|
-| `memory/driver.ts` | `memory/schema.ts`, `memory/ops/*` | Connected |
-| `memory/partitions.ts` | `memory/access-policy.ts`, `memory/ops/*` | Connected |
-| `memory/access-policy.ts` | `memory/ops/registry.ts` (wraps every op) | Connected |
-| `memory/schema.ts` | **`continuum/src/service/server.ts`** startup | Connected (F2 resolved) |
-| `memory/ops/learning-events.ts` | `memory/ops/registry.ts` | Connected |
-| `memory/ops/execution-events.ts` | `memory/ops/registry.ts`; factory consumed by `execution-dispatch.ts` | Connected |
-| `memory/ops/semantic-graph.ts` | `registry.ts`, `ingest/memory-to-graph.ts`, `derive/*` | Connected |
-| `memory/ops/semantic-helpers.ts` | `memory/ops/semantic-graph.ts` | Connected |
-| `memory/ops/search.ts` | `registry.ts`, `ingest/*`, `derive/*`, `service/graph-api.ts` | Connected |
-| `memory/ops/registry.ts` | `ipc/server.ts` | Connected |
-| `ipc/protocol.ts` | `ipc/server.ts`, `ipc/client.ts` | Connected |
-| `ipc/auth.ts` | `ipc/server.ts` | Connected |
-| `ipc/server.ts` | `continuum/src/service/server.ts` | Connected |
-| `ipc/client.ts` | `continuum/client/index.ts` | Connected |
-| `continuum/client/index.ts` | `victor/src/kernel/memory/continuum-store.ts` | Connected |
-| `victor/kernel/memory/continuum-store.ts` | `victor/src/kernel/memory/store.ts` factory | Connected |
-| `victor/heartbeat/runtime/dependencies.ts` | `victor/src/heartbeat/runtime.ts` | Connected |
-| `victor/heartbeat/runtime/tick-persistence.ts` | `victor/src/heartbeat/runtime.ts` | Connected |
+3. **Name the caller of every orphaned module explicitly:**
+   - Add `arena/src/server.ts` to Phase-2 affected files and spec the modification: "mount ladder loop via `startLadderLoop(registry, store)` at boot; mount tournament scheduler via `startTournamentScheduler(store)` at boot." State current 32L and projected size.
+   - Add the match-completion caller for `rank/apply.ts`. Either `arena/src/engine/match.ts` or the ladder/tournament runner must name `applyMatchResult(matchRecord)` as its post-match hook — list that file in Phase-3 affected files with its modification described.
+   - `pairing.ts` becomes non-orphan once `ladder-loop.ts` has a named caller. `runner.ts` becomes non-orphan once `scheduler.ts` does.
 
-All proposed/new files have named callers. **Orphan: PASS**
+4. **Specify the authorization model for every write endpoint.** At minimum:
+   - Operator registration: either (a) open with aggressive rate-limit and handle-reservation policy, (b) admin-bootstrap only with signed invite tickets, or (c) captcha/challenge-gated. Pick one and state the enforcement site (middleware name, route-level check, or external gate).
+   - Agent-version registration: must require the operator's auth token; specify the header (`Authorization: Bearer <token>`) and the verification module (e.g., `identity/auth-middleware.ts`).
+   - Tournament creation: admin-only vs operator-self-service. If admin-only, state how admins are designated (env var handle list, separate table, etc.).
+   - Tournament signup: operator-token authenticated; specify enforcement site.
+   - Auth token hash: state algorithm (e.g., bcrypt cost=12, argon2id default params, or sha256 with per-row salt). SHA256-without-salt is unacceptable for L2.
+   - List `arena/src/identity/auth-middleware.ts` (or equivalent) as a new Phase-1 file if the enforcement site is middleware.
+
+### Verdict Hash
+
+This report sealed pre-write; chain hash computed by ledger entry.
 
 ---
-
-## Non-Blocking Flags (F-Class)
-
-### F-v3-1 — Current-line-count facts implicit rather than explicit
-
-**Severity**: F (disclosure-form)
-**Location**: Plan §Affected Files (various)
-
-v14 mandatory guard 3.1: *"Every existing file named for modification has a current-line-count fact stated in the plan (not inferred)."* The v3 plan does not explicitly state `runtime.ts is currently 333L`. It states the target post-decomposition budget (~200L) and the extracted module budgets (80 + 100L). Mathematical consistency implies current ≈330L, which matches reality.
-
-The substantive concern the v14 guard protected against (hiding over-ceiling state) is NOT present — v3's decomposition architecture explicitly confronts the over-ceiling state. Form imperfect; intent met.
-
-**Recommendation**: Future plans should state `file.ts (currently XXX L, target YYY L)` inline in each affected-files bullet.
-
-### F-v3-2 — `memory-to-graph.ts` hardcoded fallback deletion not tested
-
-**Severity**: F (dead code post-modification)
-**Location**: `continuum/src/ingest/memory-to-graph.ts:7`
-
-`const NEO4J_PASS = process.env.NEO4J_PASS ?? "victor-memory-dev"` remains in the file. Plan line 48 deletes the `neo4j.driver()` call but does not explicitly delete the constant. Post-modification, the constant becomes dead code but the hardcoded string remains in source.
-
-Test `memory-to-graph-no-driver.test.ts` (plan line 123) scans for `neo4j.driver(` and `import neo4j` — does NOT scan for `victor-memory-dev`. The parallel test for `graph-api.ts` (plan line 125) DOES scan for `victor-memory-dev`. Asymmetric test coverage.
-
-**Recommendation**: During implementation, remove the `NEO4J_PASS` constant entirely from `memory-to-graph.ts` and extend the no-driver test to scan for `victor-memory-dev` there too.
-
-### F-v3-3 — Pre-existing 170L `runHeartbeatTick` function remains
-
-**Severity**: F (pre-existing debt, explicitly disclosed)
-**Location**: Plan line 211 ("Pre-existing over-ceiling note")
-
-The `runHeartbeatTick` function inside `runtime.ts` is ~170L, violating the 40L function ceiling. v3 adds ~2L (IPC store wiring) to this function. Plan explicitly flags this as pre-existing and scopes it out.
-
-File-ceiling remediation (the v13 guard concern) IS satisfied. Function-ceiling remediation is out-of-scope with explicit disclosure — QoreLogic accepts scope boundaries when honestly declared.
-
-**Recommendation**: Spawn a follow-on plan `YYYY-MM-DD-runHeartbeatTick-decomposition.md` targeting the inner function split.
-
-### F-v3-4 — Op count inconsistency in `memory/ops/search.ts`
-
-**Severity**: F (documentation drift)
-**Location**: Plan line 45
-
-Stated as "6 ops" but text also lists `graph.upsertCacheEntries` + `graph.markCacheEntriesStale`, making total 8 ops. 200L budget @ 250L ceiling (80%) still holds at 8 × 25L. No structural concern; summary text needs correction.
-
-### F-v3-5 — Vector dimension change requires schema rebuild
-
-**Severity**: F (operator burden, disclosed)
-**Location**: Plan §Open Questions
-
-`NEO4J_VECTOR_DIMENSIONS` read at schema-init; dimension change requires manual schema rebuild. Plan acknowledges. No automated migration path.
-
-**Recommendation**: Out-of-scope for v3. Track as future improvement (embedding-model migration plan).
-
----
-
-## Verdict
-
-**✅ PASS**
-
-All 6 adversarial passes clear. All v14 blocking violations (V-ARCH-6, V-RAZOR-2) structurally resolved. All v14 non-blocking flags (F1, F2, F3) addressed. Five F-class flags documented for future-plan discipline; none rise to L3 blocker.
-
-Implementation authorized. Proceed to `/qor-implement`.
-
-**Content Hash**: `sha256:d4e15d96e4b58a6de78feda12351aac96352f0a0ab34c3173d0ab9587894a18f`
-**Chain Hash**: `sha256:plan-continuum-memory-ipc-v2-audit-v1-veto → plan-continuum-memory-ipc-v3-audit-v1-pass`
-**Auditor**: QoreLogic Judge (Challenge Mode)
+_This verdict is binding._

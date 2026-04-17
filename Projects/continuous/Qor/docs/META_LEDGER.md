@@ -8399,3 +8399,23 @@ shadow_genome_severity_sum: 9
 test_suite_status: pass
 remediation_injected: 1
 notes: Builder ticks 60 and 61 both succeeded, and rem-016 restored arena quick-suite health to 390/390 per the latest builder status entry. All 8 sentinel probes are effectively green after excluding the known `1cfee42b` T4 false positive. RED remains driven only by stale queue-drift shadow entries (ticks 31, 33, 47) that still sit inside the review window despite the underlying filename-normalization fixes already landing.
+
+## 2026-04-17 — GATE TRIBUNAL audit-v16-hexawars-scope-2 (2026-04-17T19:56:00Z)
+
+**Phase**: GATE
+**Author**: Judge (Claude Opus 4.6, `/qor-audit`)
+**Risk Grade**: L2
+**Verdict**: ❌ **VETO**
+
+**Blueprint**: `docs/plans/2026-04-17-hexawars-scope-2-depth-expansion.md`
+**Blueprint Hash**: `sha256:5fd9c751b527f70d22fb700deb8b705c7363e81f10624ef25e1b5cd75b96d473`
+
+**Content Hash**:
+SHA256(.agent/staging/AUDIT_REPORT.md) = `ff3e61cec68fc987360bbb59bdb29e5029279caf688b7300a11e6c6157b0e978`
+
+**Previous Hash**: `df2e8d714c9e557b958e6c12455a0760b9ab201360dfd6bd8db9f32d2ecb16ea` (META_LEDGER.md @ tick-24)
+
+**Chain Hash**:
+SHA256(content_hash + previous_hash) = `993cba2fecaacd8df6e374b84086935c30d075fb540530dc98548e77cd5c2285`
+
+**Decision**: VETO. Scope-2 HexaWars depth-expansion blueprint is coherent in architecture but fails four gates: (V1) no Razor Budget Summary table, (V2) no current-line-count statements for modified files `router.ts`/`shared/types.ts`/`schema.sql`, (V3) three orphan modules with no named caller — `matchmaking/ladder-loop.ts`, `tournaments/scheduler.ts`, `rank/apply.ts`, (V4) all four ranked-competitive write endpoints have no declared authorization model. Both v13 and v14 Mandatory Guards from SHADOW_GENOME are tripped. Remediation steps enumerated in AUDIT_REPORT.md §"Required Remediation". Implementation is blocked until the plan is revised and re-audited.
