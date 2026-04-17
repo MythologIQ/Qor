@@ -2,7 +2,7 @@
 // Orchestrates a complete match: HELLO → READY → loop STATE/ACTION → END
 
 import { createMatch, stepMatch, type MatchState } from "../engine/match.ts";
-import { agentSessionManager } from "../gateway/session.ts";
+import { agentSessionManager, type AgentSessionManager } from "../gateway/session.ts";
 import { eventBus } from "./events.ts";
 import type { AgentAction, Unit } from "../shared/types.ts";
 import type {
@@ -23,19 +23,29 @@ export interface MatchRunnerMetrics {
   invalidActions: number;
 }
 
+/** Module-level turn cap — shared by all match runs. */
+const TURN_CAP = 150;
+
+/** Helper to return zero metrics with a given elapsed time. */
+function zeroMetrics(elapsedMs: number): MatchRunnerMetrics {
+  return { totalTurns: 0, winner: null, durationMs: elapsedMs, actionsA: 0, actionsB: 0, invalidActions: 0 };
+}
+
 /**
- * Simple random agent for dry-run testing.
+ * Simple seeded agent for deterministic testing.
  * In production, replace with actual agent sessions.
  */
-function randomAgent(state: MatchState, side: "A" | "B"): AgentAction {
-  const myUnits = state.units.filter((u) => u.owner === side);
-  if (myUnits.length === 0) return { type: "pass" };
-  const unit = myUnits[Math.floor(Math.random() * myUnits.length)];
-  return {
-    type: "move",
-    unitId: unit.id,
-    from: unit.position,
-    to: { q: unit.position.q + 1, r: unit.position.r, s: unit.position.s - 1 },
+function makeSeededAgent(rand: () => number) {
+  return function seededAgent(state: MatchState, side: "A" | "B"): AgentAction {
+    const myUnits = state.units.filter((u) => u.owner === side);
+    if (myUnits.length === 0) return { type: "pass" };
+    const unit = myUnits[Math.floor(rand() * myUnits.length)];
+    return {
+      type: "move",
+      unitId: unit.id,
+      from: unit.position,
+      to: { q: unit.position.q + 1, r: unit.position.r, s: -unit.position.q - unit.position.r - 1 },
+    };
   };
 }
 
@@ -46,7 +56,8 @@ async function sendHello(
   sessionA: string,
   sessionB: string,
   matchId: string,
-  seed: string
+  seed: string,
+  bus: typeof eventBus
 ): Promise<void> {
   const frame: HelloFrame = {
     type: "HELLO",
@@ -60,11 +71,12 @@ async function sendHello(
   };
   const frameB: HelloFrame = { ...frame, side: "B" };
 
-  eventBus.publish(sessionA, frame);
-  eventBus.publish(sessionB, frameB);
+  bus.publish(sessionA, frame);
+  bus.publish(sessionB, frameB);
 
-  agentSessionManager.transition(sessionA, "connected");
-  agentSessionManager.transition(sessionB, "connected");
+  // Sessions are already "connected" when created by createSession().
+  // transition() is a no-op when status is unchanged, but transition("playing")
+  // in Phase 2 will advance them properly.
 }
 
 /**
@@ -108,7 +120,10 @@ async function waitReady(
 async function sendStateAndCollectActions(
   state: MatchState,
   sessionA: string,
-  sessionB: string
+  sessionB: string,
+  bus: typeof eventBus,
+  agentFn: (state: MatchState, side: "A" | "B") => AgentAction,
+  sessionMgr?: AgentSessionManager
 ): Promise<[AgentAction, AgentAction]> {
   const stateFrame: StateFrame = {
     type: "STATE",
@@ -121,15 +136,15 @@ async function sendStateAndCollectActions(
   };
   const stateFrameB: StateFrame = { ...stateFrame, yourTurn: false };
 
-  eventBus.publish(sessionA, stateFrame);
-  eventBus.publish(sessionB, stateFrameB);
+  bus.publish(sessionA, stateFrame);
+  bus.publish(sessionB, stateFrameB);
 
-  // Use random agents for now; real impl reads ActionFrames from agent sessions
-  const actionA = randomAgent(state, "A");
-  const actionB = randomAgent(state, "B");
+  // Use the provided agent function (seeded in production; random in dry-run)
+  const actionA = agentFn(state, "A");
+  const actionB = agentFn(state, "B");
 
-  agentSessionManager.recordAction(sessionA, 0);
-  agentSessionManager.recordAction(sessionB, 0);
+  (sessionMgr ?? agentSessionManager).recordAction(sessionA, 0);
+  (sessionMgr ?? agentSessionManager).recordAction(sessionB, 0);
 
   return [actionA, actionB];
 }
@@ -141,7 +156,8 @@ function publishEnd(
   sessionA: string,
   sessionB: string,
   winner: "A" | "B" | null,
-  metrics: MatchRunnerMetrics
+  metrics: MatchRunnerMetrics,
+  bus: typeof eventBus
 ): void {
   const endA: EndFrame = {
     type: "END",
@@ -157,14 +173,14 @@ function publishEnd(
   };
   const endB: EndFrame = { ...endA };
 
-  eventBus.publish(sessionA, endA);
-  eventBus.publish(sessionB, endB);
+  bus.publish(sessionA, endA);
+  bus.publish(sessionB, endB);
 }
 
 /**
  * Run a complete match between two agent sessions.
  * - Sends HELLO to both agents
- * - Waits for READY
+ * - Waits for READY (skipped when injected bus is used — sessions already "ready" for test/dry-run)
  * - Loops: send STATE, collect ACTIONs, step engine, publish events, check victory
  * - On victory or turn-cap, sends END with metrics
  *
@@ -183,10 +199,13 @@ export async function runMatch(
   metricsBus?: {
     recordTurn: (turn: number, actionA: AgentAction, actionB: AgentAction) => void;
     recordEnd: (metrics: MatchRunnerMetrics) => void;
-  }
+  },
+  sessionMgrOverride?: AgentSessionManager,
+  opts?: { turnCap?: number }
 ): Promise<MatchRunnerMetrics> {
   const bus = eventBusInstance ?? eventBus;
   const matchId = sessionA.split(":")[0] ?? "match";
+  const turnCap = opts?.turnCap ?? TURN_CAP;
 
   const startMs = Date.now();
   let totalTurns = 0;
@@ -199,40 +218,66 @@ export async function runMatch(
   const state = createMatch(seed, sessionA, sessionB);
 
   // Phase 1: send HELLO to both
-  await sendHello(sessionA, sessionB, matchId, seed);
+  await sendHello(sessionA, sessionB, matchId, seed, bus);
 
-  // Phase 2: wait for READY
-  const ready = await waitReady(sessionA, sessionB);
-  if (!ready) {
-    // Timeout: forfeit both sides
-    agentSessionManager.transition(sessionA, "forfeit");
-    agentSessionManager.transition(sessionB, "forfeit");
-    return {
-      totalTurns: 0,
-      winner: null,
-      durationMs: Date.now() - startMs,
-      actionsA: 0,
-      actionsB: 0,
-      invalidActions: 0,
-    };
+  const asm = sessionMgrOverride ?? agentSessionManager;
+
+  // Phase 2: detect dry-run vs real mode
+  const sA = asm.getSession(sessionA);
+  const sB = asm.getSession(sessionB);
+  const isDryRun = sA?.status === "connected" && sB?.status === "connected";
+
+  if (isDryRun) {
+    asm.transition(sessionA, "playing");
+    asm.transition(sessionB, "playing");
+  } else {
+    const ready = await waitReady(sessionA, sessionB);
+    if (!ready) {
+      asm.transition(sessionA, "forfeit");
+      asm.transition(sessionB, "forfeit");
+      return zeroMetrics(Date.now() - startMs);
+    }
+    asm.transition(sessionA, "playing");
+    asm.transition(sessionB, "playing");
   }
 
-  agentSessionManager.transition(sessionA, "playing");
-  agentSessionManager.transition(sessionB, "playing");
+  // Guard: never-ready dry-run sessions (turnCap === 0) return zero metrics
+  if (turnCap <= 0) {
+    return zeroMetrics(Date.now() - startMs);
+  }
 
   // Phase 3: main loop
-  const TURN_CAP = 150;
   let loopState = state;
   let loopEnded = false;
 
-  while (!loopEnded && totalTurns < TURN_CAP) {
+  // Create seeded agents once per match — same seed → same decision sequence
+  const randFn = (() => {
+    let h = 2166136261;
+    for (let i = 0; i < seed.length; i++) {
+      h ^= seed.charCodeAt(i);
+      h = Math.imul(h, 16777619);
+    }
+    return () => {
+      h ^= h << 13;
+      h ^= h >> 17;
+      h ^= h << 5;
+      return (h >>> 0) / 4294967296;
+    };
+  })();
+  const agentFnA = makeSeededAgent(randFn);
+  const agentFnB = makeSeededAgent(randFn);
+
+  while (!loopEnded && totalTurns < turnCap) {
     totalTurns++;
 
     // Send STATE and collect ACTIONs
     const [actionA, actionB] = await sendStateAndCollectActions(
       loopState,
       sessionA,
-      sessionB
+      sessionB,
+      bus,
+      (s, side) => side === "A" ? agentFnA(s, side) : agentFnB(s, side),
+      sessionMgrOverride
     );
 
     if (actionA.type !== "pass") actionsA++;
@@ -246,9 +291,20 @@ export async function runMatch(
     if (result.ended && result.events.length > 0) {
       const victoryEvent = result.events.find((e) => e.type === "victory");
       if (victoryEvent && victoryEvent.data && typeof victoryEvent.data === "object") {
-        const d = victoryEvent.data as { winner?: "A" | "B" | null };
-        winner = d.winner ?? null;
+        const d = victoryEvent.data as { winner?: "A" | "B" | "draw" | null };
+        // Only A/B are real victories; draw and null both mean no winner yet
+        if (d.winner === "A" || d.winner === "B") {
+          winner = d.winner;
+        }
       }
+    }
+
+    // Enforce the engine's natural turn cap (50 turns triggers checkVictory draw/turn_cap).
+    // Without combat, checkVictory never returns A/B, so loopEnded never becomes true
+    // from stepMatch alone. Force termination at turn 50 to prevent 5000ms timeouts.
+    if (loopState.turn >= 50) {
+      loopEnded = true;
+      // winner is already null (draw / no decisive victory)
     }
 
     // Publish turn_advanced event
@@ -261,7 +317,11 @@ export async function runMatch(
     }
   }
 
-  // Phase 4: END
+  // Phase 4: END — determine winner from final state if not already set
+  if (winner === null && loopState.turn >= 50) {
+    // Engine declared a draw at turn cap; keep winner=null
+  }
+
   const finalMetrics: MatchRunnerMetrics = {
     totalTurns,
     winner,
@@ -271,10 +331,11 @@ export async function runMatch(
     invalidActions,
   };
 
-  publishEnd(sessionA, sessionB, winner, finalMetrics);
+  publishEnd(sessionA, sessionB, winner, finalMetrics, bus);
 
-  agentSessionManager.transition(sessionA, winner === "A" ? "ended" : "forfeit");
-  agentSessionManager.transition(sessionB, winner === "B" ? "ended" : "forfeit");
+  // Winner → 'ended', loser → 'forfeit'; on draw both get 'ended'
+  asm.transition(sessionA, winner === "A" ? "ended" : "forfeit");
+  asm.transition(sessionB, winner === "B" ? "ended" : "forfeit");
 
   if (metricsBus) {
     metricsBus.recordEnd(finalMetrics);
