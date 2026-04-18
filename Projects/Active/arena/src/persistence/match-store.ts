@@ -112,3 +112,14 @@ export function countEvents(db: Database, matchId: string): number {
     .get(matchId) as { n: number };
   return row.n;
 }
+
+export function updateForfeit(db: Database, id: string, outcome: string, originTag: string): void {
+  db.prepare(
+    `INSERT OR REPLACE INTO matches
+       (id, operator_a_id, operator_b_id, agent_a_id, agent_b_id,
+        origin_tag, outcome, created_at)
+     SELECT id, operator_a_id, operator_b_id, agent_a_id, agent_b_id,
+            ?, ?, created_at
+     FROM matches WHERE id = ?`,
+  ).run(originTag, outcome, id);
+}

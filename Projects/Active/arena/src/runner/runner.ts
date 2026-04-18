@@ -1,7 +1,7 @@
 import type { Database } from "bun:sqlite";
 import type { MatchRecord, AgentAction, MatchState, MatchEvent } from "../shared/types.ts";
 import { createMatch, stepMatch, computeMatchHash } from "../engine/match.ts";
-import { saveMatch, appendEvents } from "../persistence/match-store.ts";
+import { saveMatch, appendEvents, updateForfeit } from "../persistence/match-store.ts";
 import type { RunnerContext, AgentChannel, RunnerResult } from "./types.ts";
 
 const DEFAULT_TURN_TIMEOUT_MS = 5000;
@@ -87,17 +87,24 @@ export class MatchRunner {
     // Attach close listeners before match loop begins
     channels.a.onClose?.(() => {
       forfeitResult = { winnerOperatorId: ctx.b.id, reason: "forfeit" };
-      const updated: MatchRecord = { ...matchRecord, outcome: "forfeit", originTag: "ladder:forfeit" };
-      saveMatch(this.db, updated);
+      channels.a.close();
+      updateForfeit(this.db, ctx.matchId, "forfeit", "ladder:forfeit");
     });
     channels.b.onClose?.(() => {
       forfeitResult = { winnerOperatorId: ctx.a.id, reason: "forfeit" };
-      const updated: MatchRecord = { ...matchRecord, outcome: "forfeit", originTag: "ladder:forfeit" };
-      saveMatch(this.db, updated);
+      channels.b.close();
+      updateForfeit(this.db, ctx.matchId, "forfeit", "ladder:forfeit");
     });
 
     do {
-      // Check if a channel closed mid-match (forfeit)
+      // Check if a channel closed mid-match (forfeit) — poll closed flag synchronously
+      // in addition to the async onClose callback which may not have fired yet
+      if (channels.a.closed || channels.b.closed) {
+        const winnerId = channels.a.closed ? ctx.b.id : ctx.a.id;
+        updateForfeit(this.db, ctx.matchId, "forfeit", "ladder:forfeit");
+        return { winnerOperatorId: winnerId, reason: "forfeit" };
+      }
+      // Check async forfeit result from onClose callback
       if (forfeitResult) return forfeitResult;
 
       const isATurn = engine.state.yourTurn;

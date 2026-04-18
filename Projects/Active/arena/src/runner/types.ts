@@ -11,6 +11,8 @@ export interface AgentChannel {
   send(msg: unknown): void;
   onMessage(cb: (m: unknown) => void): void;
   close(): void;
+  /** Set by close() so the runner can poll for early forfeit before each turn. */
+  closed?: boolean;
 }
 
 export type MatchConclusionReason = "decisive" | "timeout" | "forfeit";
