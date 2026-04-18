@@ -7,6 +7,21 @@ export function mount(app: Hono, db: Database): void {
     c.json({ stub: true, path: "/api/arena/status" }),
   );
 
+  app.get("/api/arena/matches", (c) => {
+    const rows = db
+      .prepare(
+        `SELECT m.id, oa.handle AS operator_a, ob.handle AS operator_b,
+                m.outcome, m.created_at
+         FROM matches m
+         JOIN operators oa ON m.operator_a_id = oa.id
+         JOIN operators ob ON m.operator_b_id = ob.id
+         ORDER BY m.created_at DESC
+         LIMIT 50`,
+      )
+      .all();
+    return c.json({ matches: rows });
+  });
+
   app.get("/api/arena/match/:id", (c) =>
     c.json({ stub: true, path: "/api/arena/match/:id", id: c.req.param("id") }),
   );
