@@ -4,14 +4,28 @@ import { createMatch, stepMatch, computeMatchHash } from "../engine/match.ts";
 import { saveMatch, appendEvents } from "../persistence/match-store.ts";
 import type { RunnerContext, AgentChannel, RunnerResult } from "./types.ts";
 
+const DEFAULT_TURN_TIMEOUT_MS = 5000;
+
+function withTimeout<T>(promise: Promise<T>, ms: number, onTimeout: () => T): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<T>((_, reject) => setTimeout(() => reject("TIMEOUT"), ms)),
+  ]).catch((err) => {
+    if (err === "TIMEOUT") return onTimeout();
+    throw err;
+  }) as Promise<T>;
+}
+
 /** Temporary match engine facade — replaces the full engine stub for turn dispatch. */
 class TurnEngine {
   private _state: MatchState;
   private _actions: { a: AgentAction | null; b: AgentAction | null } = { a: null, b: null };
   private _done = false;
+  private _maxTurns: number;
 
-  constructor(seed: string, sideA: string, sideB: string) {
+  constructor(seed: string, sideA: string, sideB: string, maxTurns = 50) {
     this._state = createMatch(seed, sideA, sideB);
+    this._maxTurns = maxTurns;
   }
 
   get state(): MatchState {
@@ -35,7 +49,7 @@ class TurnEngine {
     const result = stepMatch(this._state, this._actions.a!, this._actions.b!);
     this._state = result.state;
     this._actions = { a: null, b: null };
-    if (result.ended || this._state.turn >= 50) {
+    if (result.ended || this._state.turn >= this._maxTurns) {
       this._done = true;
     }
   }
@@ -47,6 +61,7 @@ export class MatchRunner {
   async start(
     ctx: RunnerContext,
     channels: { a: AgentChannel; b: AgentChannel },
+    turnTimeoutMs = DEFAULT_TURN_TIMEOUT_MS,
   ): Promise<RunnerResult> {
     const matchRecord: MatchRecord = {
       id: ctx.matchId,
@@ -64,28 +79,52 @@ export class MatchRunner {
     const engine = new TurnEngine(ctx.matchId, String(ctx.a.id), String(ctx.b.id));
     let seq = 0;
 
+    const timedOutOperatorId = (timedOutSide: "A" | "B"): number | null =>
+      timedOutSide === "A" ? ctx.b.id : ctx.a.id;
+
     do {
       const isATurn = engine.state.yourTurn;
       const activeChannel = isATurn ? channels.a : channels.b;
       const waitingChannel = isATurn ? channels.b : channels.a;
+      const activeSide: "A" | "B" = isATurn ? "A" : "B";
 
       activeChannel.send(engine.publicState);
 
-      const action = await new Promise<AgentAction>((resolve) => {
-        if (typeof activeChannel.onMessage === "function") {
-          activeChannel.onMessage((msg: unknown) => {
-            resolve(((msg as any)?.action) ?? { type: "pass", confidence: 1 });
-          });
-        } else {
-          resolve({ type: "pass", confidence: 1 });
-        }
-      });
+      let action: AgentAction;
+      let timedOut = false;
 
-      const otherAction = await new Promise<AgentAction>((resolve) => {
+      try {
+        action = await withTimeout(
+          new Promise<AgentAction>((resolve) => {
+            if (typeof activeChannel.onMessage === "function") {
+              activeChannel.onMessage((msg: unknown) => {
+                resolve(((msg as any)?.action) ?? { type: "pass", confidence: 1 });
+              });
+            } else {
+              resolve({ type: "pass", confidence: 1 });
+            }
+          }),
+          turnTimeoutMs,
+          () => {
+            timedOut = true;
+            return { type: "pass", confidence: 0 };
+          },
+        );
+      } catch {
+        timedOut = true;
+        action = { type: "pass", confidence: 0 };
+      }
+
+      if (timedOut) {
+        const winnerOpId = timedOutOperatorId(activeSide);
+        return { winnerOperatorId: winnerOpId, reason: "timeout" };
+      }
+
+      const otherAction: AgentAction = await new Promise<AgentAction>((resolve) => {
         if (typeof waitingChannel.onMessage === "function") {
           const timer = setTimeout(
             () => resolve({ type: "pass", confidence: 0 }),
-            5000,
+            turnTimeoutMs,
           );
           waitingChannel.onMessage((msg: unknown) => {
             clearTimeout(timer);
