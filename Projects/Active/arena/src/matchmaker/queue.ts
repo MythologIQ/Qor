@@ -15,7 +15,7 @@ export class MatchQueue {
   }
 
   snapshot(): QueueEntry[] {
-    return Array.from(this.entries.values());
+    return Array.from(this.entries.values()).sort((a, b) => a.enqueuedAt - b.enqueuedAt);
   }
 
   size(): number {
