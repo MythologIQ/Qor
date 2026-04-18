@@ -10,12 +10,14 @@ import { renderUnits } from "./unit-render.js";
 import { appendEvent } from "./event-log.js";
 import { updateScore } from "./score.js";
 import { updateAgentStatus } from "./agent-status.js";
+import { updateReasoningPanel } from "./reasoning-panel.js";
 import { connectSpectator, FRAME_TYPES } from "./ws-client.js";
 
 const boardEl    = document.getElementById("board");
 const logEl      = document.getElementById("eventLog");
 const scoreEl   = document.getElementById("score");
 const agentEl   = document.getElementById("agentStatus");
+const reasonEl  = document.getElementById("reasoningPanel");
 
 // ── Derive board SVG element ────────────────────────────────────────────────
 function ensureSvg() {
@@ -111,6 +113,7 @@ async function main() {
           turnCap: frame.state.turnCap ?? 50,
         });
         updateAgentStatus(agentEl, frame.state.agents ?? []);
+        updateReasoningPanel(reasonEl, frame.state.reasoning ?? []);
         applyFogForState(svg, frame.state);
         renderUnits(svg, frame.state.units ?? []);
       }
@@ -125,6 +128,7 @@ async function main() {
         turnCap: frame.state.turnCap ?? 50,
       });
       updateAgentStatus(agentEl, frame.state.agents ?? []);
+      updateReasoningPanel(reasonEl, frame.state.reasoning ?? []);
       applyFogForState(svg, frame.state);
       renderUnits(svg, frame.state.units ?? []);
     },
@@ -146,6 +150,7 @@ async function main() {
           turnCap: frame.state.turnCap ?? 50,
         });
         updateAgentStatus(agentEl, frame.state.agents ?? []);
+        updateReasoningPanel(reasonEl, frame.state.reasoning ?? []);
         renderUnits(svg, frame.state.units ?? []);
       }
     },
