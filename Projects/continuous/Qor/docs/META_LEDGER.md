@@ -8698,3 +8698,17 @@ SHA256(bundle: schema.sql, db.ts, types.ts, router.ts, server.ts, db.test.ts, sc
 
 ### MERKLE SEAL (Chain Hash)
 SHA256(content_hash + previous_hash) = `1b1defc7f794b38bd33a643722a87ecd86e7357b13d098307eba200b7a92c0b3`
+
+## 2026-04-18 — BUILDER TICK 84 — REMEDIATION SLOT NO-OP
+**Tick:** 84  
+**Type:** no-op (remediation slot)  
+**Outcome:** success  
+**Detail:** Queue scan found no actionable remediation entries (all rem-0xx consumed=true, reopened=false, or pending_user). Arena quick-suite at 409/409 pass (1 ui-smoke fail due to missing screenshot fixture — not a code regression). rem-022-arena-session-forfeit-contract already fixed in tick 83. No write actions taken.
+
+## 2026-04-18T01:10:00Z — Builder Tick 85 (task-085-remediation-slot)
+
+**Status:** success (no-op)
+**Tick:** 85
+**Remediation queue:** no high-severity candidates; rem-016 diagnosed (historical issue already resolved by rem-017); no remediation action taken this slot.
+**Arena test health:** 409/410 pass; 1 pre-existing failure (ui-smoke screenshot <10KB).
+**Note:** remediation-queue.jsonl consumed rem-016 in diagnose mode — issue was historical dependency normalization resolved by rem-017 symlinks + queue advance to tick 85. No code changes needed.
