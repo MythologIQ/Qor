@@ -1,5 +1,5 @@
 import { describe, test, expect, beforeEach } from 'bun:test';
-import { PresenceTracker } from '../src/matchmaker/presence.ts';
+import { PresenceTracker } from '../../src/matchmaker/presence.ts';
 
 describe('PresenceTracker', () => {
   let tracker: PresenceTracker;
@@ -25,17 +25,17 @@ describe('PresenceTracker', () => {
     tracker.connect(3);
     tracker.connect(1);
     tracker.connect(2);
-    expect(tracker.online()).toEqual([1, 2, 3]);
+    expect(tracker.onlineOperators()).toEqual([1, 2, 3]);
   });
 
   test('online() deduplicates', () => {
     tracker.connect(1);
     tracker.connect(1);
-    expect(tracker.online()).toEqual([1]);
+    expect(tracker.onlineOperators()).toEqual([1]);
   });
 
   test('disconnect of unknown is noop', () => {
     expect(() => tracker.disconnect(999)).not.toThrow();
-    expect(tracker.online()).toEqual([]);
+    expect(tracker.onlineOperators()).toEqual([]);
   });
 });

@@ -16,8 +16,8 @@ export class PresenceTracker {
     return this.online.has(operatorId);
   }
 
-  online(): number[] {
-    return Array.from(this.online);
+  onlineOperators(): number[] {
+    return Array.from(this.online).sort((a, b) => a - b);
   }
 
   size(): number {

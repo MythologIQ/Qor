@@ -1,5 +1,5 @@
 // Matchmaker Queue — in-memory ring buffer backed by Map
-// KISS: enqueue/dequeue/snapshot only, no pairing logic.
+// KISS: enqueue/dequeue/snapshot/clear only, no pairing logic.
 
 import type { QueueEntry } from './types';
 
@@ -20,6 +20,10 @@ export class MatchQueue {
 
   size(): number {
     return this.entries.size;
+  }
+
+  clear(): void {
+    this.entries.clear();
   }
 }
 

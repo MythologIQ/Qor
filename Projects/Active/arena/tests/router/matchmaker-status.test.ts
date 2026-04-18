@@ -4,10 +4,14 @@ import { Database } from "bun:sqlite";
 import { openDb, initDb } from "../../src/persistence/db";
 import { mount } from "../../src/router";
 import { createLimiter } from "../../src/identity/rate-limit";
+import { matchQueue } from "../../src/matchmaker/queue";
+import { presenceTracker } from "../../src/matchmaker/presence";
 
 function makeApp(): { app: Hono; db: Database } {
   const db = openDb(":memory:");
   initDb(db);
+  matchQueue.clear();
+  presenceTracker.reset?.();
   const app = new Hono();
   mount(app, db, { limiter: createLimiter() });
   return { app, db };
