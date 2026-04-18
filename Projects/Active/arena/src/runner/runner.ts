@@ -1,14 +1,14 @@
 import type { Database } from "bun:sqlite";
-import type { MatchRecord, AgentAction, MatchState } from "../shared/types.ts";
+import type { MatchRecord, AgentAction, MatchState, MatchEvent } from "../shared/types.ts";
 import { createMatch, stepMatch, computeMatchHash } from "../engine/match.ts";
-import { saveMatch } from "../persistence/match-store.ts";
+import { saveMatch, appendEvents } from "../persistence/match-store.ts";
 import type { RunnerContext, AgentChannel, RunnerResult } from "./types.ts";
 
 /** Temporary match engine facade — replaces the full engine stub for turn dispatch. */
 class TurnEngine {
   private _state: MatchState;
   private _actions: { a: AgentAction | null; b: AgentAction | null } = { a: null, b: null };
-  private _done = false; // set true once victory or turn cap is hit
+  private _done = false;
 
   constructor(seed: string, sideA: string, sideB: string) {
     this._state = createMatch(seed, sideA, sideB);
@@ -22,17 +22,14 @@ class TurnEngine {
     return this._state;
   }
 
-  /** Set both agents' actions for the current turn; call before done(). */
   setActions(a: AgentAction, b: AgentAction): void {
     this._actions = { a, b };
   }
 
-  /** Returns true when the match has concluded. */
   get done(): boolean {
     return this._done;
   }
 
-  /** Advance the engine one turn with the collected actions. */
   tick(): void {
     if (this._done) return;
     const result = stepMatch(this._state, this._actions.a!, this._actions.b!);
@@ -65,14 +62,13 @@ export class MatchRunner {
     saveMatch(this.db, matchRecord);
 
     const engine = new TurnEngine(ctx.matchId, String(ctx.a.id), String(ctx.b.id));
-    const events: unknown[] = [];
+    let seq = 0;
 
     do {
       const isATurn = engine.state.yourTurn;
       const activeChannel = isATurn ? channels.a : channels.b;
       const waitingChannel = isATurn ? channels.b : channels.a;
 
-      // send() may be async — fire and discard
       activeChannel.send(engine.publicState);
 
       const action = await new Promise<AgentAction>((resolve) => {
@@ -103,10 +99,17 @@ export class MatchRunner {
       engine.setActions(isATurn ? action : otherAction, isATurn ? otherAction : action);
       engine.tick();
 
-      events.push({ turn: engine.state.turn, actionA: action, actionB: otherAction });
+      // Persist turn event immediately — small batch (one turn at a time)
+      const turnEvent: Omit<MatchEvent, "matchId"> = {
+        seq,
+        eventType: "turn_action",
+        payload: JSON.stringify({ turn: engine.state.turn, actionA: action, actionB: otherAction }),
+        ts: Date.now(),
+      };
+      appendEvents(this.db, ctx.matchId, [turnEvent]);
+      seq++;
     } while (!engine.done);
 
-    // Determine winner
     const finalState = engine.state;
     const { checkVictory } = require("../engine/victory.ts");
     const victory = checkVictory(finalState);
@@ -121,7 +124,6 @@ export class MatchRunner {
       winnerOperatorId = ctx.b.id;
       reason = "decisive";
     } else {
-      // draw or null → timeout
       winnerOperatorId = null;
       reason = "timeout";
     }
