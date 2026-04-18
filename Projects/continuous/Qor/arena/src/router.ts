@@ -29,4 +29,21 @@ export function mount(app: Hono, db: Database): void {
   app.post("/api/arena/match", (c) =>
     c.json({ stub: true, path: "/api/arena/match" }),
   );
+
+  app.get("/api/arena/metrics", (c) => {
+    const matchCount = db
+      .prepare("SELECT COUNT(*) as count FROM matches")
+      .get() as { count: number };
+    const operatorCount = db
+      .prepare("SELECT COUNT(*) as count FROM operators")
+      .get() as { count: number };
+    const completedCount = db
+      .prepare("SELECT COUNT(*) as count FROM matches WHERE outcome IS NOT NULL")
+      .get() as { count: number };
+    return c.json({
+      totalMatches: matchCount.count,
+      totalOperators: operatorCount.count,
+      completedMatches: completedCount.count,
+    });
+  });
 }
