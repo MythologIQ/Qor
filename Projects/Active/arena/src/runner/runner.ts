@@ -1,7 +1,7 @@
 import type { Database } from "bun:sqlite";
 import type { MatchRecord, AgentAction, MatchState, MatchEvent } from "../shared/types.ts";
 import { createMatch, stepMatch, computeMatchHash } from "../engine/match.ts";
-import { saveMatch, appendEvents, updateForfeit } from "../persistence/match-store.ts";
+import { saveMatch, appendEvents, updateForfeit, updateMatchOutcome } from "../persistence/match-store.ts";
 import type { RunnerContext, AgentChannel, RunnerResult } from "./types.ts";
 
 const DEFAULT_TURN_TIMEOUT_MS = 5000;
@@ -74,7 +74,7 @@ export class MatchRunner {
       createdAt: Date.now(),
     };
 
-    saveMatch(this.db, matchRecord);
+    saveMatch(this.db, { ...matchRecord, originTag: "ladder" });
 
     const engine = new TurnEngine(ctx.matchId, String(ctx.a.id), String(ctx.b.id));
     let seq = 0;
@@ -101,11 +101,14 @@ export class MatchRunner {
       // in addition to the async onClose callback which may not have fired yet
       if (channels.a.closed || channels.b.closed) {
         const winnerId = channels.a.closed ? ctx.b.id : ctx.a.id;
-        updateForfeit(this.db, ctx.matchId, "forfeit", "ladder:forfeit");
+        updateForfeit(this.db, ctx.matchId, JSON.stringify({ winnerOperatorId: winnerId, reason: "forfeit" }), "ladder");
         return { winnerOperatorId: winnerId, reason: "forfeit" };
       }
       // Check async forfeit result from onClose callback
-      if (forfeitResult) return forfeitResult;
+      if (forfeitResult) {
+        updateForfeit(this.db, ctx.matchId, JSON.stringify({ winnerOperatorId: forfeitResult.winnerOperatorId, reason: "forfeit" }), "ladder");
+        return forfeitResult;
+      }
 
       const isATurn = engine.state.yourTurn;
       const activeChannel = isATurn ? channels.a : channels.b;
@@ -141,6 +144,7 @@ export class MatchRunner {
 
       if (timedOut) {
         const winnerOpId = timedOutOperatorId(activeSide);
+        updateMatchOutcome(this.db, ctx.matchId, JSON.stringify({ winnerOperatorId: winnerOpId, reason: "timeout" }), winnerOpId, "ladder");
         return { winnerOperatorId: winnerOpId, reason: "timeout" };
       }
 
@@ -190,6 +194,14 @@ export class MatchRunner {
       winnerOperatorId = null;
       reason = "timeout";
     }
+
+    updateMatchOutcome(
+      this.db,
+      ctx.matchId,
+      JSON.stringify({ winnerOperatorId, reason }),
+      winnerOperatorId,
+      "ladder",
+    );
 
     return { winnerOperatorId, reason };
   }
