@@ -79,10 +79,27 @@ export class MatchRunner {
     const engine = new TurnEngine(ctx.matchId, String(ctx.a.id), String(ctx.b.id));
     let seq = 0;
 
+    // Forfeit guard: if either channel closes mid-match, the other player wins by forfeit
+    let forfeitResult: RunnerResult | null = null;
     const timedOutOperatorId = (timedOutSide: "A" | "B"): number | null =>
       timedOutSide === "A" ? ctx.b.id : ctx.a.id;
 
+    // Attach close listeners before match loop begins
+    channels.a.onClose?.(() => {
+      forfeitResult = { winnerOperatorId: ctx.b.id, reason: "forfeit" };
+      const updated: MatchRecord = { ...matchRecord, outcome: "forfeit", originTag: "ladder:forfeit" };
+      saveMatch(this.db, updated);
+    });
+    channels.b.onClose?.(() => {
+      forfeitResult = { winnerOperatorId: ctx.a.id, reason: "forfeit" };
+      const updated: MatchRecord = { ...matchRecord, outcome: "forfeit", originTag: "ladder:forfeit" };
+      saveMatch(this.db, updated);
+    });
+
     do {
+      // Check if a channel closed mid-match (forfeit)
+      if (forfeitResult) return forfeitResult;
+
       const isATurn = engine.state.yourTurn;
       const activeChannel = isATurn ? channels.a : channels.b;
       const waitingChannel = isATurn ? channels.b : channels.a;
