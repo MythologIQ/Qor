@@ -1,13 +1,49 @@
 import type { Database } from "bun:sqlite";
-import type { MatchRecord } from "../shared/types.ts";
-import { createMatch } from "../engine/match.ts";
+import type { MatchRecord, AgentAction, MatchState } from "../shared/types.ts";
+import { createMatch, stepMatch, computeMatchHash } from "../engine/match.ts";
 import { saveMatch } from "../persistence/match-store.ts";
 import type { RunnerContext, AgentChannel, RunnerResult } from "./types.ts";
 
-/**
- * MatchRunner — skeleton for ladder match execution.
- * Actual run loop (turn dispatch, agent interaction, conclusion) implemented in later ticks.
- */
+/** Temporary match engine facade — replaces the full engine stub for turn dispatch. */
+class TurnEngine {
+  private _state: MatchState;
+  private _actions: { a: AgentAction | null; b: AgentAction | null } = { a: null, b: null };
+  private _done = false; // set true once victory or turn cap is hit
+
+  constructor(seed: string, sideA: string, sideB: string) {
+    this._state = createMatch(seed, sideA, sideB);
+  }
+
+  get state(): MatchState {
+    return this._state;
+  }
+
+  get publicState(): MatchState {
+    return this._state;
+  }
+
+  /** Set both agents' actions for the current turn; call before done(). */
+  setActions(a: AgentAction, b: AgentAction): void {
+    this._actions = { a, b };
+  }
+
+  /** Returns true when the match has concluded. */
+  get done(): boolean {
+    return this._done;
+  }
+
+  /** Advance the engine one turn with the collected actions. */
+  tick(): void {
+    if (this._done) return;
+    const result = stepMatch(this._state, this._actions.a!, this._actions.b!);
+    this._state = result.state;
+    this._actions = { a: null, b: null };
+    if (result.ended || this._state.turn >= 50) {
+      this._done = true;
+    }
+  }
+}
+
 export class MatchRunner {
   constructor(private db: Database) {}
 
@@ -26,9 +62,72 @@ export class MatchRunner {
       createdAt: Date.now(),
     };
 
-    // Persist placeholder record; events appended by later tick loop
     saveMatch(this.db, matchRecord);
 
-    return { winnerOperatorId: null, reason: "timeout" };
+    const engine = new TurnEngine(ctx.matchId, String(ctx.a.id), String(ctx.b.id));
+    const events: unknown[] = [];
+
+    do {
+      const isATurn = engine.state.yourTurn;
+      const activeChannel = isATurn ? channels.a : channels.b;
+      const waitingChannel = isATurn ? channels.b : channels.a;
+
+      // send() may be async — fire and discard
+      activeChannel.send(engine.publicState);
+
+      const action = await new Promise<AgentAction>((resolve) => {
+        if (typeof activeChannel.onMessage === "function") {
+          activeChannel.onMessage((msg: unknown) => {
+            resolve(((msg as any)?.action) ?? { type: "pass", confidence: 1 });
+          });
+        } else {
+          resolve({ type: "pass", confidence: 1 });
+        }
+      });
+
+      const otherAction = await new Promise<AgentAction>((resolve) => {
+        if (typeof waitingChannel.onMessage === "function") {
+          const timer = setTimeout(
+            () => resolve({ type: "pass", confidence: 0 }),
+            5000,
+          );
+          waitingChannel.onMessage((msg: unknown) => {
+            clearTimeout(timer);
+            resolve(((msg as any)?.action) ?? { type: "pass", confidence: 1 });
+          });
+        } else {
+          resolve({ type: "pass", confidence: 1 });
+        }
+      });
+
+      engine.setActions(isATurn ? action : otherAction, isATurn ? otherAction : action);
+      engine.tick();
+
+      events.push({ turn: engine.state.turn, actionA: action, actionB: otherAction });
+    } while (!engine.done);
+
+    // Determine winner
+    const finalState = engine.state;
+    const { checkVictory } = require("../engine/victory.ts");
+    const victory = checkVictory(finalState);
+
+    let reason: MatchConclusionReason = "timeout";
+    let winnerOperatorId: number | null = null;
+
+    if (victory.winner === "A") {
+      winnerOperatorId = ctx.a.id;
+      reason = "decisive";
+    } else if (victory.winner === "B") {
+      winnerOperatorId = ctx.b.id;
+      reason = "decisive";
+    } else {
+      // draw or null → timeout
+      winnerOperatorId = null;
+      reason = "timeout";
+    }
+
+    return { winnerOperatorId, reason };
   }
 }
+
+type MatchConclusionReason = "decisive" | "timeout" | "forfeit";

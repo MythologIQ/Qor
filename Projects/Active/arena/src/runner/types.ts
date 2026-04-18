@@ -2,6 +2,7 @@ import type { OperatorRef } from "../shared/types.ts";
 
 export interface RunnerContext {
   matchId: string;
+  ladderId?: string;
   a: OperatorRef;
   b: OperatorRef;
 }

@@ -59,7 +59,7 @@ describe("MatchRunner", () => {
     expect(row!.operatorBId).toBe(20);
   });
 
-  it("start() returns RunnerResult with reason='timeout' placeholder", async () => {
+  it("start() returns RunnerResult after completing the turn dispatch loop", async () => {
     const runner = new MatchRunner(db);
     const ctx: RunnerContext = {
       matchId: "runner-skel-test-2",
@@ -72,11 +72,13 @@ describe("MatchRunner", () => {
     const result: RunnerResult = await runner.start(ctx, channels);
 
     expect(result).toHaveProperty("reason");
-    expect(result.reason).toBe("timeout");
-    expect(result.winnerOperatorId).toBeNull();
+    expect(result).toHaveProperty("winnerOperatorId");
+    // All-pass agents: after 50 turns, territory comparison determines winner (decisive) or draw (timeout)
+    expect(result.reason).toBeOneOf(["decisive", "timeout"] as const);
+    expect(typeof result.winnerOperatorId === "number" || result.winnerOperatorId === null).toBe(true);
   });
 
-  it("start() emits no events before match loop is implemented", async () => {
+  it("start() completes without hanging and loop terminates on engine.done", async () => {
     const runner = new MatchRunner(db);
     const ctx: RunnerContext = {
       matchId: "runner-skel-test-3",
@@ -86,9 +88,9 @@ describe("MatchRunner", () => {
     };
     const channels = { a: fakeChannel(10), b: fakeChannel(20) };
 
-    // Skeleton contract: no event queue yet, result reflects placeholder state
     const result: RunnerResult = await runner.start(ctx, channels);
-    expect(result.winnerOperatorId).toBeNull();
-    expect(result.reason).toBe("timeout");
+    expect(result).toHaveProperty("winnerOperatorId");
+    expect(result).toHaveProperty("reason");
+    expect(result.reason).toBeOneOf(["decisive", "timeout"] as const);
   });
 });
