@@ -19,4 +19,10 @@ export class PresenceTracker {
   online(): number[] {
     return Array.from(this.online);
   }
+
+  size(): number {
+    return this.online.size;
+  }
 }
+
+export const presenceTracker = new PresenceTracker();

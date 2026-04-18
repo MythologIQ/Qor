@@ -16,6 +16,17 @@ import {
 import { registerAgentVersion } from "./identity/agent-version";
 import { getMatch, listMatchesByOperator, streamEvents } from "./persistence/match-store";
 import { matchQueue } from "./matchmaker/queue";
+import { presenceTracker } from "./matchmaker/presence";
+
+let lastPairAt: number | null = null;
+
+export function recordPair(): void {
+  lastPairAt = Date.now();
+}
+
+export function getLastPairAt(): number | null {
+  return lastPairAt;
+}
 
 export interface MountOpts {
   limiter?: RateLimiter;
@@ -197,5 +208,16 @@ export function mount(app: Hono, db: Database, opts: MountOpts = {}): void {
     });
 
     return c.json({ ok: true, queueSize: matchQueue.size() });
+  });
+
+  app.get("/api/arena/matchmaker/status", (c) => {
+    const lastPair = getLastPairAt();
+    const queueSize = matchQueue.size();
+    const presenceCount = presenceTracker.size();
+    return c.json({
+      lastPairAt: lastPair,
+      queueSize,
+      presenceCount,
+    });
   });
 }
