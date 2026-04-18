@@ -22,3 +22,5 @@ export class MatchQueue {
     return this.entries.size;
   }
 }
+
+export const matchQueue = new MatchQueue();
