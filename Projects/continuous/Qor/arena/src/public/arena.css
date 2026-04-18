@@ -43,8 +43,9 @@ body {
 .hex.water      { background: #0d1f3c; }
 
 /* Control Tints */
-.hex.controlled-a { background: #0d2040; box-shadow: inset 0 0 0 2px #3b82f6; }
-.hex.controlled-b { background: #3c1010; box-shadow: inset 0 0 0 2px #ef4444; }
+/* WCAG AA: controlled backgrounds vs plain #1a1a24 must be >= 3:1 */
+.hex.controlled-a { background: #4a6e97; box-shadow: inset 0 0 0 2px #3b82f6; }
+.hex.controlled-b { background: #935959; box-shadow: inset 0 0 0 2px #ef4444; }
 
 /* Fog Overlay */
 .hex.fog { opacity: 0.5; background: #2a2a35; }
