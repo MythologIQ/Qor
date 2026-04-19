@@ -11,6 +11,7 @@ import { PresenceTracker } from "./matchmaker/presence.js";
 import { MatchRunner } from "./runner/runner.js";
 import type { RunnerContext, AgentChannel } from "./runner/types.js";
 import { agentSessionManager } from "./gateway/session.js";
+import { configureWsAuth } from "./gateway/ws.js";
 
 const app = new Hono();
 
@@ -18,6 +19,7 @@ const dbPath = process.env.ARENA_DB_PATH ?? DEFAULT_DB_PATH;
 if (dbPath !== ":memory:") mkdirSync(dirname(dbPath), { recursive: true });
 const db = openDb(dbPath);
 initDb(db);
+configureWsAuth(db);
 if (process.env.ARENA_SEED_DEMO === "1") {
   try {
     const seeded = seedDemoMatch(db);
