@@ -2,6 +2,8 @@
 
 import type { Hono } from "hono";
 import type { Database } from "bun:sqlite";
+import type { MatchQueue } from "./matchmaker/queue";
+import type { PresenceTracker } from "./matchmaker/presence";
 import {
   createLimiter,
   keyFromHeaders,
@@ -15,8 +17,9 @@ import {
 } from "./identity/operator";
 import { registerAgentVersion } from "./identity/agent-version";
 import { getMatch, listMatchesByOperator, streamEvents } from "./persistence/match-store";
-import { matchQueue } from "./matchmaker/queue";
-import { presenceTracker } from "./matchmaker/presence";
+import { getLeaderboard } from "./rank/leaderboard";
+import { matchQueue as _moduleMatchQueue } from "./matchmaker/queue";
+import { presenceTracker as _modulePresenceTracker } from "./matchmaker/presence";
 
 let lastPairAt: number | null = null;
 
@@ -30,10 +33,14 @@ export function getLastPairAt(): number | null {
 
 export interface MountOpts {
   limiter?: RateLimiter;
+  matchQueue?: MatchQueue;
+  presence?: PresenceTracker;
 }
 
 export function mount(app: Hono, db: Database, opts: MountOpts = {}): void {
   const limiter = opts.limiter ?? createLimiter();
+  const matchQueue = opts.matchQueue ?? _moduleMatchQueue;
+  const presenceTracker = opts.presence ?? _modulePresenceTracker;
 
   app.get("/api/arena/status", (c) =>
     c.json({ stub: true, path: "/api/arena/status" }),
@@ -103,6 +110,13 @@ export function mount(app: Hono, db: Database, opts: MountOpts = {}): void {
       totalOperators: operatorCount.count,
       completedMatches: completedCount.count,
     });
+  });
+
+  // ── Leaderboard route (Phase E rank store) ─────────────────────────────
+
+  app.get("/api/arena/leaderboard", (c) => {
+    const entries = getLeaderboard(db, 100);
+    return c.json({ entries });
   });
 
   // ── Identity routes (Plan A v2, Phase 2) ─────────────────────────────
