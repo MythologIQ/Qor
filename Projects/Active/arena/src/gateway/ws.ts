@@ -3,6 +3,7 @@
 
 import type { Server as HTTPServer } from 'node:http';
 import { agentSessionManager } from './session.js';
+import { presenceTracker } from '../matchmaker/presence.js';
 import type { HelloFrame, ReadyFrame, ActionFrame, StateFrame, AckFrame, EventFrame, EndFrame } from './contract.js';
 import type { HexCell, Unit } from '../shared/types.js';
 import { getOperatorByToken } from '../identity/operator.js';
@@ -77,6 +78,9 @@ export function handleWs(req: Request, server: HTTPServer): Response {
   // Create agent session
   const session = agentSessionManager.createSession(sessionId, matchId, side);
 
+  // Wire presence: operator is authenticated and WS connection is established
+  presenceTracker.connect(operator.id);
+
   // Build the WebSocket upgrade response using Bun's upgrade API
   if (!req.headers.get('upgrade')?.toLowerCase().includes('websocket')) {
     return new Response('Expected WebSocket upgrade', { status: 426 });
@@ -101,6 +105,8 @@ export function handleWs(req: Request, server: HTTPServer): Response {
 
   // The upgrade is handled asynchronously via Bun.serve's internal upgrade map
   // This return is only reached if upgrade() returns false in non-standard mode
+  // NOTE: disconnect(operatorId) must be wired via Bun.serve websocket close handler
+  // in registerWsHandlers — see registerWsHandlers for the onDisconnect hook.
   return new Response(null, { status: 101 });
 }
 
@@ -108,6 +114,11 @@ export function handleWs(req: Request, server: HTTPServer): Response {
 export function registerWsHandlers(
   bunServer: {
     upgrade?: (req: Request, opts: { data: WSData; headers?: Headers }) => unknown;
+    websocket?: {
+      open?: (ws: WebSocket, req: Request) => void;
+      close?: (ws: WebSocket, code: number, reason: string) => void;
+      message?: (ws: WebSocket, data: string | Buffer) => void;
+    };
   },
   opts: {
     boardSize?: { width: number; height: number };
@@ -118,10 +129,16 @@ export function registerWsHandlers(
 ): void {
   const { boardSize = { width: 7, height: 7 }, timeBudgetMs = 5000, turnCap = 150, seed = crypto.randomUUID() } = opts;
 
-  // Register open handler
-  if (bunServer.upgrade) {
-    // bunServer already handles WS via its own websocket config; nothing to register
-    // The handleWs function above is the Request→WS upgrade handler
+  // Wire presence disconnect into Bun.serve's websocket close handler
+  if (bunServer.websocket) {
+    const origClose = bunServer.websocket.close;
+    bunServer.websocket.close = (ws: WebSocket, code: number, reason: string) => {
+      const data = (ws as any).data as WSData | undefined;
+      if (data?.operatorId) {
+        presenceTracker.disconnect(Number(data.operatorId));
+      }
+      origClose?.call(bunServer.websocket, ws, code, reason);
+    };
   }
 }
 

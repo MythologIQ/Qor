@@ -1,5 +1,5 @@
 import { describe, test, expect, beforeEach } from 'bun:test';
-import { handleWs, configureWsAuth } from '../../src/gateway/ws';
+import { handleWs, configureWsAuth, wsOperatorLimiter } from '../../src/gateway/ws';
 import { openDb, initDb } from '../../src/persistence/db';
 import { createOperator } from '../../src/identity/operator';
 import type { Database } from 'bun:sqlite';
@@ -29,6 +29,7 @@ describe('WS Auth — handleWs', () => {
     db = openDb(':memory:');
     initDb(db);
     configureWsAuth(db);
+    wsOperatorLimiter.resetAll();
   });
 
   test('missing token → 401', async () => {
