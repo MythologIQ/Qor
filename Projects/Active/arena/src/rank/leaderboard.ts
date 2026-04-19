@@ -1,8 +1,5 @@
-// HexaWars Arena — Leaderboard Query
-// Top-N operators by Elo rating with match count
-
+// HexaWars Arena — Leaderboard (Phase E rank store)
 import type { Database } from "bun:sqlite";
-import type { EloInput, EloResult } from "./types";
 
 export interface LeaderboardEntry {
   handle: string;
@@ -12,16 +9,24 @@ export interface LeaderboardEntry {
 
 export function getLeaderboard(
   db: Database,
-  limit: number = 100,
+  limit = 100,
 ): LeaderboardEntry[] {
   return db
     .prepare(
-      `SELECT o.handle, o.elo, COUNT(m.id) AS matchesPlayed
-       FROM operators o
-       LEFT JOIN matches m ON m.operator_a_id = o.id OR m.operator_b_id = o.id
-       GROUP BY o.id
-       ORDER BY o.elo DESC
-       LIMIT ?`,
+      `WITH operator_match_counts AS (
+        SELECT operator_id, COUNT(*) AS matchesPlayed
+        FROM (
+          SELECT operator_a_id AS operator_id FROM matches
+          UNION ALL
+          SELECT operator_b_id AS operator_id FROM matches
+        )
+        GROUP BY operator_id
+      )
+      SELECT o.handle, o.elo, omc.matchesPlayed
+      FROM operators o
+      JOIN operator_match_counts omc ON o.id = omc.operator_id
+      ORDER BY o.elo DESC
+      LIMIT ?`,
     )
     .all(limit) as LeaderboardEntry[];
 }
