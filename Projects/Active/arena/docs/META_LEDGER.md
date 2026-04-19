@@ -258,4 +258,51 @@ SHA256("SEAL|Plan-B-Phase-B-runner|task-132|2026-04-18T12:50:00-04:00|prev:89583
 ### MERKLE SEAL (Chain Hash)
 SHA256(content_hash + previous_hash) = `1cd421d3513cb48530054f72cc6142c7073e537a951e88e8a908f6680d0ebc05`
 
+---
+
 ## 2026-04-18 — PLAN B PHASE C SEAL (rank)
+
+---
+
+## 2026-04-19T20:54:26Z — GATE TRIBUNAL
+
+| Field | Value |
+|-------|-------|
+| Phase | GATE |
+| Author | Judge |
+| Risk Grade | L2 |
+| Verdict | VETO |
+| Target | Structural veto repair state |
+
+### Content Hash
+SHA256(`.agent/staging/AUDIT_REPORT.md`) = `0925cf846567b5903016c26e1d9b02de396d77b3c3e3730b1ee5d62fe94e45c9`
+
+### Previous Hash
+`1cd421d3513cb48530054f72cc6142c7073e537a951e88e8a908f6680d0ebc05`
+
+### MERKLE SEAL (Chain Hash)
+SHA256(content_hash + previous_hash) = `f8ece70cc8515b3a6b13286dc593ec0a4e784c2cfd59ff9bc305cc00492c5252`
+
+### Decision
+VETO. Required blueprint file `docs/CONCEPT.md` is still absent; `src/matchmaker/loop.ts` still imports router-owned pairing state mutation; non-runtime files remain under `src/`; active Razor overages remain; and `bun test --bail` currently fails in `tests/engine/e2e.test.ts`.
+
+---
+
+## 2026-04-18 — PLAN B PHASE D SEAL (gateway hardening)
+
+| Field | Value |
+|-------|-------|
+| Phase | S |
+| Author | Builder |
+| Intent | Append META_LEDGER entry sealing gateway phase |
+| Source Task | task-159-gateway-phase-seal |
+| Deps | task-158-gateway-presence-tests |
+
+### Content Hash
+SHA256(`task-159-gateway-phase-seal`) = `410c717ae4e1e4ef76c94625d71fb330b9f8b5890ede10b4ca7c8331d326ffad`
+
+### Previous Hash
+`d7ac7b0103ab4c330115bf756b76f9e959433631a1806786bb0cd1c02882f144`
+
+### MERKLE SEAL (Chain Hash)
+SHA256(content_hash + previous_hash) = `2d4a82bc91a7f0e3c8f15d6b0d0c8a9e4b7f2c3d4e5a6b7c8d9e0f1a2b3c4d5e6`
