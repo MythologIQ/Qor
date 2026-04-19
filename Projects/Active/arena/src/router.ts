@@ -115,7 +115,9 @@ export function mount(app: Hono, db: Database, opts: MountOpts = {}): void {
   // ── Leaderboard route (Phase E rank store) ─────────────────────────────
 
   app.get("/api/arena/leaderboard", (c) => {
-    const entries = getLeaderboard(db, 100);
+    const raw = c.req.query("limit");
+    const limit = raw ? Math.min(Math.max(parseInt(raw, 10), 1), 100) : 100;
+    const entries = getLeaderboard(db, limit);
     return c.json({ entries });
   });
 
