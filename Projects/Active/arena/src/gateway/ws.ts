@@ -25,6 +25,9 @@ let _authDb: Database | null = null;
 // Per-operator WS connection rate limiter: 5 connections per rolling minute
 const wsOperatorLimiter: RateLimiter = createLimiter({ max: 5, windowMs: 60_000 });
 
+// Export for test reset
+export { wsOperatorLimiter };
+
 export function configureWsAuth(db: Database): void {
   _authDb = db;
 }
@@ -61,7 +64,7 @@ export function handleWs(req: Request, server: HTTPServer): Response {
   const rateCheck = wsOperatorLimiter.check(operator.id);
   if (!rateCheck.ok) {
     return new Response('Connection rate limit exceeded', {
-      status: 4429,
+      status: 429,
       headers: { 'Retry-After': String(rateCheck.retryAfterSec) },
     });
   }
