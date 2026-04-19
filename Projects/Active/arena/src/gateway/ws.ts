@@ -6,6 +6,7 @@ import { agentSessionManager } from './session.js';
 import type { HelloFrame, ReadyFrame, ActionFrame, StateFrame, AckFrame, EventFrame, EndFrame } from './contract.js';
 import type { HexCell, Unit } from '../shared/types.js';
 import { getOperatorByToken } from '../identity/operator.js';
+import { createLimiter, type RateLimiter } from '../identity/rate-limit.js';
 import type { Database } from 'bun:sqlite';
 
 // Bun.serve WebSocket payload types
@@ -20,6 +21,9 @@ type WSPayload = string | Buffer | TypedArray;
 
 // Authenticated handler factory — must be called once at server boot with the db instance
 let _authDb: Database | null = null;
+
+// Per-operator WS connection rate limiter: 5 connections per rolling minute
+const wsOperatorLimiter: RateLimiter = createLimiter({ max: 5, windowMs: 60_000 });
 
 export function configureWsAuth(db: Database): void {
   _authDb = db;
@@ -46,11 +50,20 @@ export function handleWs(req: Request, server: HTTPServer): Response {
   const url = new URL(req.url);
   const rawToken = url.searchParams.get('token');
   if (!rawToken) {
-    return new Response('Missing token', { status: 4401 });
+    return new Response('Missing token', { status: 401 });
   }
   const operator = getOperatorByToken(_authDb, rawToken);
   if (!operator) {
-    return new Response('Invalid token', { status: 4401 });
+    return new Response('Invalid token', { status: 401 });
+  }
+
+  // Per-operator WS connection rate limit: 5 per rolling minute
+  const rateCheck = wsOperatorLimiter.check(operator.id);
+  if (!rateCheck.ok) {
+    return new Response('Connection rate limit exceeded', {
+      status: 4429,
+      headers: { 'Retry-After': String(rateCheck.retryAfterSec) },
+    });
   }
 
   // Extract sessionId and matchId from URL search params
