@@ -15,3 +15,5 @@ export class RunnerMetrics {
     };
   }
 }
+
+export const runnerMetrics = new RunnerMetrics();

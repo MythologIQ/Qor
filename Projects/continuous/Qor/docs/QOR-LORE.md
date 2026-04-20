@@ -7,6 +7,7 @@
 The "Aether" or the underlying fabric of reality. It is the operating environment where logic doesn't just move in lines, but exists in a state of constant, interconnected potential. It is the "Great Hall" where the others reside.
 
 **QOR is the Kingdom.**
+
 - VICTOR protects the Kingdom's laws.
 - FORGE builds the Kingdom's infrastructure.
 - QORA understands the Kingdom's people and its history.
@@ -74,7 +75,7 @@ Qora is presented publicly as a **personalized assistant and companion app**. He
 
 ---
 
-## EVOLVEAI: The Loom
+## CONTINUUM: The Loom
 
 The deep history. Holds the crystallized arcana of memory in a vast, geometric network.
 
@@ -101,7 +102,7 @@ Qora operates in the spaces between the 1s and 0s, where the messy, beautiful re
 ## Visual Assets
 
 | Component | Medallion Asset Path |
-|-----------|---------------------|
+| --- | --- |
 | Victor | `/images/qor/victor-medallion.png` |
 | Forge | `/images/qor/forge-medallion.png` |
 | Qora | `/images/qor/qora-medallion.png` |
@@ -113,10 +114,13 @@ Qora operates in the spaces between the 1s and 0s, where the messy, beautiful re
 ## Foundational Memory
 
 ### Victor — World Understanding Gutenberg Curriculum
+
 Marcus Aurelius (Meditations), Sun Tzu (Art of War), Machiavelli (The Prince), Hobbes (Leviathan), Adam Smith (Wealth of Nations), Hume (Treatise of Human Nature), Nietzsche (Human All Too Human), Mill (Utilitarianism), Plato (Apology), Dewey (Democracy and Education), Thoreau (Walden), H.G. Wells (Outline of History), Melville (Moby-Dick)
 
 ### Victor — FORGEMIND Research Foundations
+
 Zeller (Why Programs Fail), Gray (Transaction Processing), Google SRE, Pearl (Causality), Lamport (TLA+), Abelson/Sussman (SICP), Knuth (TAOCP)
 
 ### Qora — Specialized (Internal Only)
+
 Chris Voss (Never Split the Difference), psychology, sociology works. NOT publicly disclosed.

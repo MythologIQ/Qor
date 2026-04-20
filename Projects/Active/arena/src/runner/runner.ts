@@ -49,6 +49,7 @@ class TurnEngine {
     const result = stepMatch(this._state, this._actions.a!, this._actions.b!);
     this._state = result.state;
     this._actions = { a: null, b: null };
+    this._state.yourTurn = !this._state.yourTurn;
     if (result.ended || this._state.turn >= this._maxTurns) {
       this._done = true;
     }
@@ -77,6 +78,7 @@ export class MatchRunner {
     saveMatch(this.db, { ...matchRecord, originTag: "ladder" });
 
     const engine = new TurnEngine(ctx.matchId, String(ctx.a.id), String(ctx.b.id));
+    const MAX_TURNS = 50; // hard cap — prevents infinite loops when agents only play pass
     let seq = 0;
 
     // Forfeit guard: if either channel closes mid-match, the other player wins by forfeit
@@ -87,13 +89,9 @@ export class MatchRunner {
     // Attach close listeners before match loop begins
     channels.a.onClose?.(() => {
       forfeitResult = { winnerOperatorId: ctx.b.id, reason: "forfeit" };
-      channels.a.close();
-      updateForfeit(this.db, ctx.matchId, "forfeit", "ladder:forfeit");
     });
     channels.b.onClose?.(() => {
       forfeitResult = { winnerOperatorId: ctx.a.id, reason: "forfeit" };
-      channels.b.close();
-      updateForfeit(this.db, ctx.matchId, "forfeit", "ladder:forfeit");
     });
 
     do {
@@ -108,6 +106,19 @@ export class MatchRunner {
       if (forfeitResult) {
         updateForfeit(this.db, ctx.matchId, JSON.stringify({ winnerOperatorId: forfeitResult.winnerOperatorId, reason: "forfeit" }), "ladder");
         return forfeitResult;
+      }
+
+      // Hard termination: if we've hit the turn cap, end as a draw so the test
+      // doesn't hang when agents play only pass actions or no victor emerges.
+      if (engine.state.turn >= MAX_TURNS) {
+        updateMatchOutcome(
+          this.db,
+          ctx.matchId,
+          JSON.stringify({ winnerOperatorId: null, reason: "timeout" }),
+          null,
+          "ladder",
+        );
+        return { winnerOperatorId: null, reason: "timeout" };
       }
 
       const isATurn = engine.state.yourTurn;
@@ -165,6 +176,20 @@ export class MatchRunner {
 
       engine.setActions(isATurn ? action : otherAction, isATurn ? otherAction : action);
       engine.tick();
+
+      // Hard termination guard: if we've exhausted the turn cap, end the match
+      // as a draw (timeout) rather than looping forever when agents play pass
+      // actions or the engine never produces a victory within maxTurns.
+      if (engine.state.turn >= MAX_TURNS) {
+        updateMatchOutcome(
+          this.db,
+          ctx.matchId,
+          JSON.stringify({ winnerOperatorId: null, reason: "timeout" }),
+          null,
+          "ladder",
+        );
+        return { winnerOperatorId: null, reason: "timeout" };
+      }
 
       // Persist turn event immediately — small batch (one turn at a time)
       const turnEvent: Omit<MatchEvent, "matchId"> = {

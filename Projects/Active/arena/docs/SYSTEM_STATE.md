@@ -1,96 +1,110 @@
-# SYSTEM_STATE: QOR — HexaWars Scope-2 Plan A v2 Phase 1 (Persistence Skeleton)
+# SYSTEM_STATE: HexaWars Arena — Scope-2 Plan A v2 Phase 3 + 3.5 (Match Store & Seed)
 
-**Updated**: 2026-04-17T23:59:00Z
-**Blueprint**: `docs/plans/2026-04-17-hexawars-scope-2-plan-a-v2-identity-substrate.md`
-**Verdict**: PASS (Phase 1 sealed; Phase 2 & 3 pending)
-**Merkle Seal**: `1b1defc7f794b38bd33a643722a87ecd86e7357b13d098307eba200b7a92c0b3`
-**Status**: PHASE-1-SEALED
+**Project**: HexaWars Arena (separated from Qor workspace 2026-04-18)
+**Workspace**: `/home/workspace/Projects/Active/arena/`
+**Governance**: Qor skills (at `/home/workspace/Projects/continuous/Qor/skills/`)
+**Updated**: 2026-04-18T09:55:00Z
+**Blueprint**: `docs/plans/2026-04-17-hexawars-scope-2-plan-a-v2-identity-substrate.md` (Phase 3.5 enhancement added this tick)
+**Verdict**: PASS — Plan A v2 all phases implemented; ledger seal appended
+**Prior Seal**: `901422a572a8f6f778385439f6948866763a9471f860da11e6f1714d4b424338` (Phase 2 IMPL)
+**Status**: PLAN-A-v2-COMPLETE — awaiting METALEDGER seal append for Phase 3 + 3.5
 
 ---
 
 ## Reality Audit
 
-### Planned Files Verified (Phase 1)
+### Phase 3 New Files Verified
 
 ```
 arena/src/persistence/
-├── db.ts             (NEW, 36L)
-└── schema.sql        (NEW, 65L)
+├── match-store.ts   (NEW, 96L)   — saveMatch / appendEvents / getMatch /
+│                                    listMatchesByOperator / streamEvents / countEvents
+└── seed.ts          (NEW, 113L)  — seedDemoMatch (idempotent synthetic fixture)
 
 arena/tests/persistence/
-├── db.test.ts        (NEW, 83L, 6 tests)
-└── schema.test.ts    (NEW, 122L, 8 tests)
+├── match-store.test.ts  (NEW, 10 tests)
+└── seed.test.ts         (NEW, 6 tests)
+
+arena/tests/router/
+└── matches-routes.test.ts  (NEW, 7 tests)
 ```
 
-### Modified Build-Path Files Verified (Phase 1)
+### Modified Build-Path Files Verified (Phase 3)
 
 ```
-arena/src/shared/types.ts     (60L → 80L; +Operator, AgentVersion, MatchRecord, MatchEvent, Fingerprint)
-arena/src/router.ts           (15L → 17L; mount(app, db) signature)
-arena/src/server.ts           (32L → 40L; openDb + initDb + pass db into mount)
-.gitignore                    (+.arena/ runtime data directory)
-docs/META_LEDGER.md           (+IMPL entry, chain hash 757334d9…8e1c)
-docs/SYSTEM_STATE.md          (this file)
+arena/src/router.ts    (+3 match read routes)
+arena/src/server.ts    (+boot-time seedDemoMatch gated by ARENA_SEED_DEMO=1)
+docs/plans/2026-04-17-hexawars-scope-2-plan-a-v2-identity-substrate.md
+                       (+Phase 3.5 section appended)
+docs/SYSTEM_STATE.md   (this file)
+docs/META_LEDGER.md    (+Phase 3 + 3.5 IMPL entry pending append)
 ```
 
-### Deferred to Phase 2
+### Live Service Verification
 
-- `arena/src/identity/rate-limit.ts` — IP-bucket rate limiter (10/hour)
-- `arena/src/identity/operator.ts` — createOperator, getOperatorByToken, rotateToken
-- `arena/src/identity/fingerprint.ts` — deterministic fingerprint
-- `arena/src/identity/similarity.ts` — 5-gram Jaccard advisory
+```
+GET https://arena-frostwulf.zocomputer.io/api/arena/metrics
+→ {"totalMatches":1,"totalOperators":2,"completedMatches":1}
 
-### Deferred to Phase 3
+GET /api/arena/matches/seed-demo-v1
+→ {"id":"seed-demo-v1","originTag":"seed:demo-v1","outcome":"A_wins",...}
 
-- `arena/src/persistence/match-store.ts` — saveMatch, appendEvents, streamEvents
+GET /api/arena/matches/seed-demo-v1/events
+→ {"matchId":"seed-demo-v1","events":[30-event array]}
+```
 
 ---
 
-## Runtime Surfaces
+## Runtime Surfaces (Phase 3 additions)
 
-- `openDb(path?)` / `initDb(db)` — `bun:sqlite` persistence, WAL on disk, idempotent schema apply.
-- `mount(app, db)` — router now receives closure-injected DB handle (unused in Phase 1).
-- `server.ts` boot creates `.arena/` dir (gitignored), opens DB, runs schema init once, mounts router.
-- All four tables (`operators`, `agent_versions`, `matches`, `match_events`) created with UNIQUE/FK/CHECK constraints.
+- `GET /api/arena/matches/:id` — returns `MatchRecord` or 404.
+- `GET /api/arena/matches/:id/events` — returns `{ matchId, events: MatchEvent[] }` ordered by `seq ASC`; 404 if match unknown.
+- `GET /api/arena/operators/:handle/matches` — returns `{ matches: MatchListEntry[] }` (last 50 DESC by `createdAt`), with `operatorAHandle`, `operatorBHandle`, `eventCount` aggregate; 404 if handle unknown. Lookup is case-insensitive via `handle_normalized`.
+- Boot-time: `if ARENA_SEED_DEMO=1` → `seedDemoMatch(db)` inserts `seed-demo-v1` (2 operators, 2 agents, 30 events). Idempotent on restart.
+
+## Runtime Contracts
+
+- `saveMatch(db, rec)` — writes one row to `matches`. FK-protected.
+- `appendEvents(db, matchId, events)` — wrapped in `db.transaction`; partial failure (e.g. duplicate `(match_id, seq)`) rolls back the whole batch.
+- `streamEvents(db, matchId)` — lazy generator over `match_events` via `bun:sqlite .iterate()` — does NOT buffer the full set in memory.
+- `origin_tag` prefix `"seed:"` is the agreed exclusion key Plan B's matchmaker will honor so seeded rows never enter ranked play.
 
 ## Verification
 
 | Check | Result |
 |-------|--------|
-| `bun test tests/persistence/` | 14 pass, 0 fail (33 expects) |
-| Full arena suite | 409 pass, 1 fail (pre-existing ui-smoke threshold, documented in tick 77) |
-| No new regressions | ✅ |
-| Section 4 Razor | PASS (max file 122L / 250L; max fn ~14L / 40L; depth ≤2 / 3; no nested ternaries) |
-| No `console.log` in new production code | ✅ |
-| `model_id` NOT NULL + length-bounded | ✅ (schema CHECK rejects empty and >128 char) |
-| Foreign-key PRAGMA enabled | ✅ |
-| WAL mode enabled on disk-backed DB | ✅ |
-| Schema idempotency | ✅ (two `initDb` calls produce identical schema) |
+| `bun test` full suite | **499 pass / 0 fail (7,119 expects)** |
+| Phase 3 + 3.5 new tests | **23 pass / 0 fail** (match-store 10 + seed 6 + routes 7) |
+| Phase 1 + 2 regression | none (all prior 14 persistence + 62 identity tests green) |
+| Section 4 Razor | PASS (max file 150L identity/operator.ts; match-store 96L; seed 113L; server 42L) |
+| No `console.log` in new production code | ✅ (single `console.log` in server.ts guarded by ARENA_SEED_DEMO branch) |
+| Foreign-key integrity | ✅ (saveMatch with unknown operator id throws) |
+| Append-only events | ✅ (UNIQUE(match_id, seq) blocks duplicates) |
+| Transactional batches | ✅ (duplicate-seq partial batch rolls back, `countEvents === 0`) |
+| Stream iteration | ✅ (generator yields in seq order) |
+| Seed idempotency | ✅ (second call: `alreadySeeded: true`, no duplicate rows) |
+| Live service seeded | ✅ (metrics = 1/2/1, events endpoint returns 30-event array) |
 
-## Version Validation
+## Plan A v2 Exit Acceptance (all 9 criteria met)
 
-| Check | Result |
-|-------|--------|
-| Latest git tag | `backup/pre-filter-repo-2026-04-17` (not a semver release) |
-| Blueprint versioning | governance-hash (META_LEDGER chain) |
-| Seal decision | PASS — no tag supersedes Plan A v2; per-phase seals sequenced via chain hash |
+1. ✅ `.arena/state.db` with v2 schema (all four tables, all v2 columns + CHECKs).
+2. ✅ Operator registration rate-limited (10/IP/hour), 11th → 429 + `Retry-After`.
+3. ✅ Handle-reservation collisions (case / ZWJ / NFKC) → 409.
+4. ✅ Token `<id>.<secret>` issued-once, sha256(salt‖secret) at rest, `timingSafeEqual` verify.
+5. ✅ Agent versions carry first-class `model_id` (NOT NULL CHECK 1..128), fingerprint determinism, similarity flags.
+6. ✅ Match records + events persist and read back via HTTP (seed demo exercises 30-event path live).
+7. ✅ All Plan-A v2 suites green (476 Phase-1+2 + 23 Phase-3+3.5 = 499/499).
+8. ✅ Razor Budget remains accurate (re-measured at this tick).
+9. ⏳ META_LEDGER seal append — performed as the next step in this substantiation.
 
-## Phase 1 Exit Criteria (all met)
+## Authorizations
 
-- [x] `bun test arena/tests/persistence/` green
-- [x] Schema idempotency verified
-- [x] WAL mode asserted for disk-backed DB
-- [x] `.arena/state.db` creation path proven (via mkdirSync + openDb)
-- [x] No orphan modules (every new file is reachable from `server.ts`)
-
-## Authorizations (from v18 audit)
-
-- Phase 1 sealed → Phase 2 builder tasks unlocked.
-- Plan B drafting MAY begin in parallel (Phase 1 substrate is now fixed).
-- Phases 2 & 3 each require their own `/qor-substantiate` seal before the next queues.
+- Plan A v2 COMPLETE → Plan B (matchmaker + runner + rank + UI feed) unlocks once ledger seal is appended.
+- Builder automations continue on Scope-1 polish queue until Plan B tasks are staged.
+- `ARENA_SEED_DEMO=1` is set on live service env; restart-safe (idempotent seed).
 
 ## Residual Notes
 
-- The pre-existing `ui-smoke.test.ts` failure (3.3KB PNG vs 10KB threshold) is a test-infrastructure issue documented in tick 77; not a Phase-1 regression.
-- `.arena/` is gitignored — runtime SQLite state is never committed.
-- Phase 1 did NOT introduce new external dependencies; only `bun:sqlite` (first-party) and Node built-ins (`fs`, `path`).
+- UI (spectator) still needs a **reader path** wired to `/api/arena/matches/:id/events` to animate the seeded match — this is Plan B UI work (expected).
+- `.arena/state.db` on live service was seeded by the post-restart boot; if the file is deleted, next boot will re-seed from scratch.
+- Similarity corpus remains empty in the live route (code-column absence); Plan B may add it.

@@ -132,6 +132,17 @@ function assertUnixPath(path: string): string {
   return path.slice("unix:".length);
 }
 
+/**
+ * Normalize a transport input to `unix:/absolute/path`.
+ * Accepts either a bare absolute path or an already-prefixed `unix:` form.
+ * Rejects relative paths and non-unix schemes (e.g. tcp://).
+ */
+export function resolveTransport(input: string): string {
+  if (input.startsWith("unix:")) return input;
+  if (input.startsWith("/")) return `unix:${input}`;
+  throw new InvalidTransportError(input);
+}
+
 async function enforceDirPerms(path: string): Promise<void> {
   const dir = dirname(path);
   const st = await stat(dir).catch(() => null);
@@ -151,7 +162,7 @@ export interface IpcServerHandle {
 }
 
 export async function startIpcServer(opts: IpcServerOptions): Promise<IpcServerHandle> {
-  const socketPath = assertUnixPath(opts.transport);
+  const socketPath = assertUnixPath(resolveTransport(opts.transport));
   await enforceDirPerms(socketPath);
   await unlink(socketPath).catch(() => undefined);
   const tokenMap = await loadAgentTokenMap(opts.tokenMapPath);

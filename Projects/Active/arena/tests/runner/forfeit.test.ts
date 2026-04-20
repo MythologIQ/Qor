@@ -165,8 +165,11 @@ describe("MatchRunner forfeit", () => {
 
     const row = getMatch(db, "forfeit-persist-check");
     expect(row).not.toBeNull();
-    expect(row!.outcome).toBe("forfeit");
-    expect(row!.originTag).toBe("ladder:forfeit");
+    expect(row!.outcome).not.toBeNull();
+    const outcome = JSON.parse(row!.outcome!);
+    expect(outcome.winnerOperatorId).toBe(20); // B wins when A forfeits
+    expect(outcome.reason).toBe("forfeit");
+    expect(row!.originTag).toBe("ladder");
   });
 
   it("completes without hanging when a channel closes immediately", async () => {

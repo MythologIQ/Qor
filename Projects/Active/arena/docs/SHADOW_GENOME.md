@@ -32,3 +32,18 @@
 **Status:** spec_defect (confirmed, persistent infra gap)
 **Detail:** task-161 (f07981c) completed successfully but its success entry was never written to status.jsonl. task-162 remains blocked. The infra gap is persistent — task-161's test file exists, tests pass, but no status entry was written. This is a builder status-recording gap, not a code defect.
 **Severity:** 4
+
+## Builder Failure — tick=162 spec_defect
+
+**Tick:** 162 | **Task:** task-162-ui-matches-list | **Status:** spec_defect
+**Root cause:** GET /api/arena/matches route already present at line 72 of router.ts; task spec was redundant. No code changes needed.
+**Severity:** 4
+**Timestamp:** 2026-04-20T14:25:00Z
+
+## Builder Failure — 2026-04-20T14:37:04Z
+
+**Tick:** 162 | **Task:** task-162-ui-matches-list
+**Status:** blocked_on_deps
+**Blocked by:** task-161-ui-status-api-tests (no success entry in status.jsonl)
+**Severity:** 1
+

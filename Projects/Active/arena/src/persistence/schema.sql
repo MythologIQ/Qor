@@ -9,10 +9,16 @@
 -- MIGRATION: add elo column to operators (existing DBs only)
 -- ============================================================
 -- SQLite doesn't support ADD COLUMN IF NOT EXISTS.
--- Run this block on every initDb; pragma_table_info guards ensure
--- it is a no-op when the column already exists.
+-- Guard: only migrate if the column is absent.
 SELECT 'migration-elo-check' WHERE 1;
--- no-op sentinel to allow the block above to succeed when Elo already exists
+-- no-op sentinel
+-- Actual migration: add elo column only when it doesn't already exist.
+-- Done via a block that checks pragma_table_info before ALTER.
+-- We use a workaround: attempt ALTER and catch the duplicate column error
+-- via a wrapper that tries the add in a nested execution context.
+-- For SQLite Bun, we use a procedural approach inside initDb instead.
+-- The schema SQL below is the canonical DDL; actual migration logic
+-- lives in db.ts initDb() using a pragma_table_info guard.
 
 -- ============================================================
 -- TABLES

@@ -70,6 +70,8 @@ export function mount(app: Hono, db: Database, opts: MountOpts = {}): void {
   });
 
   app.get("/api/arena/matches", (c) => {
+    const rawLimit = c.req.query("limit");
+    const limit = rawLimit ? Math.min(Math.max(parseInt(rawLimit, 10), 1), 100) : 20;
     const rows = db
       .prepare(
         `SELECT m.id, oa.handle AS operator_a, ob.handle AS operator_b,
@@ -78,9 +80,9 @@ export function mount(app: Hono, db: Database, opts: MountOpts = {}): void {
          JOIN operators oa ON m.operator_a_id = oa.id
          JOIN operators ob ON m.operator_b_id = ob.id
          ORDER BY m.created_at DESC
-         LIMIT 50`,
+         LIMIT ?`,
       )
-      .all();
+      .all(limit);
     return c.json({ matches: rows });
   });
 

@@ -125,11 +125,14 @@ async function handleLayerRoutes(path: string, req: Request): Promise<Response |
 await initializeSchema(getDriver());
 
 let ipcHandle: IpcServerHandle | null = null;
-const IPC_TRANSPORT = process.env.CONTINUUM_IPC_TRANSPORT;
-const IPC_TOKEN_MAP = process.env.CONTINUUM_IPC_TOKEN_MAP;
-if (IPC_TRANSPORT && IPC_TOKEN_MAP) {
-  ipcHandle = await startIpcServer({ transport: IPC_TRANSPORT, tokenMapPath: IPC_TOKEN_MAP });
-  process.stdout.write(`Continuum IPC listening on ${ipcHandle.socketPath}\n`);
+const IPC_SOCKET = process.env.QOR_IPC_SOCKET ?? process.env.CONTINUUM_IPC_TRANSPORT;
+const IPC_TOKEN_MAP = process.env.QOR_IPC_TOKEN_MAP ?? process.env.CONTINUUM_IPC_TOKEN_MAP;
+if (IPC_SOCKET && IPC_TOKEN_MAP) {
+  if (process.env.CONTINUUM_IPC_TRANSPORT && !process.env.QOR_IPC_SOCKET) {
+    process.stdout.write("warn: CONTINUUM_IPC_TRANSPORT is deprecated; use QOR_IPC_SOCKET\n");
+  }
+  ipcHandle = await startIpcServer({ transport: IPC_SOCKET, tokenMapPath: IPC_TOKEN_MAP });
+  process.stdout.write(`QOR IPC listening on ${ipcHandle.socketPath}\n`);
 }
 
 const server = Bun.serve({

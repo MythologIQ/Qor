@@ -181,6 +181,44 @@ This v2 remediates v17's two security findings (V5: no "who can invoke" declarat
 
 ---
 
+## Phase 3.5 — Demo Seed Fixture (plan enhancement, 2026-04-18T09:45Z)
+
+**Trigger**: Operator observation "the UI is active but nothing feeds into it yet." Plan A v2 as originally written gives the spectator UI a readable HTTP surface but no content; matchmakers/runners are reserved for Plan B. To keep the Plan A stance (no live runner) while giving the UI something to render end-to-end, add a **synthetic canned-match seed** used only for demo/bootstrap and never in competitive paths.
+
+### Goal
+
+With an empty `.arena/state.db` and `ARENA_SEED_DEMO=1` at boot, the arena service inserts one synthetic match (2 operators, 2 agent versions, a deterministic event stream, `origin_tag = "seed:demo-v1"`). With the env var unset, boot is seed-free. The spectator UI can read `/api/arena/matches/seed-demo-v1/events` to replay a real stream.
+
+### Affected Files
+
+- `arena/src/persistence/seed.ts` (NEW, ≤90 LOC) — exports `seedDemoMatch(db): { matchId: string; eventCount: number; alreadySeeded: boolean }` and `DEMO_SEED_MATCH_ID = "seed-demo-v1"`. Idempotent: if a match with that id already exists, returns `{ alreadySeeded: true, ... }` without re-inserting. Deterministic: no `Date.now` / `randomBytes` — uses fixed seed-values for handles `demo_greedy` / `demo_random`, modelIds `builtin-greedy-v1` / `builtin-random-v1`, and a synthetic token pair.
+- `arena/src/server.ts` (MOD, +4 LOC) — after `initDb(db)`, if `process.env.ARENA_SEED_DEMO === "1"` call `seedDemoMatch(db)` behind a try/catch.
+
+### Unit Tests
+
+- `arena/tests/persistence/seed.test.ts` — `seedDemoMatch` on empty DB writes exactly 2 operators, 2 agent_versions, 1 match, and a 30-event stream; second call returns `alreadySeeded: true` and does NOT insert duplicates; `seq` values are 1..N with no gaps; `origin_tag = "seed:demo-v1"`.
+
+### Phase 3.5 Exit Criteria
+
+- `bun test tests/persistence/seed.test.ts` green.
+- With `ARENA_SEED_DEMO=1` + empty DB: service boots, metrics report `totalMatches: 1, totalOperators: 2, completedMatches: 1`, and `GET /api/arena/matches/seed-demo-v1/events` returns a 30-event JSON array.
+- Without the env var: boot is seed-free (no new rows).
+
+### What this does NOT do
+
+- Does NOT kick off live matches.
+- Does NOT write events while the service runs.
+- Does NOT alter competitive flow — `origin_tag` prefix `"seed:"` is the exclusion key Plan B's matchmaker will honor.
+
+### Razor Impact
+
+| File | Δ | Final | Under 250? |
+|------|--:|------:|:----------:|
+| `seed.ts` | +90 | 90 | ✅ |
+| `server.ts` | +4 | 42 | ✅ |
+
+---
+
 ## Sequencing Notes
 
 - Phases stack: P2 imports `db.ts` from P1; P3 imports `db.ts` from P1 and reuses types defined in P2. **No file in any phase is unreachable from `server.ts` boot.**

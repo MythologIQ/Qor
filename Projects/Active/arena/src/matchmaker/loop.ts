@@ -5,7 +5,7 @@ import type { MatchQueue } from './queue';
 import type { PresenceTracker } from './presence';
 import type { MatchPair, PairingCriteria } from './types';
 import { findPair } from './pair';
-import { recordPair } from '../../router';
+import { recordPair } from '../router';
 
 export function startMatchmaker(deps: {
   queue: MatchQueue;

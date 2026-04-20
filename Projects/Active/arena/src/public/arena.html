@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>HexaWars Arena</title>
+  <link rel="stylesheet" href="/arena/static/arena.css?v=20260418d4" />
+</head>
+<body>
+  <div class="shell">
+    <header class="topbar">
+      <div class="topbar-brand">
+        <div id="modeBadge">Live Arena</div>
+        <div class="title-stack">
+          <p class="eyebrow">HexaWars Spectator Feed</p>
+          <h1>Command Deck</h1>
+        </div>
+      </div>
+      <div class="topbar-meta">
+        <div class="status-chip">
+          <span class="status-label">Playback</span>
+          <span id="autoplayStatus">Live Socket</span>
+        </div>
+        <div class="status-chip">
+          <span class="status-label">Turn</span>
+          <span id="turnTicker">--/--</span>
+        </div>
+      </div>
+    </header>
+
+    <section class="command-strip">
+      <div class="headline-card">
+        <p class="panel-kicker">Featured Sequence</p>
+        <h2 id="headline">Awaiting opening exchange.</h2>
+        <p id="featuredEvent" class="headline-copy">No featured event yet.</p>
+      </div>
+      <div class="command-metrics">
+        <div class="metric-card">
+          <span class="status-label">Phase</span>
+          <strong id="phasePill">Spectator Feed</strong>
+        </div>
+        <div class="metric-card metric-card-pressure">
+          <span class="status-label">Combat Pressure</span>
+          <strong id="pressureValue">0%</strong>
+        </div>
+        <div class="runout-card">
+          <div class="progress-head">
+            <span>Runout</span>
+            <span id="progressLabel">No turn data</span>
+          </div>
+          <div class="progress-rail">
+            <div id="progressFill" class="progress-fill"></div>
+          </div>
+          <div id="timeline" class="timeline"></div>
+        </div>
+      </div>
+    </section>
+
+    <main class="stage-grid">
+      <section class="board-shell">
+        <div class="board-header">
+          <div class="board-title">
+            <p class="panel-kicker">Battlefield</p>
+            <h3>Kestrel Gate</h3>
+          </div>
+          <div class="controls">
+            <button id="togglePlayback" type="button" hidden>Pause Demo</button>
+            <button id="restartDemo" type="button" hidden>Restart Demo</button>
+          </div>
+        </div>
+        <div id="board" class="board-wrap"></div>
+        <div id="victory-banner" class="victory-banner" hidden>
+          <p class="panel-kicker">Result</p>
+          <h3 data-victory-title>Blue Horizon Closes The Gate</h3>
+          <p data-victory-copy>Blue Horizon wins.</p>
+        </div>
+      </section>
+
+      <aside class="telemetry-grid">
+        <section class="panel panel-score">
+          <p class="panel-kicker">Scoreboard</p>
+          <div id="score"></div>
+        </section>
+        <section class="panel">
+          <div class="panel-row">
+            <p class="panel-kicker">Operator Stack</p>
+            <span class="panel-tag">Live Metrics</span>
+          </div>
+          <div id="agentStatus"></div>
+        </section>
+        <section class="panel">
+          <div class="panel-row">
+            <p class="panel-kicker">Agent Intent</p>
+            <span class="panel-tag">Current Turn</span>
+          </div>
+          <div id="reasoningPanel"></div>
+        </section>
+        <section class="panel panel-log">
+          <div class="panel-row">
+            <p class="panel-kicker">Match Feed</p>
+            <span class="panel-tag">Newest First</span>
+          </div>
+          <div id="eventLog"></div>
+        </section>
+      </aside>
+    </main>
+  </div>
+  <script type="module" src="/arena/static/arena.js?v=20260418d4"></script>
+</body>
+</html>
