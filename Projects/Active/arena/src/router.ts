@@ -107,6 +107,73 @@ export function mount(app: Hono, db: Database, opts: MountOpts = {}): void {
     return c.json({ matchId: id, events });
   });
 
+  app.get("/api/arena/matches/:id/stream", (c) => {
+    const id = c.req.param("id");
+    const rec = getMatch(db, id);
+    if (!rec) return c.json({ error: "not_found" }, 404);
+
+    let lastSeq = 0;
+    const events = [];
+    for (const ev of streamEvents(db, id)) {
+      lastSeq = ev.seq;
+      events.push(ev);
+    }
+
+    let sentInitial = false;
+    let closed = false;
+
+    const stream = new ReadableStream({
+      async start(controller) {
+        const enc = new TextEncoder();
+        function sendEvent(data: string) {
+          if (closed) return;
+          controller.enqueue(enc.encode(`data: ${JSON.stringify(data)}\n\n`));
+        }
+
+        // Send initial snapshot
+        sendEvent({ type: "snapshot", matchId: id, events });
+        sentInitial = true;
+
+        // Poll for new events every 1s
+        const poll = setInterval(() => {
+          if (closed) {
+            clearInterval(poll);
+            return;
+          }
+          const current = getMatch(db, id);
+          if (current?.outcome != null) {
+            clearInterval(poll);
+            sendEvent({ type: "match-end", matchId: id, outcome: current.outcome });
+            closed = true;
+            controller.close();
+            return;
+          }
+          const newEvents = [];
+          for (const ev of streamEvents(db, id)) {
+            if (ev.seq > lastSeq) {
+              lastSeq = ev.seq;
+              newEvents.push(ev);
+            }
+          }
+          if (newEvents.length > 0) {
+            sendEvent({ type: "update", events: newEvents });
+          }
+        }, 1000);
+      },
+      cancel() {
+        closed = true;
+      },
+    });
+
+    return new Response(stream, {
+      headers: {
+        "Content-Type": "text/event-stream",
+        "Cache-Control": "no-cache",
+        "Connection": "keep-alive",
+      },
+    });
+  });
+
   app.get("/api/arena/operators/:handle/matches", (c) => {
     const handle = c.req.param("handle");
     const op = db
