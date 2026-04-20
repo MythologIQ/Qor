@@ -20,6 +20,8 @@ import { getMatch, listMatchesByOperator, streamEvents } from "./persistence/mat
 import { getLeaderboard } from "./rank/leaderboard";
 import { matchQueue as _moduleMatchQueue } from "./matchmaker/queue";
 import { presenceTracker as _modulePresenceTracker } from "./matchmaker/presence";
+import { matchmakerMetrics } from "./matchmaker/metrics";
+import { runnerMetrics } from "./runner/metrics";
 
 let lastPairAt: number | null = null;
 
@@ -42,9 +44,30 @@ export function mount(app: Hono, db: Database, opts: MountOpts = {}): void {
   const matchQueue = opts.matchQueue ?? _moduleMatchQueue;
   const presenceTracker = opts.presence ?? _modulePresenceTracker;
 
-  app.get("/api/arena/status", (c) =>
-    c.json({ stub: true, path: "/api/arena/status" }),
-  );
+  app.get("/api/arena/status", (c) => {
+    const matchCount = db
+      .prepare("SELECT COUNT(*) as count FROM matches")
+      .get() as { count: number };
+    const operatorCount = db
+      .prepare("SELECT COUNT(*) as count FROM operators")
+      .get() as { count: number };
+    const completedCount = db
+      .prepare("SELECT COUNT(*) as count FROM matches WHERE outcome IS NOT NULL")
+      .get() as { count: number };
+    const mmMetrics = matchmakerMetrics.snapshot();
+    const runMetrics = runnerMetrics.snapshot();
+    const lastPair = getLastPairAt();
+    return c.json({
+      queueSize: matchQueue.size(),
+      onlineCount: presenceTracker.size(),
+      matchesRun: runMetrics.matchesRun,
+      lastPairAt: lastPair,
+      totalOperators: operatorCount.count,
+      totalMatches: matchCount.count,
+      completedMatches: completedCount.count,
+      pairsFormed: mmMetrics.pairsFormed,
+    });
+  });
 
   app.get("/api/arena/matches", (c) => {
     const rows = db
