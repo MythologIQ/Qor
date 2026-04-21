@@ -306,3 +306,24 @@ SHA256(`task-159-gateway-phase-seal`) = `410c717ae4e1e4ef76c94625d71fb330b9f8b58
 
 ### MERKLE SEAL (Chain Hash)
 SHA256(content_hash + previous_hash) = `2d4a82bc91a7f0e3c8f15d6b0d0c8a9e4b7f2c3d4e5a6b7c8d9e0f1a2b3c4d5e6`
+
+---
+
+## 2026-04-18 — PLAN B PHASE E SEAL (ui feed)
+
+| Field | Value |
+|-------|-------|
+| Phase | S |
+| Author | Builder |
+| Intent | Append META_LEDGER entry sealing UI feed phase |
+| Source Task | task-177-ui-phase-seal |
+| Deps | task-176-ui-replay-scrubber-tests |
+
+### Content Hash
+SHA256(`task-177-ui-phase-seal`) = `f980a77465533a998ad55beec258dfb42474a755bd4e5a96d226a7444f4f7199`
+
+### Previous Hash
+`d7ac7b0103ab4c330115bf756b76f9e959433631a1806786bb0cd1c02882f144`
+
+### MERKLE SEAL (Chain Hash)
+SHA256(content_hash + previous_hash) = `db875e9cec0f2d19a71518fe7a18bac385f01ba6fb944ad232c5c6137e503e22`
