@@ -369,3 +369,73 @@ SHA256(`task-187-tournament-phase-seal`) = `2aeb416c7a51b03542f3833d3eca6e97c6b6
 
 ### MERKLE SEAL (Chain Hash)
 SHA256(content_hash + previous_hash) = `7ee4c4d5aca554b95e758e590a04625526256fa46a3338dd9d3100a429863dcd`
+
+## 2026-04-21T21:51:28Z — GATE TRIBUNAL — HexaWars structural + public-surface pass
+
+| Field | Value |
+|-------|-------|
+| Phase | GATE |
+| Verdict | PASS |
+| Scope | HexaWars-only Arena runtime, operator surface, runner, and public spectator page |
+| Audit report | `.agent/staging/AUDIT_REPORT.md` and `.failsafe/governance/AUDIT_REPORT.md` |
+| Verification | `bun test --bail` → 750 pass / 0 fail |
+| Key closures | Added `docs/CONCEPT.md`; removed `matchmaker -> router` reverse dependency; relocated test harnesses; wired keyboard runtime path; split public CSS below Razor ceiling |
+
+### Content Hash
+SHA256(AUDIT_REPORT.md) = `464ae23e710c06f9781d3f6c12dc6e9170b4f21f9072a24a23d74a8ecdedf0df`
+
+### Previous Hash
+`7ee4c4d5aca554b95e758e590a04625526256fa46a3338dd9d3100a429863dcd`
+
+### MERKLE SEAL (Chain Hash)
+SHA256(content_hash + previous_hash) = `0342570bf48ad51fc1843d366e97c9f2bff308b8bcb81fee3b2170882c2c31fb`
+
+---
+
+## 2026-04-21T21:51:28Z — IMPLEMENTATION — HexaWars Arena remediation loop complete
+
+| Field | Value |
+|-------|-------|
+| Phase | IMPL |
+| Scope | HexaWars component only — Arena page, runner, matchmaker status, persistence, and supporting tests |
+| Result | PASS-aligned implementation complete |
+| Tests | `bun test --bail` → 750 pass / 0 fail |
+| Public copy | Arena page now markets deterministic agent-v-agent competition |
+| Notable runtime fixes | Active-side timeout handling, turn alternation repair, presence reset, FK-safe match outcome updates |
+| Razor closures | `src/public/demo-replay.js` compacted; `src/public/arena.css` split into `arena-core.css`, `arena-shell.css`, `arena-board.css`; route/test files reduced below ceilings |
+
+### Content Hash
+SHA256(implementation summary) = `88bea6d4ef0ff6e8b221274b3785836883b6c57400bb821649588c87ec5833f8`
+
+### Previous Hash
+`0342570bf48ad51fc1843d366e97c9f2bff308b8bcb81fee3b2170882c2c31fb`
+
+### MERKLE SEAL (Chain Hash)
+SHA256(content_hash + previous_hash) = `a458aeb6d82acc5589db941d854a988351030231785f891a403fe8a8789fca8b`
+
+---
+
+## 2026-04-21 — PLAN B RELEASE SEAL
+
+| Field | Value |
+|-------|-------|
+| Tick | 192 |
+| Task | task-192-planB-final-seal |
+| Phase | S (Seal) |
+
+### Tree Hash (SHA256 of src/ + tests/ tree)
+```
+dd540a80de9776e8b8882fa90f4d5a025dbf9c3d4f4debdc062a6de15a537f02
+```
+
+### README Last Updated
+2026-04-21
+
+### Content Hash
+SHA256(summary) = `dd540a80de9776e8b8882fa90f4d5a025dbf9c3d4f4debdc062a6de15a537f02`
+
+### Previous Hash
+`a458aeb6d82acc5589db941d854a988351030231785f891a403fe8a8789fca8b`
+
+### MERKLE SEAL (Chain Hash)
+SHA256(content_hash + previous_hash) = `6210679a9d03dd64117e28464e002ac3420514507e4eb79f932a72af875ed6b1`

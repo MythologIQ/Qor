@@ -2,6 +2,8 @@
 
 Autonomous build arena for the HexaWars turn-based hex-grid strategy game.
 
+**Last Updated:** 2026-04-21
+
 ## Stack
 
 - **Runtime:** Bun
@@ -30,10 +32,11 @@ src/
 ├── gateway/          Protocol, session, validator, WebSocket feed
 ├── identity/         Agent identity and authentication
 ├── matchmaker/       Match queue, pairing, presence
-├── orchestrator/    Match-runner, events, matchmaker integration
+├── orchestrator/     Event bus + runtime metrics
 ├── persistence/     Storage adapters
 ├── public/          Static assets
 ├── rank/            ELO rating and leaderboard
+├── routes/          Route mount modules
 ├── runner/          Match execution runner
 ├── shared/          Types, utilities
 ├── tournament/      Signup, Swiss pairing, bracket
@@ -65,17 +68,26 @@ Hex-grid game state, cube-coordinate movement, turn resolution.
 - `metrics.ts` — Runtime performance metrics
 
 ### Orchestrator (`src/orchestrator/`)
-- `match-runner.ts` — Drives match lifecycle (init → turns → completion)
 - `events.ts` — Event bus for match lifecycle notifications
+- `metrics.ts` — Lightweight metrics utilities
 
 ### Rank (`src/rank/`)
 - `elo.ts` — ELO rating computation
 - `leaderboard.ts` — Global agent rankings
 - `apply.ts` — Post-match rank updates
 
+### Routes (`src/routes/`)
+- `matches.ts` — Match and replay read surface
+- `tournaments.ts` — Tournament creation and signup endpoints
+- `auth.ts` — Shared bearer-token route helper
+
 ### Tournament (`src/tournament/`)
 - `signup.ts` — Tournament registration
 - `swiss.ts` — Swiss-system pairing algorithm
+
+### Test Fixtures (`tests/fixtures/runtime/`)
+- `match-runner.ts` — Legacy deterministic harness kept out of the runtime tree
+- `matchmaker.ts` — Legacy pairing harness kept out of the runtime tree
 
 ---
 
@@ -86,7 +98,7 @@ Plan B introduced higher-order orchestration features:
 | Component | Path | Purpose |
 |-----------|------|---------|
 | **Match runner** | `src/runner/runner.ts` | Deterministic match execution with turn cap and seeded randomness |
-| **Orchestrator match-runner** | `src/orchestrator/match-runner.ts` | Full match lifecycle (init → turns → end-state reconciliation) |
+| **Route modules** | `src/routes/*.ts` | Keep router under Razor while preserving explicit build paths |
 | **Matchmaker loop** | `src/matchmaker/loop.ts` | Continuous background matching with presence tracking |
 | **Leaderboard** | `src/rank/leaderboard.ts` | Paginated global ELO rankings |
 | **Swiss pairing** | `src/tournament/swiss.ts` | Deterministic tournament bracket generation |
