@@ -327,3 +327,45 @@ SHA256(`task-177-ui-phase-seal`) = `f980a77465533a998ad55beec258dfb42474a755bd4e
 
 ### MERKLE SEAL (Chain Hash)
 SHA256(content_hash + previous_hash) = `db875e9cec0f2d19a71518fe7a18bac385f01ba6fb944ad232c5c6137e503e22`
+
+---
+
+## 2026-04-18 — PLAN B PHASE S SEAL (tournament scaffold)
+
+| Field | Value |
+|-------|-------|
+| Phase | S |
+| Author | Builder |
+| Intent | Append META_LEDGER entry sealing tournament scaffold |
+| Source Task | task-187-tournament-phase-seal |
+| Deps | task-186-tournament-routes-tests |
+
+### Content Hash
+SHA256(`task-187-tournament-phase-seal`) = `cf0d9c42341cfa84574d6dda399e3f4d7c9d4c351ba8ec118e2ac7175d5ccb9e`
+
+### Previous Hash
+`db875e9cec0f2d19a71518fe7a18bac385f01ba6fb944ad232c5c6137e503e22`
+
+### MERKLE SEAL (Chain Hash)
+SHA256(content_hash + previous_hash) = `1684429edd081660d10ff031a15060a47f25594aec337684e2696d9944b3dc86`
+
+---
+
+## 2026-04-18 — PLAN B PHASE F SEAL (tournament scaffold)
+
+| Field | Value |
+|-------|-------|
+| Phase | F |
+| Author | Builder |
+| Intent | Append META_LEDGER entry sealing tournament scaffold |
+| Source Task | task-187-tournament-phase-seal |
+| Deps | task-186-tournament-routes-tests |
+
+### Content Hash
+SHA256(`task-187-tournament-phase-seal`) = `2aeb416c7a51b03542f3833d3eca6e97c6b64ac0f87845af9569abb9c265a02a`
+
+### Previous Hash
+`db875e9cec0f2d19a71518fe7a18bac385f01ba6fb944ad232c5c6137e503e22`
+
+### MERKLE SEAL (Chain Hash)
+SHA256(content_hash + previous_hash) = `7ee4c4d5aca554b95e758e590a04625526256fa46a3338dd9d3100a429863dcd`
