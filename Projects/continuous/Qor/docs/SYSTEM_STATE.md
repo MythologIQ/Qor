@@ -37,19 +37,29 @@ Deprecation warning emitted on stdout when legacy var in use and new var absent.
 
 | Path | Role | LOC | Status |
 |------|------|-----|--------|
-| `qor/start.sh` (+x) | Wrapper entrypoint: env → spawn Neo4j → boot gate → watchdog → `exec bun` | 45 | SEALED |
+| `qor/start.sh` (+x) | Wrapper entrypoint: env → spawn Neo4j → boot gate → watchdog → background-launch Bun → wait | 93 | SEALED (Phase 3 v5 P1) |
 | `qor/neo4j.conf` | Workspace Neo4j override (127.0.0.1 listen; data/logs paths) | 9 | SEALED |
 | `qor/README.md` | Entrypoint spec + env contract + exit codes + signal handling + Known Limitations | 60 | SEALED |
-| `qor/start.test.sh` (+x) | 3-scenario bash harness (boot-pass, boot-timeout, liveness-kill) | 153 | SEALED |
+| `qor/start.test.sh` (+x) | 7-scenario bash harness (boot-pass, boot-timeout, liveness-kill, crashloop-cooldown, window-reset, preflight-probe, bun-watchdog) | 349 | SEALED (Phase 3 v5 P1) |
 
 ## Phase 2 Test Surface
 
-- Bash harness: **3/3 pass** (boot_gate_pass, boot_gate_timeout, liveness_kill)
+- Bash harness: **7/7 pass** (boot_gate_pass, boot_gate_timeout, liveness_kill, crashloop_cooldown, crashloop_window_reset, preflight_port_probe, bun_watchdog)
 - Stubs Neo4j via `$NEO4J_HOME` redirect and Bun via PATH shim; runs under `setsid` with per-scenario process-group reap.
+
+## Phase 3 v5 Phase 1 Hardening (Sealed 2026-04-20)
+
+Applied R3 + R4 closures in-place on `qor/start.sh` without structural change; extended `qor/start.test.sh` with scenarios 4–7:
+
+- **R3 — Crashloop counter**: `/dev/shm/qor-crashloop` stateful counter, 3 failures / 60s window / 60s cooldown.
+- **R4 Gap 1 — Pre-flight 7687 probe**: subshell-scoped `/dev/tcp` probe avoids stderr-silencing; orphan Neo4j detected and fails fast.
+- **R4 Gap 2 — Bun PID watchdog**: background launch + `wait` replaces `exec`; supervisor sees Bun crash as wrapper exit.
+
+Chain: `e15f8b67d86a92bfb867d6367fdf13086347408711b2f75b49696a7f743bedc5` (prev `b6792654…` v5 GATE PASS).
 
 ## Unshipped Phases
 
-- **Phase 3** — Atomic service swap via zo `register_user_service`. Requires live-state re-gate immediately before execution.
+- **Phase 3 v5 Phase 2** — Atomic service swap (`neo4j` + `continuum-api` → `qor`) + bash canary (`qor/qor-live-canary.sh`) + MCP config-layer runbook step. Requires live-state re-audit immediately before execution.
 
 ## Open Deferrals (Per Plan)
 
