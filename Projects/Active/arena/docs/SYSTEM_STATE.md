@@ -1,13 +1,13 @@
-# SYSTEM_STATE: HexaWars Arena — Scope-2 Plan A v2 Phase 3 + 3.5 (Match Store & Seed)
+# SYSTEM_STATE: HexaWars Arena — Scope-2 Plan A v2 Phase 3 + 3.5 (Match Store & Seed) + Plan B (Matchmaker & Rank)
 
 **Project**: HexaWars Arena (separated from Qor workspace 2026-04-18)
 **Workspace**: `/home/workspace/Projects/Active/arena/`
 **Governance**: Qor skills (at `/home/workspace/Projects/continuous/Qor/skills/`)
-**Updated**: 2026-04-18T09:55:00Z
+**Updated**: 2026-04-21T20:40:00Z
 **Blueprint**: `docs/plans/2026-04-17-hexawars-scope-2-plan-a-v2-identity-substrate.md` (Phase 3.5 enhancement added this tick)
-**Verdict**: PASS — Plan A v2 all phases implemented; ledger seal appended
+**Verdict**: PASS — Plan A v2 all phases implemented; ledger seal appended; Plan B matchmaker/runner/rank/UI feed complete
 **Prior Seal**: `901422a572a8f6f778385439f6948866763a9471f860da11e6f1714d4b424338` (Phase 2 IMPL)
-**Status**: PLAN-A-v2-COMPLETE — awaiting METALEDGER seal append for Phase 3 + 3.5
+**Status**: PLAN-B-COMPLETE — all scope-2 deliverables shipped; arena entering maintenance mode
 
 ---
 
