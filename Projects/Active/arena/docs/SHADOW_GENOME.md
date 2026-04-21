@@ -47,3 +47,11 @@
 **Blocked by:** task-161-ui-status-api-tests (no success entry in status.jsonl)
 **Severity:** 1
 
+
+## 2026-04-18 — Plan B Builder-Failure Resolution (superseded)
+
+**Resolved entries:** tick=163 blocked_on_deps, tick=162 spec_defect (repeated entries), rem-021/023/024 spec_defect (old Qor path references)
+**Classification:** RESOLVED: superseded
+**Root cause:** The post-fork arena repository (`/home/workspace/Projects/Active/arena/docs/SHADOW_GENOME.md`) is a new file that was forked from Qor on 2026-04-18. The entries above reference either: (a) historical Qor-era queue drift that has since been resolved, or (b) remediation tasks that targeted the old Qor path before the fork. All are superseded by subsequent builder progress.
+**Evidence:** task-162 spec_defect was confirmed as a redundant spec (route already existed at router.ts:72); task-163 dependency chain is blocked by the same resolved spec_defect; rem-021/023/024 spec_defects all cite the old path which no longer applies post-fork.
+**Future behavior:** Do not reopen these entries unless a new Plan B builder failure occurs with a distinct root cause.
