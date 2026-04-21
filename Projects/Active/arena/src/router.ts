@@ -18,6 +18,7 @@ import {
 import { registerAgentVersion } from "./identity/agent-version";
 import { getMatch, listMatchesByOperator, streamEvents } from "./persistence/match-store";
 import { getLeaderboard } from "./rank/leaderboard";
+import { createTournament, signup } from "./tournament/signup";
 import { matchQueue as _moduleMatchQueue } from "./matchmaker/queue";
 import { presenceTracker as _modulePresenceTracker } from "./matchmaker/presence";
 import { matchmakerMetrics } from "./matchmaker/metrics";
@@ -327,5 +328,70 @@ export function mount(app: Hono, db: Database, opts: MountOpts = {}): void {
       queueSize,
       presenceCount,
     });
+  });
+
+  // ── Tournament routes (Phase E) ──────────────────────────────────────
+
+  app.post("/api/arena/tournaments", (c) => {
+    const auth = c.req.header("authorization") ?? "";
+    const m = /^Bearer\s+(.+)$/i.exec(auth);
+    if (!m) return c.json({ error: "unauthorized" }, 401);
+    const operator = getOperatorByToken(db, m[1]);
+    if (!operator) return c.json({ error: "unauthorized" }, 401);
+
+    let body: { name?: unknown; startAt?: unknown };
+    try {
+      body = c.req.query("name") !== "" ? { name: c.req.query("name"), startAt: c.req.query("startAt") } : await c.req.json();
+    } catch {
+      return c.json({ error: "invalid_json" }, 400);
+    }
+    const name = typeof body.name === "string" ? body.name : "";
+    const startAt =
+      typeof body.startAt === "number"
+        ? body.startAt
+        : typeof body.startAt === "string"
+          ? parseInt(body.startAt, 10)
+          : 0;
+    if (!name) return c.json({ error: "name_required" }, 400);
+    if (!startAt) return c.json({ error: "startAt_required" }, 400);
+
+    const id = createTournament(db, name, startAt);
+    return c.json({ id, name, startAt }, 201);
+  });
+
+  app.post("/api/arena/tournaments/:id/signup", (c) => {
+    const auth = c.req.header("authorization") ?? "";
+    const m = /^Bearer\s+(.+)$/i.exec(auth);
+    if (!m) return c.json({ error: "unauthorized" }, 401);
+    const operator = getOperatorByToken(db, m[1]);
+    if (!operator) return c.json({ error: "unauthorized" }, 401);
+
+    const id = c.req.param("id");
+    const tournamentId = parseInt(id, 10);
+    if (!tournamentId) return c.json({ error: "invalid_id" }, 400);
+
+    const signupId = signup(db, tournamentId, operator.id);
+    return c.json({ signupId, tournamentId, operatorId: operator.id }, 201);
+  });
+
+  app.get("/api/arena/tournaments/:id", (c) => {
+    const id = c.req.param("id");
+    const tournamentId = parseInt(id, 10);
+    if (!tournamentId) return c.json({ error: "invalid_id" }, 400);
+
+    const row = db
+      .prepare("SELECT id, name, start_at AS startAt, status FROM tournaments WHERE id = ?")
+      .get(tournamentId) as { id: number; name: string; startAt: number; status: string } | undefined;
+    if (!row) return c.json({ error: "not_found" }, 404);
+
+    const signups = db
+      .prepare(
+        `SELECT ts.id, ts.operator_id, o.handle
+         FROM tournament_signups ts
+         JOIN operators o ON ts.operator_id = o.id
+         WHERE ts.tournament_id = ?`,
+      )
+      .all(tournamentId);
+    return c.json({ ...row, signups });
   });
 }
