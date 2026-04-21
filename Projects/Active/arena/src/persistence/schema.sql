@@ -71,6 +71,49 @@ CREATE TABLE IF NOT EXISTS match_events (
   FOREIGN KEY (match_id) REFERENCES matches(id) ON DELETE RESTRICT
 );
 
+-- ============================================================
+-- TOURNAMENTS
+-- ============================================================
+
+CREATE TABLE IF NOT EXISTS tournaments (
+  id        INTEGER PRIMARY KEY,
+  name      TEXT    NOT NULL,
+  start_at  INTEGER NOT NULL,
+  status    TEXT    NOT NULL
+                      CHECK (status IN ('pending', 'active', 'completed', 'cancelled'))
+);
+
+CREATE TABLE IF NOT EXISTS tournament_signups (
+  id            INTEGER PRIMARY KEY,
+  tournament_id INTEGER NOT NULL,
+  operator_id   INTEGER NOT NULL,
+  FOREIGN KEY (tournament_id) REFERENCES tournaments(id) ON DELETE RESTRICT,
+  FOREIGN KEY (operator_id)   REFERENCES operators(id)  ON DELETE RESTRICT,
+  UNIQUE (tournament_id, operator_id)
+);
+
+CREATE TABLE IF NOT EXISTS tournament_pairings (
+  id            INTEGER PRIMARY KEY,
+  tournament_id INTEGER NOT NULL,
+  round_no      INTEGER NOT NULL,
+  operator_a    INTEGER NOT NULL,
+  operator_b    INTEGER NOT NULL,
+  match_id      TEXT,
+  result        TEXT
+                  CHECK (result IN ('a_wins', 'b_wins', 'draw', NULL)),
+  FOREIGN KEY (tournament_id) REFERENCES tournaments(id) ON DELETE RESTRICT,
+  FOREIGN KEY (operator_a)    REFERENCES operators(id)  ON DELETE RESTRICT,
+  FOREIGN KEY (operator_b)    REFERENCES operators(id)  ON DELETE RESTRICT,
+  FOREIGN KEY (match_id)     REFERENCES matches(id)    ON DELETE SET NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_tournament_signups_tournament_id
+  ON tournament_signups(tournament_id);
+CREATE INDEX IF NOT EXISTS idx_tournament_pairings_tournament_id
+  ON tournament_pairings(tournament_id);
+CREATE INDEX IF NOT EXISTS idx_tournament_pairings_match_id
+  ON tournament_pairings(match_id);
+
 CREATE UNIQUE INDEX IF NOT EXISTS idx_operators_handle
   ON operators(handle);
 CREATE UNIQUE INDEX IF NOT EXISTS idx_operators_handle_normalized
