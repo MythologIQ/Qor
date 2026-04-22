@@ -1,94 +1,102 @@
-# Gate Tribunal — Phase 3 Cutover v5
+# Gate Tribunal — Phase 3 Cutover v5.1 §Phase 2
 
-**Plan:** `docs/plans/2026-04-20-qor-phase3-cutover-v5.md`
-**Content hash:** `b929b2314acc5ad7586ac2ee537e0f2ef228943414909fdba8a23219ec5cac1d`
-**Prior chain (v4 VETO):** `5b58f8a920f1a5ef8407a2987d5860dd02a84fe4e4eca5c82e88979118dd082f`
-**Chain hash:** `b6792654d0fe59712fc48d09b3d87a08513360c6b75ddd0d2495bbfab40cfd1e`
-**Risk Grade:** L2 (service infra — lifecycle, credentials, atomic swap)
+**Plan:** `docs/plans/2026-04-21-qor-phase3-cutover-v5.1.md` §Phase 2 (atomic service swap + canary, D1 remediation)
+**Content hash:** `33deccdfc5713b9fdc45a3be39694a967e257b3923f350d30d0875dbc7dbbb1a`
+**Prior chain (v5 VETO):** `b19d4da856aeee32788c809600296b980af5661f5a9f0c57fd52867529bef531`
+**Chain hash:** `cc6f127eacd0dccd879d0e0de04f90f7127b0d1284c6b59b4f65960e0e812ee2`
 **Verdict:** ✅ **PASS**
+**Risk Grade:** L2 (operational service cutover)
 
----
+## Scope
 
-## Audit Passes
+v5.1 delta vs. v5: **single-line swap** of canary assertion 4 Bolt probe primitive — `nc -z 127.0.0.1 7687` → `(exec 3<>/dev/tcp/127.0.0.1/7687) 2>/dev/null && exec 3<&- 3>&-`. All other v5 design (atomic service swap, env_vars, IPC deferral, rollback, MCP runbook step, canary assertions 1–3, 5–6) inherited verbatim under v5's PASS chain `b6792654…`. Phase 1 start.sh hardening sealed under v5 at `e15f8b67…` — not re-audited.
 
-### Security (L3)
+## Live-State Reconnaissance
 
-- No placeholder auth. Inline `NEO4J_PASS=victor-memory-dev` is documented dev-grade secret, accepted under Q1=A.
-- v5 delta is single-line endpoint swap; no new secrets, no new auth surface.
-- No bypassed checks; no mock auth returns.
+| Probe | Result |
+|---|---|
+| `bash --version` | GNU bash 5.2.15 |
+| `bash --help \| grep disable-net-redirections` | absent (net-redirections compiled in) |
+| `(exec 3<>/dev/tcp/127.0.0.1/3088) 2>/dev/null` | succeeds on bound port |
+| `(exec 3<>/dev/tcp/127.0.0.1/65535) 2>/dev/null` | fails (connection refused) |
+| `(exec 3<>/dev/tcp/127.0.0.1/7687) 2>/dev/null` | fails (Neo4j not yet running — expected pre-cutover) |
+| Subshell fd isolation verified | fd 3 not leaked to parent (`ls /proc/$$/fd/ \| grep ' 3 '` empty) |
+| `start.sh` uses same idiom | 3 call sites (lines 40, 49, 70) sealed at `e15f8b67…` |
+| `qor/qor-live-canary.sh` exists? | No — implementation artifact for Phase 2 |
 
-**PASS.**
+Primitive is provably discriminating, leak-free, and already validated under Phase 1 seal.
 
-### Ghost UI
+## Adversarial Audit
 
-N/A — plan introduces no UI.
+### Security Audit
+- [x] No placeholder auth logic. *(v5.1 changes bash idiom only.)*
+- [x] No new hardcoded credentials. *(NEO4J_PASS inline inherited from v5 PASS chain.)*
+- [x] No bypassed security checks.
+- [x] No mock authentication returns.
+- [x] No security disablement comments.
 
-**PASS.**
+**Verdict: PASS**
 
-### Section 4 Razor
+### Ghost UI Audit
+- [x] N/A — bash canary has no UI surface.
 
-| Check | Limit | v5 Delta | Status |
+**Verdict: PASS**
+
+### Simplicity Razor Audit
+
+| Check | Limit | v5.1 Proposes | Status |
 |---|---|---|---|
-| Max function lines | 40 | single-line URL change | OK |
-| Max file lines | 250 | canary script unchanged shell | OK |
-| Max nesting depth | 3 | unchanged | OK |
+| Max function lines | 40 | Canary unchanged structure; single assertion line | OK |
+| Max file lines | 250 | `qor-live-canary.sh` ~60L estimated | OK |
+| Max nesting depth | 3 | Flat bash asserts | OK |
 | Nested ternaries | 0 | 0 | OK |
 
-**PASS.**
+**Verdict: PASS**
 
-### Dependency
+### Dependency Audit
 
-No new dependencies introduced by v5.
-
-**PASS.**
-
-### Macro-Level Architecture
-
-- Module boundaries clean (canary is bash ops script).
-- No cyclic deps; layering intact.
-- `/api/continuum/stats` is canonical Neo4j-read health endpoint (single source of truth).
-- `getDriver()` is sole driver owner (verified Phase 1 sealed).
-
-**PASS.**
-
-### Build-Path / Orphan
-
-| Proposed File | Entry Connection | Status |
-|---|---|---|
-| `qor/start.sh` | Zo `qor` service entrypoint | Connected |
-| `qor/start.test.sh` | `bash qor/start.test.sh` (Phase 1 SC §1) | Connected |
-| `qor/qor-live-canary.sh` | `bash qor/qor-live-canary.sh` (Phase 2 SC §2, runbook) | Connected |
-| `AGENTS.md` (root + project) | Workspace memory | Connected |
-| `docs/SYSTEM_STATE.md` | Runbook reference | Connected |
-| `docs/plans/…-v5.md` | Governance blueprint | Connected |
-
-**N1 closure verified against source:**
-
-- `/api/continuum/stats` IS registered at `continuum/src/service/server.ts:72-74` inside `handleGraphRoutes`.
-- `handleGraphRoutes` IS wired to `Bun.serve` at server.ts:138-143 via `route(req, handleGraphRoutes, handleLayerRoutes)`.
-- `getGraphStats()` at `continuum/src/service/graph-api.ts:72-80` executes two Cypher queries via `queryGraph()` which opens `getDriver().session()`.
-- Full chain confirmed: `/api/continuum/stats` → `getGraphStats()` → `queryGraph()` → `getDriver().session().run(cypher)` → Neo4j Bolt 7687.
-- HTTP 200 with JSON body discriminates four concerns: router wiring + NEO4J_URI/USER/PASS resolution + Bolt handshake + Cypher read. Any NEO4J_* misconfig collapses assertion to 500 or connection error.
-
-**PASS.**
-
----
-
-## Closure Matrix
-
-| Finding | Source | v5 Remediation | Status |
+| Package | Justification | <10 Lines Vanilla? | Verdict |
 |---|---|---|---|
-| N1 — orphan `/api/continuum/memory?limit=1` | v4 `5b58f8a9…` | Swapped to registered `/api/continuum/stats` | ✅ CLOSED |
-| T1r — orphan TS canary path | v3 (closed v4) | Bash canary `qor/qor-live-canary.sh` | ✅ INHERITED |
-| X1 — config-layer MCP assertion | v3 (closed v4) | Runbook manual `list_user_services` step | ✅ INHERITED |
-| T1 — TS/Bash mismatch | v2 (closed v3) | Extend bash harness in-place | ✅ INHERITED |
-| C2 — vacuous IPC 404 | v2 (closed v3) | Socket absence probes (assertions 5+6) | ✅ INHERITED |
-| R1/R2/R3/R4 runtime proofs | v1 VETO | Bash canary assertions 1–6 | ✅ INHERITED |
+| `nc` (netcat) | **REMOVED** in v5.1 | N/A | PASS (regression closed) |
+| `bash` `/dev/tcp` | Kernel-level non-blocking TCP connect, bash builtin | N/A (builtin, 0 lines) | PASS |
 
----
+v5.1 is strictly dependency-reducing. Primitive already used 3× in Phase 1 sealed `start.sh`.
+
+**Verdict: PASS**
+
+### Macro-Level Architecture Audit
+- [x] Module boundaries unchanged from v5.
+- [x] No cyclic dependencies introduced.
+- [x] Layering direction preserved.
+- [x] No cross-cutting concern drift.
+- [x] Primitive choice consistent with Phase 1 (single source of truth for Bolt probe idiom in this repo).
+
+**Verdict: PASS**
+
+### Build Path / Orphan Audit
+
+| Proposed File | Entry Point Connection | Status |
+|---|---|---|
+| `qor/qor-live-canary.sh` | `bash qor/qor-live-canary.sh` from operational runbook (same invocation pattern as v5) | Connected |
+
+**Verdict: PASS**
+
+### Residual Sweep (v5.1-specific adversarial probes)
+
+1. **fd-leak claim** — plan asserts `exec 3<&- 3>&-` "closes both halves of fd 3 cleanly after a successful probe so the canary does not leak descriptors." Empirical verification: subshell-scoped `/dev/tcp` does NOT propagate fd 3 to parent, so the parent-shell close is a no-op on an unopened fd (exit 0). Code is functionally correct. Plan rationale is slightly over-stated (cleanup is redundant, not load-bearing), but this is a cosmetic documentation issue — not a functional defect. **No VETO.**
+
+2. **Half-open / TIME_WAIT masking** — acknowledged in v5.1 Risk Ledger; mitigated by assertion 3 (`/api/continuum/stats` 200 requires live Cypher round-trip, which would fail before assertion 4 even runs if Bolt is half-open). Defense-in-depth preserved.
+
+3. **bash `--disable-net-redirections` future regression** — acknowledged in v5.1 Risk Ledger; Phase 1 `start.sh` already depends on this feature across 3 call sites, so regression surfaces pre-canary at start-sh seal level. Fail-fast domain matches.
+
+4. **Idiom consistency with Phase 1** — plan's primitive exactly matches Phase 1 idiom (verified via `grep`). Zero cognitive drift.
+
+## Verdict Rationale
+
+v5.1 closes D1 with a minimal, in-repo-validated, dependency-reducing change. All prior v5 PASS findings hold. Live-state recon confirms the primitive works on this host. No new findings surface.
+
+**Verdict: ✅ PASS.**
 
 ## Next Action
 
-`prompt Skills/qor-implement/SKILL.md` — Phase 1 (start.sh hardening + harness scenarios 4–7) then Phase 2 (atomic service swap + canary). Phase 1 is prerequisite for Phase 2's crashloop/watchdog guarantees.
-
-**Tribunal status:** GATE PASSED. Implementation unlocked.
+`/qor-implement` — Phase 2 of v5.1. Create `qor/qor-live-canary.sh` with 6 assertions using the bash `/dev/tcp` idiom for assertion 4. Execute cutover sequence (delete stale services, register `qor`), run canary, record MCP config-layer env_var assertions in Phase 2 seal evidence.

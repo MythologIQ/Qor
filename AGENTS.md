@@ -13,8 +13,7 @@
 | **Phase 13 (Cache Validation & Temporal Memory)** | COMPLETE (5/5) |
 | **Phase 12 (Zero-Trust Crystallization)** | COMPLETE (4/4) |
 | **Phase 10 (Thermodynamic Decay Foundation)** | COMPLETE (4/4) |
-| **Neo4j** | Running (`.neo4j/`, port 7474/7687, svc `svc_Vw2b3WN68nM`) |
-| **Continuum API** | Running (svc `continuum-api`) |
+| **Qor (mono-service)** | Running (port 4100 HTTP + 7687 Bolt, svc `svc_2syCkir_MDw`, entrypoint `qor/start.sh`) |
 | **Heartbeat** | 6-hour cadence via rule `5084d04a`, observe-only, fail-closed execution path |
 
 ### Key Architecture
@@ -28,8 +27,7 @@
 
 | Service | ID | Port | Notes |
 |---------|----|------|-------|
-| neo4j | `svc_Vw2b3WN68nM` | 7474 | Entrypoint: `bash -c '/home/workspace/.neo4j/start-neo4j.sh'` |
-| continuum-api | (check `list_user_services`) | varies | — |
+| qor | `svc_2syCkir_MDw` | 4100 (HTTP) / 7687 (Bolt) | Mono-service: `qor/start.sh` owns Neo4j + Bun lifecycle; public route `https://qor-frostwulf.zocomputer.io` |
 
 ### Model Strategy
 

@@ -8,6 +8,45 @@
 
 ---
 
+## 2026-04-22T00:55:00Z — IMPLEMENT: Phase 3 v5.1 Phase 2 — Atomic Service Swap + Canary
+
+| Field | Value |
+|-------|-------|
+| Phase | IMPLEMENT — Specialist, Phase 3 v5.1 Phase 2 (atomic swap + bash canary + MCP config-layer runbook) |
+| Plan | `docs/plans/2026-04-21-qor-phase3-cutover-v5.1.md` |
+| Plan Hash | `33deccdfc5713b9fdc45a3be39694a967e257b3923f350d30d0875dbc7dbbb1a` |
+| Chain Hash (gate PASS) | `cc6f127eacd0dccd879d0e0de04f90f7127b0d1284c6b59b4f65960e0e812ee2` |
+| Canary hash | `594be380c961d65bff1f510eb035f589c38449f29d991bc3ad59bdf1dce23be4` (`qor/qor-live-canary.sh`) |
+| Service delete #1 | `svc_Vw2b3WN68nM` (legacy `neo4j`) — ok |
+| Service delete #2 | `svc_JsVdYqujQAw` (legacy `continuum-api`) — ok |
+| Service register | `svc_2syCkir_MDw` (`qor`, port 4100, entrypoint `qor/start.sh`) — ok; public `https://qor-frostwulf.zocomputer.io` |
+| MCP config-layer assertions (5/5 PASS) | `NEO4J_URI=bolt://127.0.0.1:7687` ✅ · `NEO4J_USER=neo4j` ✅ · `NEO4J_PASS=victor-memory-dev` ✅ · `QOR_IPC_SOCKET` absent ✅ · `QOR_IPC_TOKEN_MAP` absent ✅ |
+| Runtime canary | 6/6 PASS — liveness 200 · public route 200 · `/api/continuum/stats` 200+JSON · Bolt 7687 bound via `/dev/tcp` · `/tmp/qor.sock` absent · `/tmp/continuum.sock` absent |
+| D1 closure verified | `nc` absent on host; bash `/dev/tcp` idiom matches Phase 1 `start.sh` (3 call sites sealed at `e15f8b67…`), no new dependency |
+| Password rotation performed | Neo4j default `neo4j` → `victor-memory-dev` via `/db/system/tx/commit` (fresh JVM database required first-login change) — one-time cutover action, not a code change |
+| Phase 1-sealed defects surfaced (out of scope) | (a) `start.sh:15` exports `NEO4J_CONF_DIR` but Neo4j 2025 honors `NEO4J_CONF` — workspace `qor/neo4j.conf` silently ignored; system conf used. (b) Early-Bun-death leaves Neo4j orphan (no EXIT trap signals child). Canary passes because system conf + fresh DB still satisfy assertions. Follow-ups documented in SYSTEM_STATE.md. |
+| Razor compliance | canary: 58 LOC ✅ · flat bash ✅ · no ternaries ✅ · reuses Phase 1 primitive |
+| Files staged | `qor/qor-live-canary.sh` (new) · `AGENTS.md` (root, service table) · `docs/SYSTEM_STATE.md` (Phase 2 impl section) · `docs/META_LEDGER.md` (this entry) |
+| Next | `/qor-substantiate` — cryptographic seal for Phase 3 v5.1 Phase 2 |
+
+---
+
+## 2026-04-22T00:45:00Z — GATE TRIBUNAL: Phase 3 Cutover v5.1
+
+| Field | Value |
+|-------|-------|
+| Phase | GATE — Judge, adversarial audit of Phase 3 v5.1 plan |
+| Plan | `docs/plans/2026-04-21-qor-phase3-cutover-v5.1.md` |
+| Content Hash | `33deccdfc5713b9fdc45a3be39694a967e257b3923f350d30d0875dbc7dbbb1a` |
+| Chain Hash | `cc6f127eacd0dccd879d0e0de04f90f7127b0d1284c6b59b4f65960e0e812ee2` (prev VETO `b19d4da8…`) |
+| Verdict | ✅ **PASS** |
+| Risk Grade | L2 |
+| Closures verified | D1 — canary assertion 4 primitive swapped `nc -z` → bash `/dev/tcp` (builtin, matches Phase 1 start.sh idiom exactly); live-state recon confirms primitive works, no external dependency |
+| Audit passes | Security ✅ · Ghost UI ✅ (N/A) · Simplicity Razor ✅ · Dependency ✅ (strictly reducing) · Macro-Level ✅ · Build-Path/Orphan ✅ · Residual Sweep ✅ |
+| Next | `prompt Skills/qor-implement/SKILL.md` — Phase 2 (atomic swap + canary + MCP runbook) |
+
+---
+
 ## 2026-04-21T00:00:00Z — IMPLEMENT: Phase 3 v5 Phase 1 — start.sh Hardening + Harness Scenarios 4–7
 
 | Field | Value |
@@ -9372,3 +9411,107 @@ SHA256(content_hash + previous_hash) = `e15f8b67d86a92bfb867d6367fdf130863474087
 ### Next Action
 
 `/qor-audit` on Phase 3 v5 **Phase 2** — atomic service swap + bash canary (`qor/qor-live-canary.sh`) + MCP runbook step. Live-state re-verification required immediately before cutover execution.
+
+
+---
+
+## 2026-04-21 — GATE TRIBUNAL — QOR Phase 3 v5 §Phase 2
+
+**Phase**: GATE
+**Plan**: `docs/plans/2026-04-20-qor-phase3-cutover-v5.md` §Phase 2
+**Verdict**: ❌ **VETO**
+
+### Findings
+
+| ID | Pass | Severity | Summary |
+|---|---|---|---|
+| D1 | Dependency / Toolchain | L2 | Canary assertion 4 uses `nc -z 127.0.0.1 7687`; `nc` / `netcat` / `ncat` absent on host. False-negative guaranteed at runtime. Remediation: swap to bash built-in `(exec 3<>/dev/tcp/127.0.0.1/7687)` (primitive already used by Phase 1 sealed `start.sh`). |
+
+All other passes (Security, Ghost UI, Razor, Macro-Architecture, Build-Path/Orphan) PASS.
+
+Baseline drift noted (not VETO): `continuum-api` + `neo4j` services currently non-serving (ports 4100 / 7687 unreachable, public `/health` 404). Cutover is effectively restoration. Implementer must re-snapshot service IDs via `list_user_services` at cutover time — v2-vintage IDs are stale.
+
+### Content Hash
+`f75d0822c61d5f365ccc0c80d5fd8c6f1a35b535c22adb6868f37a9402cbb1da`
+
+### Previous Hash
+`e15f8b67d86a92bfb867d6367fdf13086347408711b2f75b49696a7f743bedc5` (Phase 3 v5 Phase 1 SEAL)
+
+### Chain Hash
+`b19d4da856aeee32788c809600296b980af5661f5a9f0c57fd52867529bef531`
+
+### Next Action
+
+`/qor-plan` → v5.1 (single-line remediation: assertion 4 swap from `nc` to `/dev/tcp`). `/qor-audit` re-gate. `/qor-implement` Phase 2 only on PASS.
+
+---
+
+## 2026-04-21 — GATE TRIBUNAL — QOR Phase 3 v5.1 §Phase 2
+
+**Phase**: GATE
+**Plan**: `docs/plans/2026-04-21-qor-phase3-cutover-v5.1.md` §Phase 2
+**Verdict**: ✅ **PASS**
+
+### Findings
+
+All audit passes clear (Security, Ghost UI, Razor, Dependency, Macro-Architecture, Build-Path/Orphan). D1 closed via bash `/dev/tcp` primitive swap (dependency-reducing; already validated under Phase 1 seal `e15f8b67…`). Live host recon confirms primitive discriminates bound vs. unbound ports correctly and does not leak fds to parent shell.
+
+Residual sweep: cosmetic overstatement of fd-leak rationale in plan (parent-shell `exec 3<&- 3>&-` is a no-op since subshell-scoped `/dev/tcp` already handles cleanup) — functional behavior unaffected, not VETO-worthy.
+
+### Content Hash
+`33deccdfc5713b9fdc45a3be39694a967e257b3923f350d30d0875dbc7dbbb1a`
+
+### Previous Hash
+`b19d4da856aeee32788c809600296b980af5661f5a9f0c57fd52867529bef531` (Phase 3 v5 §Phase 2 VETO)
+
+### Chain Hash
+`cc6f127eacd0dccd879d0e0de04f90f7127b0d1284c6b59b4f65960e0e812ee2`
+
+### Next Action
+
+`/qor-implement` — Phase 2 of v5.1. Create `qor/qor-live-canary.sh` with 6 assertions, execute cutover, run canary, record MCP config-layer env_var assertions in Phase 2 seal evidence.
+
+---
+
+## 2026-04-22T04:40:00Z — SEAL: Phase 3 v5.1 Phase 2 — Atomic Service Swap Substantiated
+
+| Field | Value |
+|-------|-------|
+| Phase | SUBSTANTIATE — Judge, cryptographic session seal |
+| Plan | `docs/plans/2026-04-21-qor-phase3-cutover-v5.1.md` §Phase 2 |
+| Verdict | ✅ **SEALED** — Reality = Promise |
+| Reality Audit | Planned files: `qor/qor-live-canary.sh` ✅ · `AGENTS.md` root ✅ · `docs/SYSTEM_STATE.md` ✅. MISSING: 0. UNPLANNED: 0. |
+| Canary hash | `594be380c961d65bff1f510eb035f589c38449f29d991bc3ad59bdf1dce23be4` |
+| Plan hash | `33deccdfc5713b9fdc45a3be39694a967e257b3923f350d30d0875dbc7dbbb1a` |
+| SYSTEM_STATE hash | `b777ac3fbc7ed5c4887e8db634b4a12ee0e3bcce5db6dd9281c3acaa82dadc38` |
+| Content hash | `bf016ee924a5c0438e4e5af0cfdc20cc9ac8df489174fecae1654eef6237dd03` |
+| Previous chain | `cc6f127eacd0dccd879d0e0de04f90f7127b0d1284c6b59b4f65960e0e812ee2` (Phase 3 v5.1 §Phase 2 GATE PASS) |
+| Chain hash | `d48264f8185425f24b6dd2b5324b1f08436289bfd087f3ed799e3706f1196f10` |
+| Runtime re-verification | `bash qor/qor-live-canary.sh` → 6/6 PASS at seal-time (2026-04-22 00:40 EDT) |
+| Razor compliance | canary 58 LOC ✅ (< 250) · flat bash, depth ≤ 3 ✅ · 0 ternaries ✅ · 0 `console.log` ✅ |
+| Section 4 final check | PASS |
+| Test audit | canary assertions 6/6 covered by Phase 1 sealed `start.test.sh` scenarios 1–7 (bash `/dev/tcp` primitive identical); new canary itself is the Phase 2 test surface |
+| Open Deferrals | Q1 (supervisor backoff confidence) · Q3 (Victor boot-site consumer switch → Issue #37) · Phase 1-sealed defects (NEO4J_CONF env var name, orphan-on-early-Bun-death) → Phase 4 backlog |
+| Version | No semver tag (repo uses sealed-chain hashes as version basis); Phase 3 cutover complete |
+| Next | `prompt Skills/qor-plan/SKILL.md` (Phase 4 resiliency patches) or Issue #38 Phase 3.1 hardening |
+
+### Chain Integrity
+
+```
+Phase 1 seal         e15f8b67d86a92bfb867d6367fdf13086347408711b2f75b49696a7f743bedc5
+  ↓ gate v5 P2 VETO  b19d4da856aeee32788c809600296b980af5661f5a9f0c57fd52867529bef531
+  ↓ gate v5.1 P2 PASS cc6f127eacd0dccd879d0e0de04f90f7127b0d1284c6b59b4f65960e0e812ee2
+  ↓ Phase 2 SEAL     d48264f8185425f24b6dd2b5324b1f08436289bfd087f3ed799e3706f1196f10
+```
+
+### Success Criteria (all met)
+
+- [x] PASS verdict in AUDIT_REPORT.md (`cc6f127e…`)
+- [x] Reality matches Promise (0 missing, 0 unplanned)
+- [x] No open security blockers
+- [x] Test surface verified (canary 6/6; harness scenarios 1–7 sealed under Phase 1)
+- [x] Section 4 Razor final check passed
+- [x] SYSTEM_STATE.md synced with actual file tree
+- [x] Merkle seal calculated and recorded
+- [x] Ready for commit + push
+

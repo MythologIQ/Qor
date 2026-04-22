@@ -1,9 +1,9 @@
-# SYSTEM_STATE — QOR Mono-Service Cutover (Phase 2 Sealed)
+# SYSTEM_STATE — QOR Mono-Service Cutover (Phase 3 v5.1 P2 Implemented)
 
-**As of:** 2026-04-18
-**Cutover plan:** `docs/plans/2026-04-18-qor-mono-service-cutover.md`
-**Phase sealed:** 2 of 3 (wrapper entrypoint + resiliency overlay)
-**Last chain hash:** `d60746eade24b5a9b917c5e12fa96bc02e1af2d88536a6fd187dfe08e09638c3`
+**As of:** 2026-04-22
+**Cutover plan:** `docs/plans/2026-04-21-qor-phase3-cutover-v5.1.md`
+**Phase sealed:** 2 (wrapper entrypoint) + Phase 3 v5 P1 (start.sh hardening). Phase 3 v5.1 P2 implemented; awaiting substantiation seal.
+**Last chain hash (gate PASS):** `cc6f127eacd0dccd879d0e0de04f90f7127b0d1284c6b59b4f65960e0e812ee2`
 
 ---
 
@@ -57,9 +57,43 @@ Applied R3 + R4 closures in-place on `qor/start.sh` without structural change; e
 
 Chain: `e15f8b67d86a92bfb867d6367fdf13086347408711b2f75b49696a7f743bedc5` (prev `b6792654…` v5 GATE PASS).
 
+## Phase 3 v5.1 Phase 2 Implementation (2026-04-22)
+
+Atomic service swap executed. Stale `neo4j` (`svc_Vw2b3WN68nM`) + `continuum-api` (`svc_JsVdYqujQAw`) deleted; single mono-service `qor` (`svc_2syCkir_MDw`) registered on port 4100 with entrypoint `qor/start.sh`.
+
+### Artifacts
+
+| Path | Role | LOC | Status |
+|------|------|-----|--------|
+| `qor/qor-live-canary.sh` (+x) | Post-cutover live canary; 6 assertions (health, public route, `/api/continuum/stats` JSON, Bolt `/dev/tcp`, UDS absence ×2) | 58 | Implemented |
+
+### Config-Layer Assertions (MCP `list_user_services`)
+
+| Assertion | Verdict |
+|---|---|
+| `NEO4J_URI=bolt://127.0.0.1:7687` present | ✅ |
+| `NEO4J_USER=neo4j` present | ✅ |
+| `NEO4J_PASS=victor-memory-dev` present | ✅ |
+| `QOR_IPC_SOCKET` absent (IPC deferred) | ✅ |
+| `QOR_IPC_TOKEN_MAP` absent (IPC deferred) | ✅ |
+
+### Runtime Assertions (`bash qor/qor-live-canary.sh`)
+
+6/6 PASS. Exit 0. Verified 2026-04-22.
+
+### Known Phase 1-Sealed Surface Defects (Out of v5.1 Scope)
+
+1. **Neo4j config dir ignored.** `start.sh:15` exports `NEO4J_CONF_DIR`, but Neo4j 2025 honors `NEO4J_CONF` instead. Effect: system conf `/opt/neo4j/conf/neo4j.conf` is used; workspace overrides (listen address, data dir) in `qor/neo4j.conf` are silent no-ops. Canary still passes because system conf binds Bolt on `0.0.0.0` and data dir points to an existing Neo4j store with live nodes. Follow-up: Phase 4 plan to swap env var name.
+2. **Orphan Neo4j on early Bun death.** When Bun crashes before the 30s liveness subshell first tick, `wait $BUN_PID` returns and `start.sh` exits without signaling the Neo4j child; Neo4j is re-parented to init and binds 7687; next supervisor restart trips the pre-flight orphan probe and refuses to launch. Encountered once during v5.1 implementation; recovered by explicit TERM. Follow-up: Phase 4 plan to trap EXIT and TERM children.
+
+## Substantiation
+
+Phase 3 v5.1 Phase 2 **SEALED** at chain `d48264f8185425f24b6dd2b5324b1f08436289bfd087f3ed799e3706f1196f10` (2026-04-22). Reality = Promise verified (0 missing, 0 unplanned).
+
 ## Unshipped Phases
 
-- **Phase 3 v5 Phase 2** — Atomic service swap (`neo4j` + `continuum-api` → `qor`) + bash canary (`qor/qor-live-canary.sh`) + MCP config-layer runbook step. Requires live-state re-audit immediately before execution.
+- **Phase 4** — resiliency patches for Phase 1-sealed defects (NEO4J_CONF env var name, EXIT-trap orphan handling).
+- **Issue #38** — Phase 3.1 IPC hardening (7 residual items).
 
 ## Open Deferrals (Per Plan)
 
