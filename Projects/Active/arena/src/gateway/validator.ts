@@ -157,3 +157,38 @@ export function validateActionRaw(
     action: { type: 'pass', confidence },
   };
 }
+
+// ─── Plan D v2 Phase 2: RoundPlan aggregator ────────────────────────────────
+
+import type { RoundPlan } from '../shared/types';
+import { validateOwnership } from './validator/ownership';
+import { validateApArithmetic } from './validator/ap-arithmetic';
+import { validateMovePath } from './validator/move-path';
+import { validateAttackRange } from './validator/attack-range';
+import { validateExtrasUniqueness } from './validator/extras-uniqueness';
+import { validateBoostedAbilityRequirement } from './validator/boosted-ability-requirement';
+
+export type RoundPlanValidationResult =
+  | { ok: true }
+  | { ok: false; reason: string };
+
+export function validateRoundPlan(
+  plan: RoundPlan,
+  agent: 'A' | 'B',
+  state: MatchState,
+  budget: { apPool: number },
+): RoundPlanValidationResult {
+  const checks = [
+    () => validateOwnership(plan, agent, state),
+    () => validateApArithmetic(plan, budget.apPool),
+    () => validateMovePath(plan, agent, state),
+    () => validateAttackRange(plan, agent, state),
+    () => validateExtrasUniqueness(plan),
+    () => validateBoostedAbilityRequirement(plan),
+  ];
+  for (const check of checks) {
+    const r = check();
+    if (!r.ok) return { ok: false, reason: r.reason };
+  }
+  return { ok: true };
+}

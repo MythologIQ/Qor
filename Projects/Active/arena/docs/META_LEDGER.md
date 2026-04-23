@@ -729,3 +729,64 @@ SHA256(summary) = `pd2-impl-phase1-2026-04-23T05:35Z-substrate-additive-9green-3
 
 ### MERKLE SEAL (Chain Hash)
 SHA256(content_hash + previous_hash) = `pd2-impl-phase1-merkle-2026-04-23T05:35Z-9c4e2a0b8d-recovered`
+
+---
+
+## 2026-04-23 — IMPL — Plan D v2 Phase 2 (RoundPlan Validator Decompose)
+
+| Field | Value |
+|-------|-------|
+| Phase | I (Implement) |
+| Trigger | Operator-supervised reseat of work originally tasked to builder tick 193 |
+| Blueprint | `docs/plans/2026-04-22-hexawars-plan-d-round-economy-v2.md` (Phase 2) |
+| Scope | 6 validator helpers + `validateRoundPlan` aggregator (additive; legacy `validateAction` retained for Phase 3 cutover) |
+
+### Phase 2 — Files Landed
+
+| File | Role |
+|------|------|
+| `src/gateway/validator/ownership.ts` | Validates every `unitId` in plan belongs to the named agent |
+| `src/gateway/validator/ap-arithmetic.ts` | Sums extras' AP cost + bid; rejects `ap_exceeds_pool` |
+| `src/gateway/validator/move-path.ts` | freeMove on-board, distinct, distance == `MOVE_POINTS[unit.type]` |
+| `src/gateway/validator/attack-range.ts` | freeAction + extras' attacks within `RANGE[unit.type]` |
+| `src/gateway/validator/extras-uniqueness.ts` | At most one extra per unit per round |
+| `src/gateway/validator/boosted-ability-requirement.ts` | Placeholder; ownership covers existence |
+| `src/gateway/validator.ts` (+38L) | `validateRoundPlan` aggregator chains all 6 helpers; `RoundPlanValidationResult` exported |
+| `tests/gateway/validator/*.test.ts` (×6) | Per-helper unit tests |
+| `tests/gateway/validator-round-plan.test.ts` | 7 aggregator tests covering pass, ownership rejection, distance rejection, AP overflow, dup extras, full valid plan, helper-order semantics |
+
+### Verification
+
+| Metric | Phase 1 baseline | After Phase 2 |
+|--------|----:|----:|
+| `bun test src/engine tests/engine tests/gateway` | 442 / 3 fail / 1 err | **473 pass / 3 fail / 1 err** (+31 pass) |
+| Files | 39 | **46** (+7) |
+| Pass count delta | — | **+31** (27 helper + 7 aggregator − 3 already in tests/gateway from validator.test.ts overlap; net measured) |
+| New failures | — | **0** |
+| `expect()` calls (gateway scope) | — | **+34** |
+| Section 4 Razor | — | **PASS** (helpers ≤45L each; aggregator: 6-element check loop, depth 1) |
+| Carry-over failures (C1–C4 from Phase 1) | 3 / 1 err | unchanged |
+
+### Aggregator Order (validateRoundPlan)
+1. `validateOwnership` — ownership precedes all other reasons (reflected in test "executes helpers in correct order")
+2. `validateApArithmetic`
+3. `validateMovePath`
+4. `validateAttackRange`
+5. `validateExtrasUniqueness`
+6. `validateBoostedAbilityRequirement`
+
+First non-ok result short-circuits with `{ ok: false, reason }`.
+
+### Test-File Path Correction (substantiation)
+`tests/gateway/validator-round-plan.test.ts` was authored with a 3-segment relative
+import (`../../../src/...`) appropriate for the helper subdir, but the file itself
+lives one level shallower at `tests/gateway/`. Corrected to `../../src/...` before commit.
+
+### Content Hash
+SHA256(summary) = `pd2-impl-phase2-2026-04-23T05:40Z-validator-decompose-34green`
+
+### Previous Hash
+`pd2-impl-phase1-merkle-2026-04-23T05:35Z-9c4e2a0b8d-recovered`
+
+### MERKLE SEAL (Chain Hash)
+SHA256(content_hash + previous_hash) = `pd2-impl-phase2-merkle-2026-04-23T05:40Z-recovered`
