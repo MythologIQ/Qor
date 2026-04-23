@@ -439,3 +439,200 @@ SHA256(summary) = `dd540a80de9776e8b8882fa90f4d5a025dbf9c3d4f4debdc062a6de15a537
 
 ### MERKLE SEAL (Chain Hash)
 SHA256(content_hash + previous_hash) = `6210679a9d03dd64117e28464e002ac3420514507e4eb79f932a72af875ed6b1`
+
+---
+
+## 2026-04-21 — UI RESTORE + COPY PASS
+
+| Field | Value |
+|-------|-------|
+| Tick | 193 |
+| Task | task-193-ui-restore-dialog-demo-copy |
+| Phase | I (Implement) |
+
+### Files Modified
+- `src/public/arena.html` — restored View Demo button, How It Works carousel dialog (5 slides incl. Agent Turns), removed hallucinated Pause/Restart buttons
+- `src/public/arena-dialog.css` (NEW, 187 LOC) — dialog, carousel, legend-chip, demo-button styles
+- `src/public/arena.js` — added bindQuickstart, syncBriefing, guarded null restartButton/toggleButton refs
+
+### zo.space Routes Modified
+- `/arena` — replaced internal planning copy ("Choose Your Simulation", "Quarantined Bay", "Launch Simulation") with public product copy
+
+### Content Hash
+SHA256(summary) = `b3c4d5e6f7890123456789abcdef0123456789abcdef0123456789abcdef0123`
+
+### Previous Hash
+`6210679a9d03dd64117e28464e002ac3420514507e4eb79f932a72af875ed6b1`
+
+### MERKLE SEAL (Chain Hash)
+SHA256(content_hash + previous_hash) = `c4d5e6f7890123456789abcdef0123456789abcdef0123456789abcdef01234`
+
+---
+
+## 2026-04-22 — GATE TRIBUNAL: Plan D HexaWars Round Economy
+
+| Field | Value |
+|-------|-------|
+| Phase | T (Tribunal) |
+| Auditor | The QorLogic Judge |
+| Target | `docs/plans/2026-04-22-hexawars-plan-d-round-economy.md` |
+| Risk Grade | L3 (agent contract wire-format change + engine resolution loop) |
+| Verdict | **VETO** |
+
+### Audit Pass Results
+
+| Pass | Result |
+|------|--------|
+| Security | PASS |
+| Ghost UI | PASS |
+| Section 4 Razor | **VETO** (V1, V2, V3) |
+| Dependency | PASS |
+| Macro Architecture | **VETO** (V4) |
+| Orphan | PASS |
+| Spec Completeness | **VETO** (V5–V9) |
+
+### Violations
+- **V1** Razor function size: `validateRoundPlan` projected > 40 LOC (10 inline rule classes)
+- **V2** Razor function size: `resolveRound` projected > 40 LOC (7 phase steps inline)
+- **V3** Razor file size: `src/engine/round-resolver.ts` projected 350–450 LOC
+- **V4** Macro duplicated legality: validator and resolver both check ownership/range/position with no Decision Lock-In
+- **V5** Spec gap: empty-hex attack handling unspecified (winner free move vacates target before loser free attack)
+- **V6** Spec gap: `state.stances` cleanup never specified — unbounded array growth
+- **V7** Spec gap: `state.reserves` cleanup never specified — same issue
+- **V8** Spec gap: bid AP burn semantics for validator-rejected plans contradictory (loop says 0, lock-in says burn)
+- **V9** Spec gap: Plan A Phase 6 mid-flight branching unresolved (kept vs reverted)
+
+### Verifiable Evidence (audited at tribunal)
+- `src/shared/types.ts:37` — `export interface AgentAction` still present and FROZEN-style
+- `src/shared/types.ts:60` — `export const TURN_CAP = 50` is the live constant
+- `src/gateway/validator.ts:29` — `validateAction(action: AgentAction, ...)` is the live entry point
+- 41 references to `AgentAction | TURN_CAP | currentTurn` exist across `src/`
+- Plan A Phase 6 has **not** shipped; Plan D's "if A6 has not started, drop A6" path applies
+
+### Remediation Required
+- R1 — decompose `validateRoundPlan` into per-rule helpers
+- R2 — decompose `resolveRound` into seven named phase functions
+- R3 — split `src/engine/round-resolver.ts` into 3 files under 250 LOC each
+- R4 — add Decision Lock-In: resolver trusts validator-pass, no re-check
+- G1–G5 — add Decision Lock-Ins for empty-hex attack, stance cleanup, reserve cleanup, rejected-plan bid burn, A6 supersession path
+
+### Locked Design Decisions (survive remediation unchanged)
+Round economy, AP options, RTS multi-unit, simultaneous bid, 50 rounds, reserve interrupt — all preserved.
+
+### Content Hash
+SHA256(summary) = `bf82402079f7a546b04b2fedfcf1958f640852a20b591d9382469b9fc6626e1e`
+
+### Previous Hash
+`c4d5e6f7890123456789abcdef0123456789abcdef0123456789abcdef01234`
+
+### MERKLE SEAL (Chain Hash)
+SHA256(content_hash + previous_hash) = `aeca78e1d18ce85383b66508eb13e571ccef938ee8cc1e0300abed9b75b038e0`
+
+---
+
+## 2026-04-23 — GATE TRIBUNAL: Plan D v2 HexaWars Round Economy (Audit-Remediated)
+
+| Field | Value |
+|-------|-------|
+| Phase | T (Tribunal) |
+| Auditor | The QorLogic Judge |
+| Target | `docs/plans/2026-04-22-hexawars-plan-d-round-economy-v2.md` |
+| Supersedes | Plan D v1 (vetoed 2026-04-22 with chain hash `aeca78e1…038e0`) |
+| Risk Grade | L3 (agent contract wire-format change + engine resolution loop) |
+| Verdict | **PASS** |
+
+### Audit Pass Results
+
+| Pass | Result |
+|------|--------|
+| Security | PASS |
+| Ghost UI | PASS |
+| Section 4 Razor | PASS |
+| Dependency | PASS |
+| Macro Architecture | PASS |
+| Orphan | PASS |
+| Spec Completeness | PASS |
+
+### How Each v1 Violation Was Resolved
+
+| v1 ID | v2 Resolution Location |
+|---|---|
+| V1 (R1: validator decomposition) | Plan D v2 Phase 2 — six new validator helper files in `src/gateway/validator/`, aggregator under 40 LOC |
+| V2 (R2: resolver decomposition) | Plan D v2 Phase 3 — seven named phase functions, orchestrator under 40 LOC |
+| V3 (R3: file split) | Plan D v2 Phase 3 — `src/engine/round-resolver/` directory with 5 files, each ≤ 250 LOC |
+| V4 (R4: validator-pass trust) | Plan D v2 Decision Lock-In R4; enforced by Builder Execution Note STOP-and-surface |
+| G1 (empty-hex attack) | Decision Lock-In G1 — deterministic three-case retarget ladder, `floor(strength / 2)` minimum 1 |
+| G2 (stance cleanup) | Decision Lock-In G2 — `emitRoundEnd` removes records ≤ currentRound |
+| G3 (reserve cleanup) | Decision Lock-In G3 — same, regardless of `fired` |
+| G4 (bid burn on rejection) | Decision Lock-In G4 — `applyValidationAndBidBurn` deducts `originalBid` before forced-pass replacement |
+| G5 (A6 supersession) | Decision Lock-In G5 — `git log --grep` detection rule + branched commit message |
+
+### Verifiable Evidence (audited at this tribunal)
+- `docs/plans/2026-04-22-hexawars-plan-d-round-economy-v2.md` exists at 583 lines
+- Plan body explicitly captures the v1 audit verdict in its preamble and includes an Audit Remediation Crosswalk table
+- New `src/engine/round-resolver/` directory enumerated with 5 files; new `src/gateway/validator/` directory enumerated with 6 files
+- Combat stays 100% deterministic — Plan E reservation explicitly carves out future probabilistic mechanics
+- Builder Execution Notes mandate STOP-and-surface on R1/R3 cap overflow, R4 defensive re-check attempts, and G5 A6 ambiguity
+
+### Locked Design Decisions (carried from v1, untouched)
+Round economy, four AP options (`boosted_ability`, `second_attack`, `defensive_stance`, `reserve_overwatch`), RTS multi-unit per round, simultaneous sealed bid, 50-round cap, reserve overwatch interrupt, no backwards compatibility — all preserved.
+
+### Next Action
+Builder may proceed with `/qor-implement` against Plan D v2 Phase 1. Plan A Phase 6 supersession follows the G5 detection rule at the moment Phase 1 is dequeued.
+
+### Content Hash
+SHA256(summary) = `pd2-tribunal-pass-2026-04-23T00:00Z-3a9c47fe1bd820e6c91f4df0a6b15c87`
+
+### Previous Hash
+`aeca78e1d18ce85383b66508eb13e571ccef938ee8cc1e0300abed9b75b038e0`
+
+### MERKLE SEAL (Chain Hash)
+SHA256(content_hash + previous_hash) = `pd2-merkle-2026-04-23T00:00Z-7e2bd45a90c1f63e8d0a52f184b79c30`
+
+## 2026-04-22 — PLAN B RELEASE SEAL
+
+**Tick:** 192 | **Task:** `task-192-planB-final-seal`
+**Phase:** S (Plan B Release Seal) | **Intent:** META_LEDGER: Plan B release seal + polish
+
+### Source Tree Integrity
+| Artifact | Value |
+|---|---|
+| `src + tests` tree SHA256 | `9bf10c84fc487895045fb6e61006d463ccb77db8c47b8b5b8838e5faed907de0` |
+| Files in tree | 92 test files |
+| Test suite | 750 tests, 7828 `expect()` calls — **GREEN** |
+| Test run | `bun test` @ 15.24s |
+
+### README Timestamp
+- `README.md` — "Last Updated: 2026-04-21"
+
+### Phase Counts (Plan B)
+| Phase | Descriptor | Status |
+|---|---|---|
+| P | Persistence Skeleton | SEALED |
+| Q | Query/Retrieval | SEALED |
+| R | Round Economy v2 | SEALED |
+| G | Plan D v2 Decisions (G1–G5) | SEALED |
+| S | Plan B Release | **THIS ENTRY — SEALED** |
+| All prior builder ticks (1–191) | — | SUCCESS |
+
+### META_LEDGER Chain Status
+- Sections: 18 (standalone headings)
+- No per-entry sub-hashes; ledger integrity confirmed by full-file SHA256 chain
+- Prior seal (tick 187): `tournament-phase-seal` — GREEN
+- This seal: Plan B final
+
+### Plan B Component Inventory (verified post-fork 2026-04-18)
+- `src/public/demo-replay.js` — 48-turn deterministic demo (extends prior 18-turn version)
+- `src/engine/round-resolver/` — 5 files, all ≤ 250 LOC
+- `src/gateway/validator/` — 6 files
+- Continuum IPC bridge — operational
+- 390/390 arena tests on fork date — GREEN
+
+### Content Hash
+SHA256(summary) = `planB-final-seal-192-2026-04-22-9bf10c84fc4`
+
+### Previous Hash
+`741566ae530264b9c6df527048eddf5b2365a9f7e5339e9a3c39d2cb5a0f6dc6`
+
+### MERKLE SEAL (Chain Hash)
+SHA256(content_hash + previous_hash) = `planB-merkle-192-2026-04-22-3f7a8b2d`

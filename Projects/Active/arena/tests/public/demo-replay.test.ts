@@ -20,6 +20,7 @@ describe("demo replay", () => {
     expect(eventFrames.length).toBeGreaterThan(12);
     expect(stateFrames[0]?.state.reasoning.length).toBe(2);
     expect(eventFrames[0]?.event.move.length).toBeGreaterThan(10);
-    expect(frames.at(-1)?.state.turnCap).toBe(18);
+    // STEPS was extended from 18→48 turns to match TURN_CAP; update assertion
+    expect(frames.at(-1)?.state.turnCap).toBe(48);
   });
 });
