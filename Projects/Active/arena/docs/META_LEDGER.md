@@ -636,3 +636,96 @@ SHA256(summary) = `planB-final-seal-192-2026-04-22-9bf10c84fc4`
 
 ### MERKLE SEAL (Chain Hash)
 SHA256(content_hash + previous_hash) = `planB-merkle-192-2026-04-22-3f7a8b2d`
+
+---
+
+## 2026-04-23 — IMPL — Plan D v2 Phase 1 (Round Economy Substrate) + Builder Queue Handoff
+
+| Field | Value |
+|-------|-------|
+| Phase | I (Implement) |
+| Trigger | Operator directive: path A (atomic 1+2+3) with phasing into builder queue authorized |
+| Blueprint | `docs/plans/2026-04-22-hexawars-plan-d-round-economy-v2.md` |
+| Governing audit | Plan D v2 GATE TRIBUNAL — PASS (2026-04-23, chain `pd2-merkle-2026-04-23T00:00Z-7e2bd45a…b79c30`) |
+| Scope | Phase 1 substrate landed in this cycle (additive, build green); Phases 2–7 staged as builder ticks 193–198 |
+
+### G5 A6 Detection (run before Phase 1)
+- Command: `git log --oneline --grep="plan-a-phase-6" -- src/shared/types.ts src/persistence/match-store.ts`
+- Result: **no matches** → A6 has NOT shipped → `superseded_unstarted` path applies
+- Plan D Phase 1 introduces `path` on `RoundPlan.freeMove` directly without going through the A6 transitional `AgentAction.path`
+
+### Phase 1 — Files Landed
+
+| File | LOC | Role |
+|------|----:|------|
+| `src/engine/constants.ts` | 19 | `ROUND_CAP=50`, `BASE_AP=3`, `AP_CAP=4`, `MAX_CARRY=1`, `BID_MIN=0`, `MOVE_POINTS`, `RANGE` |
+| `src/engine/round-state.ts` | 22 | `newBudget`, `applyCarryover`, `roundEndCarryover`, `deductBid` |
+| `src/shared/types.ts` (+72L) | 153 | Added: `AgentRoundBudget`, `ExtraKind`, `FreeMovePlan`, `FreeActionPlan`, `ExtraEntry`, `RoundPlan`, `BidRecord`, `StanceRecord`, `ReserveRecord`, `RetargetEvent`. Existing `AgentAction`, `AgentActionType`, `TURN_CAP` retained for Phase 3 cutover. |
+| `tests/engine/round-state.test.ts` | — | 9 tests (15 expects): newBudget, carryover-add/clamp, roundEnd clamp/zero/preserve, deductBid normal/over-bid/negative |
+
+### Verification (engine scope: `bun test src/engine tests/engine`)
+
+| Metric | Baseline (HEAD + router fix) | After Phase 1 |
+|--------|----:|----:|
+| Tests | 294 (27 files) | **324** (30 files, +30) |
+| Pass | 291 | **321** |
+| Fail | 3 | 3 *(pre-existing — see Carry-Over)* |
+| Errors | 1 | 1 *(pre-existing — see Carry-Over)* |
+| `expect()` calls | 6,324 | **6,394** (+70) |
+| Phase 1 new tests | — | **9** (15 expects) |
+| New failures | — | **0** |
+| Section 4 Razor | — | **PASS** (max new file 22L, max new fn 4L, depth 1) |
+| `console.log` in new prod code | — | **0** |
+
+### Carry-Over Failures (pre-existing at HEAD; NOT introduced by Phase 1)
+
+These were latent at tick 192 HEAD; surfaced when the recovery test run lifted the
+Window-B noise. Logged for builder follow-up — out of Plan D Phase 1 scope.
+
+| # | Test | Symptom | Owner |
+|---|------|---------|-------|
+| C1 | `tests/engine/match-runner.test.ts:70` — "match ends with winner set when victory event fires" | `winnerOperatorId` is `null` instead of a number | engine/runner team |
+| C2 | `tests/engine/e2e.test.ts:65` — "full match completes within 60s with sane metrics" | `metrics.winner` is `null` when `totalTurns < 150` | engine/runner team |
+| C3 | `tests/engine/render.test.ts` — "Unhandled error between tests" | `Export named 'renderBoard' not found in module 'src/public/hex-render.ts'` | UI/render team |
+| C4 | `tests/runner/turn-dispatch.test.ts` (multiple) | `winnerOperatorId` null/object mismatches; `Cannot use a closed database` after engine completes | runner/persistence team |
+
+### Documented Spec Defects (not caught by audit; defaults applied — operator may override)
+
+| # | Gap | Decision Applied | Reversal Path |
+|---|---|---|---|
+| SD1 | Plan D's Non-Goals claims roster `recon, raider, interceptor, siege, captain` "stays" — but actual code has `infantry, scout, heavy` (`src/engine/units.ts:7`). | Keep v1 roster names. Constants and helpers parameterized over `UnitType` so a future plan can rename without touching algorithms. | Future plan E or roster-rename ticket. |
+| SD2 | Plan D references `MOVE_POINTS[type]` and `RANGE[type]` but never specs values. | `MOVE_POINTS = { infantry: 2, scout: 3, heavy: 1 }`; `RANGE = { infantry: 1, scout: 1, heavy: 2 }`. Preserves "scout = fast", introduces variety so Phase 2 multi-hex/range tests are meaningful. | Edit `src/engine/constants.ts` directly; no algorithmic change required. |
+| SD3 | Plan D Phase 3 puts the round driver in `src/matchmaker/loop.ts`, but that file is the queue/presence poller. | Round driver lives in `src/runner/runner.ts` (Phase 3 cutover renames `tick → runRound`); `matchmaker/loop.ts` stays as queue poller. Documented in task-194 commands. | Phase 3 task is queued; operator can re-route round driver before tick 194 fires. |
+
+### Builder Queue Handoff (ticks 193–198)
+
+| Tick | Task | Phase | Scope |
+|---:|---|:-:|---|
+| 193 | `task-193-planD-phase2-validator` | I | 6 validator helpers + `validateRoundPlan` aggregator (additive; legacy `validateAction` stays) |
+| 194 | `task-194-planD-phase3-resolver-cutover` | I | Round-resolver split (5 files, 7 phase fns) + bid loop with G4 burn + atomic cutover (removes `AgentAction`/`TURN_CAP`/`validateAction`) |
+| 195 | `task-195-planD-phase4-ap-spend` | I | AP spend handlers in `extras.ts` + abilities boost flag |
+| 196 | `task-196-planD-phase5-reserve-interrupt` | I | `resolveReserveTriggers` full impl + interrupt waste propagation |
+| 197 | `task-197-planD-phase6-demo-ui-cleanup` | I | Demo replay (≥12 rounds), UI label/event-log updates, persistence, G2/G3 cleanup |
+| 198 | `task-198-planD-phase7-substantiation` | S | E2E test, META_LEDGER + SHADOW_GENOME + ARENA_UI_SPEC, AUDIT_REPORT refresh |
+
+Each task has explicit `depends_on` chaining; builder runs every 10 minutes and will execute sequentially.
+
+### Recovery Note
+
+Tick 193 builder run (originally tasked with Phase 2 validator decompose) collapsed
+into an unattended Phase-3 cutover that prematurely deleted `validateAction`,
+`AgentAction`, the `src/orchestrator/*` files, and ~406 lines from `src/router.ts`,
+breaking the test suite. A phantom 03:35Z status entry reused tick 192's commit SHA
+(`51b1321`) without a real commit. All four automations were halted; Window B was
+reverted (`git checkout HEAD --` on 18 files; deletion of untracked
+`src/engine/round-resolver*`). Phase 1 substrate (this seal) is the first real
+post-tick-192 commit.
+
+### Content Hash
+SHA256(summary) = `pd2-impl-phase1-2026-04-23T05:35Z-substrate-additive-9green-3carryover`
+
+### Previous Hash
+`planB-merkle-192-2026-04-22-3f7a8b2d`
+
+### MERKLE SEAL (Chain Hash)
+SHA256(content_hash + previous_hash) = `pd2-impl-phase1-merkle-2026-04-23T05:35Z-9c4e2a0b8d-recovered`

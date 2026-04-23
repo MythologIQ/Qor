@@ -60,6 +60,80 @@ export const TIME_BUDGET_MS = 5000;
 export const TURN_CAP = 50;
 export const STARTING_UNITS = 3;
 
+// Plan D v2 Phase 1: Round Economy substrate (additive; AgentAction + TURN_CAP
+// remain in place until Phase 3 cutover removes them).
+export interface AgentRoundBudget {
+  freeMove: number;
+  freeAction: number;
+  apPool: number;
+  apCarry: number;
+}
+
+export type ExtraKind =
+  | "boosted_ability"
+  | "second_attack"
+  | "defensive_stance"
+  | "reserve_overwatch";
+
+export interface FreeMovePlan {
+  unitId: string;
+  from: CubeCoord;
+  to: CubeCoord;
+  path?: CubeCoord[];
+}
+
+export interface FreeActionPlan {
+  unitId: string;
+  type: "attack" | "ability";
+  from: CubeCoord;
+  to: CubeCoord;
+  abilityId?: string;
+}
+
+export interface ExtraEntry {
+  kind: ExtraKind;
+  unitId: string;
+  to?: CubeCoord;
+  mode?: "range" | "damage";
+}
+
+export interface RoundPlan {
+  bid: number;
+  freeMove?: FreeMovePlan;
+  freeAction?: FreeActionPlan;
+  extras: ExtraEntry[];
+}
+
+export interface BidRecord {
+  round: number;
+  bidA: number;
+  bidB: number;
+  winner: "A" | "B";
+}
+
+export interface StanceRecord {
+  unitId: string;
+  appliesOnRound: number;
+}
+
+export interface ReserveRecord {
+  unitId: string;
+  ownerId: "A" | "B";
+  appliesOnRound: number;
+  fired: boolean;
+}
+
+export interface RetargetEvent {
+  type: "action_retargeted";
+  agent: "A" | "B";
+  attackerUnitId: string;
+  originalTarget: CubeCoord;
+  actualTarget: CubeCoord;
+  actualTargetUnitId: string;
+  damage: number;
+  reason: "rushed_shot";
+}
+
 // Identity Substrate (Plan A v2, Phase 1): storage-shape types.
 export type Fingerprint = string & { readonly __brand: "Fingerprint" };
 export interface Operator {
