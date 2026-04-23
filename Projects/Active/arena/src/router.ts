@@ -332,7 +332,7 @@ export function mount(app: Hono, db: Database, opts: MountOpts = {}): void {
 
   // ── Tournament routes (Phase E) ──────────────────────────────────────
 
-  app.post("/api/arena/tournaments", (c) => {
+  app.post("/api/arena/tournaments", async (c) => {
     const auth = c.req.header("authorization") ?? "";
     const m = /^Bearer\s+(.+)$/i.exec(auth);
     if (!m) return c.json({ error: "unauthorized" }, 401);
