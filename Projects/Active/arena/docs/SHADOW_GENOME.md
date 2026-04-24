@@ -318,3 +318,53 @@ When a blueprint claims a module ends as "wiring-only" but the affected-file set
 
 ### Linked Tribunal
 META_LEDGER chain hash: `ab7f0d35ad0975db4af7e6aab8d8325bd83ea8a6eace9ab93764b495d54e7357`
+
+---
+
+## Single-Action Turn Economy
+
+**Detected:** 2026-04-22 (Plan D v1 audit VETO chain `aeca78e1…038e0`)
+**Classification:** structural failure
+**Severity:** 2
+
+### Failure Mode
+
+The UI (arena.js, reasoning-panel.js, score.js, event-log.js) advertised multi-unit decision-making per turn — agents were shown targeting multiple units, receiving role-specific briefings, and emitting per-turn reasoning traces. The engine simulation, however, executed exactly **one unit action per turn** per agent: the first valid action in the submitted `AgentAction` was resolved; subsequent unit references in the same action batch were silently discarded or never referenced by the round resolver.
+
+Concretely:
+- `src/engine/match.ts` (the round loop) iterated over the agent's `AgentAction` and resolved only the first attack/move in the payload.
+- The validator (`src/gateway/validator.ts`) validated each unit reference independently but the resolver consumed only the first matching unit.
+- `src/public/demo-replay.js` showed a 12-turn demo with multi-unit intent, but the scripted seed was hand-authored to match the engine's single-action behavior — it appeared correct only because the seed was hand-tuned to the broken model.
+- Agent reasoning panels showed "targeting unit-3, flanking from the east" per turn, but only the first such action in the batch was ever simulated.
+
+The result was a visible gap between advertised capability and actual simulation — the UI looked like an RTS but the engine was a strict sequential processor.
+
+### Structural Fix
+
+**Plan D v2** replaced the single-action turn loop with a round-level wrapper:
+
+```
+Round = all owned units act (free move + free action + AP spend options)
+AP budget = 3 + carryover, capped at 4 per agent per round
+Bid = sealed commitment; higher bid wins tiebreak, bid AP burned regardless
+Reserve overwatch = interrupt capability costing 2 AP
+```
+
+Key changes:
+1. `RoundPlan` replaces `AgentAction` as the agent contract — all units and actions are declared in a single round submission.
+2. Validator (`validateRoundPlan`) enforces per-rule decomposition with no duplication (R4 invariant: validator-pass trust — resolver does not re-check ownership/range/position).
+3. Round resolver (`resolveRound`) orchestrates 7 phase functions in fixed order; each phase processes all units, not just the first one.
+4. G1 retarget rule handles attacks on empty hexes with deterministic rushed-shot fallback (no probabilistic roll).
+5. G4 bid burn ensures invalid plans still burn the committed AP — no free retraction via deliberately malformed submissions.
+6. G2/G3 cleanup via `emitRoundEnd` prevents unbounded growth of `state.stances` and `state.reserves`.
+
+### Precipitating Event
+
+Plan D v1 was submitted to `/qor-audit` and returned **VETO** with three Razor violations (V1–V4) and five spec gaps (G1–G5). The gap most directly tied to this failure was **G5**: the round loop did not guarantee that all declared unit actions were simulated. v2 resolved G5 by designing the RoundPlan contract so the validator explicitly gates completeness.
+
+### Resolution
+
+Plan D v2 sealed end-to-end at commit chain `e08511ef2cb9c31…` (2026-04-24T23:15Z). E2E test `tests/engine/e2e.test.ts` exercises a 9-round scripted match with all AP spend options, reserve interrupt, rushed-shot retarget (G1), forced pass with bid burn (G4), and G2/G3 cleanup assertions — all green (853/853 suite).
+
+### Linked META_LEDGER
+Chain hash: `e08511ef2cb9c31ffe57fabfdaabaddc19f09ef1839ab26fdfe25bb310e3ee1c`

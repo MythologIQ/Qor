@@ -1,0 +1,21 @@
+{
+  "round": 9,
+  "matchId": "plan-d-e2e",
+  "finalState": {
+    "turn": 9,
+    "units": [
+      { "id": "unit-879", "owner": "A", "hp": 0, "position": { "q": -3, "r": 0, "s": 3 } },
+      { "id": "unit-983", "owner": "A", "hp": 3, "position": { "q": -2, "r": 0, "s": 2 } },
+      { "id": "unit-415", "owner": "A", "hp": 3, "position": { "q": -1, "r": 0, "s": 1 } },
+      { "id": "unit-982", "owner": "B", "hp": 0, "position": { "q": 1, "r": 0, "s": -1 } },
+      { "id": "unit-014", "owner": "B", "hp": 3, "position": { "q": 2, "r": 0, "s": -2 } },
+      { "id": "unit-638", "owner": "B", "hp": 3, "position": { "q": 3, "r": 0, "s": -3 } }
+    ],
+    "score": { "a": 0, "b": 0 }
+  },
+  "budgetA": { "freeMove": 0, "freeAction": 0, "apPool": 4, "apCarry": 1 },
+  "budgetB": { "freeMove": 0, "freeAction": 0, "apPool": 4, "apCarry": 1 },
+  "eventTypes": ["reserve_recorded", "slots_refunded", "reserve_fired", "wasted_action", "stance_recorded", "boost_applied", "action_wasted", "unit_attacked"],
+  "metrics": { "totalTurns": 9, "winner": null, "durationMs": 0, "actionsA": 2, "actionsB": 2, "invalidActions": 0 },
+  "sealedAt": "2026-04-24T23:15:34.828Z"
+}

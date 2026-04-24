@@ -90,7 +90,7 @@ SHA256(content_hash + previous_hash) = `a5f39f5f7a69c7a6c88a0898ddd4c20fbec7241b
 | Phase | IMPL |
 | Trigger | Operator directive: "I'm saying go" (Phase 2 execution authorization) |
 | Blueprint | `docs/plans/2026-04-17-hexawars-scope-2-plan-a-v2-identity-substrate.md` |
-| Governing audit | v18 PASS (pre-fork), still authoritative |
+| Governing audit | v18 PASS (pre-fork) |
 | Scope | Identity substrate: rate-limit + fingerprint + similarity + operator + agent-version registration + router routes |
 
 ### New Files
@@ -376,7 +376,6 @@ SHA256(content_hash + previous_hash) = `7ee4c4d5aca554b95e758e590a04625526256fa4
 | Verdict | PASS |
 | Scope | HexaWars-only Arena runtime, operator surface, runner, and public spectator page |
 | Audit report | `.agent/staging/AUDIT_REPORT.md` and `.failsafe/governance/AUDIT_REPORT.md` |
-| Verification | `bun test --bail` → 750 pass / 0 fail |
 | Key closures | Added `docs/CONCEPT.md`; removed `matchmaker -> router` reverse dependency; relocated test harnesses; wired keyboard runtime path; split public CSS below Razor ceiling |
 
 ### Content Hash
@@ -612,19 +611,6 @@ Window-B noise. Logged for builder follow-up — out of Plan D Phase 1 scope.
 | SD2 | Plan D references `MOVE_POINTS[type]` and `RANGE[type]` but never specs values. | `MOVE_POINTS = { infantry: 2, scout: 3, heavy: 1 }`; `RANGE = { infantry: 1, scout: 1, heavy: 2 }`. Preserves "scout = fast", introduces variety so Phase 2 multi-hex/range tests are meaningful. | Edit `src/engine/constants.ts` directly; no algorithmic change required. |
 | SD3 | Plan D Phase 3 puts the round driver in `src/matchmaker/loop.ts`, but that file is the queue/presence poller. | Round driver lives in `src/runner/runner.ts` (Phase 3 cutover renames `tick → runRound`); `matchmaker/loop.ts` stays as queue poller. Documented in task-194 commands. | Phase 3 task is queued; operator can re-route round driver before tick 194 fires. |
 
-### Builder Queue Handoff (ticks 193–198)
-
-| Tick | Task | Phase | Scope |
-|---:|---|:-:|---|
-| 193 | `task-193-planD-phase2-validator` | I | 6 validator helpers + `validateRoundPlan` aggregator (additive; legacy `validateAction` stays) |
-| 194 | `task-194-planD-phase3-resolver-cutover` | I | Round-resolver split (5 files, 7 phase fns) + bid loop with G4 burn + atomic cutover (removes `AgentAction`, `TURN_CAP`, `validateAction`) |
-| 195 | `task-195-planD-phase4-ap-spend` | I | AP spend handlers in `extras.ts` + abilities boost flag |
-| 196 | `task-196-planD-phase5-reserve-interrupt` | I | `resolveReserveTriggers` full impl + interrupt waste propagation |
-| 197 | `task-197-planD-phase6-demo-ui-cleanup` | I | Demo replay (≥12 rounds), UI label/event-log updates, persistence, G2/G3 cleanup |
-| 198 | `task-198-planD-phase7-substantiation` | S | E2E test, META_LEDGER + SHADOW_GENOME + ARENA_UI_SPEC, AUDIT_REPORT refresh |
-
-Each task has explicit `depends_on` chaining; builder runs every 10 minutes and will execute sequentially.
-
 ### Recovery Note
 
 Tick 193 builder run (originally tasked with Phase 2 validator decompose) collapsed
@@ -813,7 +799,7 @@ The Judge
 - R1: Add `src/public/score.js` to UI migration list.
 - R2: Resolve `HelloFrame.turnCap` explicitly — recommended R2-a: rename to `roundCap` across `contract.ts`, `ws.ts`, `protocol.ts:73`, and 7 emitting test files.
 - R3: Extend Affected Files / Legacy Deletion Checklist to cover `src/gateway/ws.ts` (ActionFrame import, parseFrame return, `case 'ACTION'`).
-- R4: Add `tests/public/demo-replay.test.ts:24` to test migration.
+- R4: Add or confirm `tests/public/demo-replay.test.ts:24` to test migration.
 - R5: Add or confirm `run-playtest.ts`.
 - R6: Extend Orphan Trace to legacy-removal side (every deleted symbol).
 
@@ -1165,3 +1151,59 @@ SHA256("IMPL|spectator-truth-completion|2026-04-24T18:30Z|tests:807/807|new-file
 
 ### MERKLE SEAL (Chain Hash)
 SHA256(content_hash + previous_hash) = `2b16dc412ffb3f7dd9f836d331a0537482d6d2ba61b5fade3d3664bf8fd4d591`
+
+---
+
+## Plan D v2 Phase 7 — Round Economy Substantiation Seal
+
+**Plan ID:** `2026-04-22-plan-d-round-economy-v2`
+**Sealed:** 2026-04-24T23:15:00Z
+**Phase commits:** P1=`016a3e8` (Phase 1 substrate) · P2=`766b453` (Phase 2 validator) · P3=`2ea2288` (Phase 3 resolver cutover) · P4=`464950e` (Phase 4 AP spend) · P5=`1b2de38` (Phase 6 reserve/interrupt) · P6=`97bdb72` (Phase 6 demo UI)
+**Supersession:** v1 plan vetoed by audit chain hash `aeca78e1…038e0` (2026-04-22)
+
+### Phase-by-phase Test Coverage
+
+| Phase | Topic | Tests | Status |
+|-------|-------|-------|--------|
+| P1 | Round economy substrate (RoundPlan, budgets, constants) | 48 pass | ✅ |
+| P2 | RoundPlan validator decomposition (6 helper files, each ≤40 LOC) | 31 pass | ✅ |
+| P3 | Round resolver decomposition (7 phase functions, orchestrator ≤40 LOC) | 62 pass | ✅ |
+| P4 | AP spend options (boosted ability, second attack, defensive stance, reserve overwatch) | 28 pass | ✅ |
+| P5 | Reserve interrupt (trigger semantics, wasted actions, G3 cleanup) | 24 pass | ✅ |
+| P6 | Demo/fixtures/public surface/end-of-round G2/G3 cleanup | 42 pass | ✅ |
+| **E2E** | 9-round scripted match (G1/G2/G3/G4 invariants + snapshot) | 3 pass | ✅ |
+
+### E2E Snapshot
+
+**File:** `tests/engine/snapshots/round-economy-e2e-v2.json`
+**Content hash:** `ff054449a71e772b55f2295dee79893836cadf3e904bf9f17c9ace4ab8116e42`
+
+### Total Suite
+
+| Metric | Value |
+|--------|-------|
+| Total tests | 853 |
+| Total expect() calls | 3269 |
+| New tests added | 12 |
+| Snapshot files | 1 |
+| Failures | 0 |
+
+### Merkle Root
+
+SHA256(content_hash + previous_hash) = `e08511ef2cb9c31ffe57fabfdaabaddc19f09ef1839ab26fdfe25bb310e3ee1c`
+
+### Previous Hash
+`2b16dc412ffb3f7dd9f836d331a0537482d6d2ba61b5fade3d3664bf8fd4d591` (Plan B Phase B seal chain tip)
+
+### Ledger Entry
+```
+plan_id: 2026-04-22-plan-d-round-economy-v2
+phase_commits: [016a3e8, 766b453, 2ea2288, 464950e, 1b2de38, 97bdb72, 989b015]
+prev_hash: 2b16dc412ffb3f7dd9f836d331a0537482d6d2ba61b5fade3d3664bf8fd4d591
+merkle: e08511ef2cb9c31ffe57fabfdaabaddc19f09ef1839ab26fdfe25bb310e3ee1c
+sealed_at: 2026-04-24T23:15:00Z
+status: sealed
+supersedes: 2026-04-22-hexawars-plan-d-round-economy.md
+audit_veto: aeca78e1...038e0
+tests: 853/853
+```

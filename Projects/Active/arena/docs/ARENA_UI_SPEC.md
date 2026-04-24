@@ -363,8 +363,95 @@ These items are acknowledged but **not specified** here — they require separat
 
 ---
 
+## 11. Round Economy
+
+This section enumerates the bid/AP/carryover/reserve/stance/retarget/bid-burn mechanics as the single source of truth for the UI. Any discrepancy between this section and the engine implementation is a spec bug — update this section to match the engine, not the reverse.
+
+### 11.1 Round Structure
+
+A **round** replaces what was previously called a "turn." Both agents act simultaneously within a round.
+
+At round start, each agent receives:
+- `freeMove = 1` — exactly one move per round on any owned unit, costing 0 AP. Movement range is `MOVE_POINTS[type]` hexes.
+- `freeAction = 1` — exactly one `attack` or `ability` per round on any owned unit, costing 0 AP. Need not be the same unit as the free move.
+- `apPool = 3` — spendable action points; carryover adds to this up to a hard cap of `AP_CAP = 4`.
+- `apCarry = 0` — AP rolled forward from the previous round, capped at `MAX_CARRY = 1`.
+
+### 11.2 Bid Mechanic
+
+Both agents submit `{ bid, plan }` sealed simultaneously. `bid` is an integer number of AP committed from `apPool`. Higher bid wins resolution priority; ties are resolved by `seededCoinFlip(matchId, round)` (deterministic, no randomness).
+
+**Bid AP is burned regardless of outcome** — it is deducted from `apPool` when the plan is submitted, before validation. If validation fails (invalid plan), the bid AP is still burned and the agent's plan is replaced with a forced pass (`{ bid: 0, extras: [] }`).
+
+### 11.3 AP Spend Options
+
+Exactly four spend options, each declared as an `extra` in `RoundPlan.extras`:
+
+| Extra | AP Cost | Effect |
+|-------|--------:|--------|
+| `boosted_ability` | 1 | Increases the free action's ability damage by 1 (mode: damage) or sight radius by 1 hex (mode: range). |
+| `second_attack` | 2 | Deals `attacker.strength - 1` damage to a target (minimum 1). Normal defender retaliation applies. |
+| `defensive_stance` | 1 | Records a `StanceRecord { unitId, appliesOnRound: currentRound + 1 }`. On the next round, the unit's defender strength is treated as `floor(strength * 1.5)`. |
+| `reserve_overwatch` | 2 | Records a `ReserveRecord { unitId, ownerId, appliesOnRound: currentRound + 1, fired: false }`. Fires when an enemy attacks the reserving unit OR ends a movement step within `RANGE[type]`. Fires before the triggering action resolves. Reserve damage = `reservingUnit.strength`, no terrain reduction, no defender retaliation. |
+
+### 11.4 AP Carryover
+
+At round end (`emitRoundEnd`), unspent AP in `apPool` (up to `MAX_CARRY = 1`) is added to `apCarry`. At round start, `apCarry` is added to `apPool` (capped at `AP_CAP = 4`).
+
+Formula: `roundEndCarryover(budget) = min(unspent AP in apPool, MAX_CARRY=1)`.
+
+### 11.5 Reserve Trigger Semantics
+
+- Reserve fires when an enemy **attacks** the reserving unit OR when an enemy **ends a movement step** within `RANGE[type]` of the reserving unit.
+- First eligible trigger fires per round; subsequent triggers do not refire.
+- If the reserve kills the triggering attacker, the triggering attack is wasted with no AP refund.
+- Reserve does not invoke defender retaliation.
+- Unfired reserves expire after their `appliesOnRound` via G3 cleanup in `emitRoundEnd`.
+
+### 11.6 Stance Semantics
+
+- Defensive stance is recorded with `appliesOnRound = currentRound + 1`.
+- Active stances are consumed during the current round's damage application (Phase 5 of `resolveRound`).
+- Expired stances are removed via G2 cleanup in `emitRoundEnd`.
+- State invariant: at round start, `state.stances` contains only records with `appliesOnRound >= currentRound`.
+
+### 11.7 G1 Retarget (Rushed Shot)
+
+When an attack action (free or AP-spent) resolves and the declared `to` hex no longer contains the targeted enemy unit:
+
+1. **Follow.** If the original target is alive and now within `RANGE[attacker.type]` of attacker at resolution time → proceeds at unit's current position, full damage, normal retaliation.
+2. **Rushed shot.** Otherwise, if any other enemy unit is within `RANGE[attacker.type]` → fires at nearest enemy. Damage = `floor(attacker.strength / 2)`, minimum 1. Emits `action_retargeted` event.
+3. **No targets.** Otherwise → no damage, `action_wasted` event. AP not refunded.
+
+### 11.8 Bid Burn on Rejected Plans
+
+When `validateRoundPlan` returns `{ ok: false }`:
+1. Original bid is deducted from `apPool` (clamped to ≥ 0).
+2. Agent's plan is replaced with forced pass `{ bid: 0, extras: [] }`.
+3. `plan_rejected` event emitted with `{ agent, reason, originalBid, apBurned }`.
+
+### 11.9 Resolution Order (per round, after bids revealed)
+
+1. Reserve triggers (`resolveReserveTriggers`)
+2. Free moves (`resolveFreeMoves`)
+3. Free actions (`resolveFreeActions`)
+4. AP extras (`resolveExtras`)
+5. Defensive stances applied (damage modifier)
+6. Reserves flagged for next round (`flagReserves`)
+7. Round end (`emitRoundEnd`) — G2/G3 cleanup, AP carryover, round counter increment
+
+### 11.10 State Invariants
+
+- `state.stances` is empty at round start (G2 cleanup in `emitRoundEnd` of prior round).
+- `state.reserves` is empty at round start (G3 cleanup in `emitRoundEnd` of prior round).
+- `apPool` never exceeds `AP_CAP = 4` after carryover is applied.
+- Match ends at `ROUND_CAP = 50` or when a win condition is met.
+
+---
+
 ## Changelog
 
 | Version | Date | Change |
 |---|---|---|
 | 1.0.0 | 2026-04-21 | Initial spec — frozen for audit |
+| 1.1.0 | 2026-04-24 | Added Round Economy section (Section 11) — bid/AP/carryover/reserve/stance/retarget/bid-burn mechanics from Plan D v2 |
