@@ -1,6 +1,6 @@
 // task-148-gateway-registry-tests | phase E | writes: tests/gateway/registry.test.ts
 
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect } from 'bun:test';
 import { SessionRegistry } from '../../src/gateway/registry.js';
 import type { AgentChannel } from '../../src/runner/types.js';
 

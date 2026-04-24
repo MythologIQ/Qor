@@ -3,7 +3,7 @@ import { checkVictory } from "../../src/engine/victory.ts";
 import type { MatchState, Unit, HexCell } from "../../src/shared/types.ts";
 
 function makeUnit(owner: "A" | "B", id: string): Unit {
-  return { id, owner, type: "infantry", hp: 10, maxHp: 10, position: { q: 0, r: 0, s: 0 }, strength: 5 };
+  return { id, owner, type: "infantry", hp: 10, position: { q: 0, r: 0, s: 0 }, strength: 5 };
 }
 
 function makeCell(owner: "A" | "B" | null = null): HexCell {
@@ -19,9 +19,9 @@ function makeState(overrides: Partial<MatchState>): MatchState {
     units: [],
     visible: [],
     turn: 1,
-    yourTurn: true,
     score: { a: 0, b: 0 },
     deadline: 0,
+    roundCap: 48,
     ...overrides,
   };
 }

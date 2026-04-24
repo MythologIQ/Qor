@@ -6,7 +6,7 @@ import { describe, expect, it } from "bun:test";
 import { renderHex } from "../../src/public/hex-render.ts";
 import type { HexCell } from "../../src/shared/types.ts";
 
-function makeCell(q: number, r: number, terrain = "plain"): HexCell {
+function makeCell(q: number, r: number, terrain: HexCell["terrain"] = "plain"): HexCell {
   return { position: { q, r, s: -q - r }, terrain };
 }
 
@@ -49,7 +49,14 @@ describe("renderHex", () => {
     const cell: HexCell = {
       position: { q: 0, r: 0, s: 0 },
       terrain: "plain",
-      unit: { owner: "A", strength: 3, movesLeft: 2, attacksLeft: 1 },
+      unit: {
+        id: "u1",
+        owner: "A",
+        type: "infantry",
+        hp: 4,
+        strength: 3,
+        position: { q: 0, r: 0, s: 0 },
+      },
     };
     const svg = renderHex([cell]);
     expect(countPolygons(svg)).toBe(1);

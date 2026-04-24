@@ -1,5 +1,55 @@
 # SHADOW_GENOME
 
+## 2026-04-23T06:45:00Z — audit-qor-issue-37-v2-veto
+
+**Verdict**: VETO
+**Chain Hash**: `sha256:84cda2b88a8bc2d1949a5017df2fe8bc6f204f1d3f4473ef5c31f44f09058104`
+
+### Failure Pattern
+
+v2 plan attempted to remediate v1's three MAJORs (T1 canary, T2 partition stamping, T3 hash chain) by **scoping down** the kernel surface to events-only ("auto-partitioned, opaque payload"). But it never read the actual `events.index` op handler. The op is **not** an opaque event store — it's a domain-specific `LearningPacket` store with strict `validatePacket()` (requires `id`, `timestamp`, `lesson`) and a fixed Cypher MERGE that destructures only known fields. Plan invented a `{ type, payload, provenance }` envelope that doesn't exist server-side; even if the envelope were accepted, the chain fields (`hash`, `prevHash`) have nowhere to land in the Neo4j schema. Compounded by token-map naming inconsistency (map keys end in `-kernel` but partition assertions strip the suffix) and a verifier that reads the JSONL the plan archives. Pattern: plan reasoned from API surface vocabulary ("events", "payload") without reading the op implementation byte-for-byte.
+
+### Bound Violations
+
+- **R1 (V-OP-CONTRACT-VERBATIM)**: Plans that propose new clients of an existing IPC/RPC op must reproduce the exact server-side parameter envelope, validation rules, and persisted schema in the plan body. "Opaque payload" claims must be backed by reading the persistence layer (Cypher, SQL, file format) — not inferred from the op name.
+- **R2 (V-IDENTITY-NAMING-COHERENCE)**: When a plan introduces or extends an identity primitive (token map, agentId, partition), every reference to that identity across the plan must use the same canonical form. Plan must state the canonical form once and grep for inconsistent references before sealing.
+- **R3 (V-MIGRATION-CONSUMER-RECHECK)**: When a v(N+1) plan claims a v(N) finding (e.g., consumer breaks on substrate migration) is closed, the closure must show the consumer's read path explicitly rewriting to the new substrate. "Verifier keeps working" requires either (a) verifier still reads same source, or (b) verifier rewritten — never (c) hand-waved by claiming the writer stamps "matching fields".
+
+### Mandatory Guard
+
+Next plan must pass **Op Contract Verbatim**, **Identity Naming Coherence**, and **Migration Consumer Recheck** passes:
+
+1. For every IPC `client.call("op.name", X)` proposed, paste the corresponding server handler signature + validation + persisted schema in the plan. State the parameter shape match explicitly. If schema doesn't accommodate the data, propose a schema extension as a separate phase.
+2. State the canonical agentId/partition form once at the top of any plan touching identity. Grep for and list every plan reference; assert they all match the canonical form before sealing.
+3. For every consumer named in a v(N) VETO that v(N+1) claims is unaffected, paste the consumer's read path code in the plan body. If the read path traverses the migrated artifact, state the rewrite explicitly. "No changes" + "matching fields" is not a valid closure.
+
+---
+
+## 2026-04-22T19:50:00Z — audit-qor-issue-37-v1-veto
+
+**Verdict**: VETO
+**Chain Hash**: `sha256:285c39134e881739e19a28651bb78972ebdbee91b7c98bdfa39ebcd2dfb6e569`
+
+### Failure Pattern
+
+v1 plan for Qora/Forge kernel standup inherited a false premise: that "verbatim mirror of Victor" automatically delivers agent-private partition isolation. Victor's kernel was built before multi-agent isolation was exercised — its `upsertCacheEntries(projectId, entries)` has no partition parameter, and the server-side `resolvePartition` default is `"shared-operational"`, not `agent-private:<agentId>`. Only LearningEvent ops auto-partition. A verbatim mirror therefore gives Qora/Forge cache/graph writes the same default as Victor — a shared pool, not isolated partitions. Compounded by T1 (canary asserting socket-absent immediately before the plan enables the socket, with no modification call-out) and T3 (hash-chain consumer `qora/src/api/status.ts:55` silently broken by migration). Common pattern: plan reasoned from current code shapes without tracing what those shapes DO at runtime for the new agents in the new config.
+
+### Bound Violations
+
+- **T1 (V-CANARY-SELF-CONSISTENCY)**: A canary modified by a plan must be internally consistent after all plan changes — no assertion can require both a presence and absence of the same runtime artifact. Plan must state BOTH delete and add edits when flipping a canary's expectation.
+- **T2 (V-ISOLATION-NOT-INHERITED)**: When a plan adds a new tenant to an existing multi-tenant primitive, isolation properties of the primitive must be verified for the new tenant in the configuration the plan produces — NOT assumed to be inherited from the reference tenant's verified behavior.
+- **T3 (V-CONSUMER-CONTRACT-WALK)**: Migrations that change storage substrate must enumerate downstream consumers that read the migrated artifact and state how each consumer's contract is preserved or replaced. Silent consumers (e.g., chain verifiers) count.
+
+### Mandatory Guard
+
+Next plan must pass **Canary Self-Consistency**, **Isolation Not Inherited**, and **Consumer Contract Walk** passes:
+
+1. For every canary modification, state both the removed assertion and the added assertion explicitly — no "extend" without enumeration.
+2. For every new tenant accessing an existing multi-tenant surface, name the specific op paths exercised and prove (via reading the op handler) that the isolation property holds for the new tenant — NOT by analogy to an existing tenant.
+3. For every data-substrate migration, enumerate downstream consumers (`grep` for the data shape) and state per-consumer: preserved, replaced, or explicitly retired with impact documented.
+
+---
+
 ## 2026-04-19T00:10:00Z — audit-qor-phase3-cutover-v3-veto
 
 **Verdict**: VETO
@@ -1163,3 +1213,47 @@ Do not issue PASS on future harness expansions unless:
 - **2026-04-17T03:45:00Z** tick=68 `task-068-ui-smoke` **spec_defect** severity=4 — arena server serves /arena.html as static but static-routes.ts rewrites /arena to /arena.html and serves from /public/arena.html which returns 404 (path mismatch). The arena server process appears to not be the one registered to port 4200. 2 tests still failing: session rejects playing→forfeit, match-runner timeout paths. | **RESOLVED: rem-017 supersedes — task-068-ui-smoke.yaml symlink exists, tick 68 was historical queue filename drift**
 - **2026-04-17T03:45:00Z** tick=68 `task-068-ui-smoke` **spec_defect** severity=4 — arena server serves /arena.html as static but static-routes.ts rewrites /arena to /arena.html and serves from /public/arena.html which returns 404 (path mismatch). The arena server process appears to not be the one registered to port 4200. 2 tests still failing: session rejects playing→forfeit, match-runner timeout paths. | **RESOLVED: rem-017 supersedes — task-068-ui-smoke.yaml symlink exists, tick 68 was historical queue filename drift**
 - **2026-04-17T03:45:00Z** tick=68 `task-068-ui-smoke` **spec_defect** severity=4 — arena server serves /arena.html as static but static-routes.ts rewrites /arena to /arena.html and serves from /public/arena.html which returns 404 (path mismatch). The arena server process appears to not be the one registered to port
+
+---
+
+## 2026-04-21T22:15:00Z — audit-v5-p2-veto-D1-nc-toolchain
+
+**Phase**: GATE
+**Plan**: `docs/plans/2026-04-20-qor-phase3-cutover-v5.md` §Phase 2
+**Chain**: `b19d4da856aeee32788c809600296b980af5661f5a9f0c57fd52867529bef531`
+
+### VETO Reason
+
+**D1 — Toolchain dependency not satisfied on host.**
+
+Plan v5 §Phase 2 Unit Tests assertion 4 specifies `nc -z 127.0.0.1 7687` as the Bolt liveness probe. Live-state recon confirms:
+- `which nc` → not found
+- `which netcat` → not found
+- `which ncat` → not found
+- No `nc*` binary on `/usr/bin` or `/bin`
+- Package not installed (`apt list --installed | grep netcat` empty)
+
+Canary script exits with "command not found" at first invocation of assertion 4, producing a guaranteed false negative indistinguishable from a real Bolt outage.
+
+### Root Pattern
+
+Plan design inherited `nc` syntax from v4 without re-verifying host toolchain — same class of omission as the v3→v4 T1r finding (tests referencing nonexistent directory). Pattern: **"inherited from prior plan" ≠ "verified against current environment."** Inheritance chains must re-ground every execution primitive.
+
+Phase 1 `start.sh` already solved the same problem correctly using bash built-in `/dev/tcp` — the primitive was available in the codebase, but not lifted into the plan's test surface.
+
+### Remediation
+
+One-line shell swap in v5.1:
+```bash
+# v5 (broken)
+if nc -z 127.0.0.1 7687; then …
+
+# v5.1 (fixed)
+if (exec 3<>/dev/tcp/127.0.0.1/7687) 2>/dev/null; then …
+```
+
+### Prevention Rule (future audits)
+
+**Every shell command in a plan's test/canary surface must appear in a host availability matrix before PASS can be issued.** Dependency Audit pass must include "available on host" column, verified by `which <cmd>` or equivalent — not by "plan says so" or "inherited from prior plan."
+
+Missed by: prior v5 GATE PASS (chain `b6792654…`). Caught by: Phase 2 live-state re-verification gate.

@@ -1,12 +1,11 @@
 /**
- * Builder Tick 46 | task-046-agent-runner
- * Tests for Agent Runner — runAgent WebSocket lifecycle
+ * Agent Runner tests — Plan D v2 (PLAN frame + getRoundPlan)
  */
 
 import { describe, it, expect, beforeEach, afterEach } from 'bun:test';
 import { runAgent } from '../../src/agents/runner';
 import { BaseAgent } from '../../src/agents/base';
-import type { AgentAction, MatchState } from '../../src/shared/types';
+import type { MatchState, RoundPlan, AgentRoundBudget } from '../../src/shared/types';
 
 // ── Mock WebSocket ────────────────────────────────────────────────────────────
 
@@ -18,7 +17,6 @@ class MockWebSocket {
 
   constructor(_url: string) {
     MockWebSocket.instances.push(this);
-    // Defer 'open' so addEventListener is called first in runAgent
     queueMicrotask(() => this.emit('open', {}));
   }
 
@@ -46,7 +44,6 @@ class MockWebSocket {
   }
 
   serverSend(frame: object) {
-    // parseFrame expects event.data to be a string/Buffer/ArrayBuffer
     this.emit('message', { data: JSON.stringify(frame) });
   }
 
@@ -58,14 +55,14 @@ class MockWebSocket {
 // ── Test Agent ────────────────────────────────────────────────────────────────
 
 class TestAgent extends BaseAgent {
-  decisions: MatchState[] = [];
+  decisions: { state: MatchState; budget: AgentRoundBudget }[] = [];
   helloArgs?: [string, 'A' | 'B', string];
   ackResults: { accepted: boolean; reason?: string }[] = [];
-  endArgs?: ['A' | 'B' | 'draw', string];
+  endArgs?: ['A' | 'B' | 'draw' | null, string];
 
-  decide(state: MatchState): AgentAction {
-    this.decisions.push(state);
-    return { type: 'pass', confidence: 1.0 };
+  getRoundPlan(state: MatchState, budget: AgentRoundBudget): RoundPlan {
+    this.decisions.push({ state, budget });
+    return { bid: 0, extras: [] };
   }
 
   onHello(matchId: string, side: 'A' | 'B', seed: string) {
@@ -76,7 +73,7 @@ class TestAgent extends BaseAgent {
     this.ackResults.push({ accepted, reason });
   }
 
-  onEnd(winner: 'A' | 'B' | 'draw', reason: string) {
+  onEnd(winner: 'A' | 'B' | 'draw' | null, reason: string) {
     this.endArgs = [winner, reason];
   }
 }
@@ -91,8 +88,7 @@ function helloFrame(overrides: Partial<object> = {}) {
     seed: 'seed-abc',
     boardSize: { width: 9, height: 9 },
     timeBudgetMs: 5000,
-    turnCap: 50,
-    protocolVersion: '1.0',
+    protocolVersion: '2.0',
     ...overrides,
   };
 }
@@ -101,11 +97,12 @@ function stateFrame(overrides: Partial<object> = {}) {
   return {
     type: 'STATE',
     turn: 1,
-    yourTurn: true,
     visible: [],
     units: [],
     score: { a: 0, b: 0 },
     deadline: Date.now() + 5000,
+    roundCap: 48,
+    budget: { freeMove: 1, freeAction: 1, apPool: 5, apCarry: 0 },
     ...overrides,
   };
 }
@@ -156,7 +153,7 @@ describe('runAgent', () => {
     expect(agent.helloArgs).toEqual(['match-42', 'B', 'xyz']);
   });
 
-  it('calls agent.decide on STATE and sends ACTION', async () => {
+  it('calls agent.getRoundPlan on STATE and sends PLAN', async () => {
     const agent = new TestAgent('test-agent', '1.0');
     const p = runAgent(agent, 'ws://localhost:8080/game');
 
@@ -164,17 +161,21 @@ describe('runAgent', () => {
 
     const ws = MockWebSocket.instances[0];
     ws.serverSend(helloFrame());
-    ws.serverSend(stateFrame({ turn: 5, yourTurn: true }));
+    ws.serverSend(stateFrame({ turn: 5 }));
+    // give the await in STATE handler a chance to flush
+    await new Promise(resolve => setTimeout(resolve, 0));
     ws.serverSend(endFrame());
 
     await p;
 
     const frames = ws.sentFrames.map(f => JSON.parse(f));
-    const actionFrame = frames.find(f => f.type === 'ACTION');
-    expect(actionFrame).toBeTruthy();
-    expect(actionFrame.action).toBe('pass');
+    const planFrame = frames.find(f => f.type === 'PLAN');
+    expect(planFrame).toBeTruthy();
+    expect(planFrame.plan.bid).toBe(0);
+    expect(planFrame.plan.extras).toEqual([]);
     expect(agent.decisions).toHaveLength(1);
-    expect(agent.decisions[0].turn).toBe(5);
+    expect(agent.decisions[0].state.turn).toBe(5);
+    expect(agent.decisions[0].budget.apPool).toBe(5);
   });
 
   it('relays ACK to agent.onAck', async () => {
@@ -184,13 +185,14 @@ describe('runAgent', () => {
     const ws = MockWebSocket.instances[0];
     ws.serverSend(helloFrame());
     ws.serverSend(stateFrame());
-    ws.serverSend({ type: 'ACK', accepted: true, reason: 'invalid_action' });
+    await new Promise(resolve => setTimeout(resolve, 0));
+    ws.serverSend({ type: 'ACK', accepted: true, reason: 'invalid_plan' });
     ws.serverSend(endFrame());
 
     await p;
 
     expect(agent.ackResults).toHaveLength(1);
-    expect(agent.ackResults[0]).toEqual({ accepted: true, reason: 'invalid_action' });
+    expect(agent.ackResults[0]).toEqual({ accepted: true, reason: 'invalid_plan' });
   });
 
   it('calls agent.onEnd on END frame and resolves', async () => {
@@ -201,11 +203,12 @@ describe('runAgent', () => {
     const ws = MockWebSocket.instances[0];
     ws.serverSend(helloFrame());
     ws.serverSend(stateFrame());
-    ws.serverSend(endFrame({ winner: 'B', reason: 'turn_cap', finalScore: { a: 0, b: 15 } }));
+    await new Promise(resolve => setTimeout(resolve, 0));
+    ws.serverSend(endFrame({ winner: 'B', reason: 'round_cap', finalScore: { a: 0, b: 15 } }));
 
     await p;
     expect(resolved).toBe(true);
-    expect(agent.endArgs).toEqual(['B', 'turn_cap']);
+    expect(agent.endArgs).toEqual(['B', 'round_cap']);
   });
 
   it('rejects when WebSocket errors', async () => {
@@ -229,14 +232,14 @@ describe('runAgent', () => {
     await expect(p).rejects.toThrow(/WebSocket closed before HELLO/);
   });
 
-  it('passes non-HELLO/STATE/ACK/EVENT/END frames through without crashing', async () => {
+  it('passes unknown frame types through without crashing', async () => {
     const agent = new TestAgent('test-agent', '1.0');
     const p = runAgent(agent, 'ws://localhost:8080/game');
 
     const ws = MockWebSocket.instances[0];
     ws.serverSend(helloFrame());
     ws.serverSend(stateFrame());
-    // unknown frame type — should be silently ignored
+    await new Promise(resolve => setTimeout(resolve, 0));
     ws.serverSend({ type: 'PING', foo: 'bar' });
     ws.serverSend(endFrame());
 

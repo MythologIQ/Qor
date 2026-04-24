@@ -1,23 +1,31 @@
 import { describe, it, expect } from "bun:test";
 import { updateTerritory } from "../../src/engine/territory.ts";
-import type { HexCell } from "../../src/shared/types.ts";
+import type { HexCell, Unit } from "../../src/shared/types.ts";
+
+function makeUnit(owner: "A" | "B"): Unit {
+  return {
+    id: "u1",
+    owner,
+    type: "infantry",
+    hp: 3,
+    strength: 1,
+    position: { q: 0, r: 0, s: 0 },
+  };
+}
 
 function makeCell(owner?: "A" | "B"): HexCell {
   return {
     position: { q: 0, r: 0, s: 0 },
+    terrain: "plain",
     controlledBy: undefined,
-    unit: owner ? { id: "u1", owner, type: "infantry", strength: 1 } : undefined,
+    unit: owner ? makeUnit(owner) : undefined,
   };
-}
-
-function makeBoard(cells: HexCell[]): HexCell[][] {
-  return [cells];
 }
 
 describe("updateTerritory", () => {
   it("cell with unit is controlled by that player", () => {
     const board: HexCell[][] = [
-      [{ position: { q: 0, r: 0, s: 0 }, controlledBy: undefined, unit: { id: "u1", owner: "A", type: "infantry", strength: 1 } }],
+      [{ position: { q: 0, r: 0, s: 0 }, terrain: "plain", controlledBy: undefined, unit: makeUnit("A") }],
     ];
     const result = updateTerritory(board);
     expect(result[0][0].controlledBy).toBe("A");
@@ -25,7 +33,7 @@ describe("updateTerritory", () => {
 
   it("cell with B unit is controlled by B", () => {
     const board: HexCell[][] = [
-      [{ position: { q: 0, r: 0, s: 0 }, controlledBy: undefined, unit: { id: "u1", owner: "B", type: "infantry", strength: 1 } }],
+      [{ position: { q: 0, r: 0, s: 0 }, terrain: "plain", controlledBy: undefined, unit: makeUnit("B") }],
     ];
     const result = updateTerritory(board);
     expect(result[0][0].controlledBy).toBe("B");
@@ -35,7 +43,7 @@ describe("updateTerritory", () => {
     // Build a board with 4 neighbors for A, 0 for B
     const board: HexCell[][] = [
       [
-        { position: { q: 0, r: 0, s: 0 }, controlledBy: undefined, unit: undefined },
+        { position: { q: 0, r: 0, s: 0 }, terrain: "plain", controlledBy: undefined, unit: undefined },
       ],
     ];
     // Mock neighbors via the coords.neighbors function — we need a board
@@ -53,7 +61,7 @@ describe("updateTerritory", () => {
     // We need a board set up so that a central cell sees 3 neighbors each way.
     // The simplest way is a 7-cell hex pattern:
     const board: HexCell[][] = [
-      [{ position: { q: 0, r: 0, s: 0 }, controlledBy: undefined, unit: undefined }],
+      [{ position: { q: 0, r: 0, s: 0 }, terrain: "plain", controlledBy: undefined, unit: undefined }],
     ];
     const result = updateTerritory(board);
     // No units at all → no majority possible
@@ -63,8 +71,9 @@ describe("updateTerritory", () => {
   it("does not mutate the input board", () => {
     const originalCell: HexCell = {
       position: { q: 0, r: 0, s: 0 },
+      terrain: "plain",
       controlledBy: undefined,
-      unit: { id: "u1", owner: "A", type: "infantry", strength: 1 },
+      unit: makeUnit("A"),
     };
     const board: HexCell[][] = [[{ ...originalCell }]];
     updateTerritory(board);
@@ -73,7 +82,7 @@ describe("updateTerritory", () => {
 
   it("idempotent — same board returned when state matches unit positions", () => {
     const board: HexCell[][] = [
-      [{ position: { q: 0, r: 0, s: 0 }, controlledBy: "A", unit: { id: "u1", owner: "A", type: "infantry", strength: 1 } }],
+      [{ position: { q: 0, r: 0, s: 0 }, terrain: "plain", controlledBy: "A", unit: makeUnit("A") }],
     ];
     const result = updateTerritory(board);
     expect(result[0][0].controlledBy).toBe("A");

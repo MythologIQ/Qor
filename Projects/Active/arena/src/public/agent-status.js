@@ -16,16 +16,16 @@ export function updateAgentStatus(el, sessions) {
 
     const head = document.createElement("div");
     head.className = "agent-head";
-    head.innerHTML = `<strong class="agent-name">${session.operator ?? session.id}</strong><span>Side ${session.side}</span>`;
+    head.innerHTML = `<strong class="agent-name">${session.operator ?? session.id}</strong>`;
 
     const meta = document.createElement("div");
     meta.className = "agent-meta";
-    meta.innerHTML = `<span class="agent-model">${session.modelId ?? "unknown model"}</span><span class="agent-status-copy">${session.status}</span>`;
+    meta.innerHTML = `<span class="agent-status-copy">${session.modelId ?? "unknown model"}</span>`;
 
     const metrics = document.createElement("div");
     metrics.className = "agent-metrics";
     metrics.innerHTML = [
-      `<div class="agent-metric"><span>Avg Decision</span><strong>${avgMs}ms</strong></div>`,
+      `<div class="agent-metric"><span>Avg Think</span><strong>${avgMs}ms</strong></div>`,
       `<div class="agent-metric"><span>Actions</span><strong>${session.totalActions ?? 0}</strong></div>`,
       `<div class="agent-metric"><span>Invalid</span><strong>${session.invalidCount ?? 0}</strong></div>`,
     ].join("");

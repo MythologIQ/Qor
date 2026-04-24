@@ -26,7 +26,7 @@ Qor is **not** the product — Qor is the governance method. The Forge is the bu
 - Test suites: engine, gateway, agents, determinism, fairness, persistence
 
 ### Scope-2 Plan A v2 — Identity Substrate (current)
-Build the durable persistence + identity primitives the rest of Scope-2 will sit on. No matchmaking, no ranking, no tournaments, no UI changes. The blueprint linked above is load-bearing; this document summarizes and indexes it.
+Build the durable persistence + identity primitives the rest of Scope-2 will sit on. The current tree now also carries the first truthful public-language pass for the shipped HexaWars broadcast surface so the live page reads as agent-v-agent competition instead of framework scaffolding. The blueprint linked above is load-bearing; this document summarizes and indexes it.
 
 **Non-goals**: matchmaking loop, ELO, tournaments, presence, replay UI. Those are Plan B/C.
 
@@ -60,13 +60,18 @@ Decision #9 governs **Plan B** (not this plan).
 │  Hex Engine (deterministic, fog-of-war)            [Scope-1]   │
 │────────────────────────────────────────────────────────────────│
 │  Router (Hono) ─ mount(app, db)                    [Scope-1]   │
+│  Route Modules (matches, tournaments, auth)       [Scope-2]   │
 │  Identity         — operator, rate-limit,                      │
 │                     fingerprint, similarity        [Plan A v2] │
 │  Persistence      — db, schema, match-store        [Plan A v2] │
 └────────────────────────────────────────────────────────────────┘
 ```
 
-Every new Plan A v2 module has a named caller reachable from `server.ts` boot. No orphans.
+Active build paths are now explicit:
+- `src/server.ts` boots the arena service runtime.
+- `src/public/arena.js` owns the shipped spectator surface, including replay keyboard support.
+- `package.json` exports `./agent-runner` for the external operator SDK entrypoint at `src/agents/runner.ts`.
+- Legacy harness code that is not part of the shipped runtime lives under `tests/fixtures/runtime/`, not under `src/`.
 
 ## Razor Budget (per Section-4: file ≤ 250L, fn ≤ 40L, depth ≤ 3, no nested ternaries)
 
@@ -140,6 +145,7 @@ See blueprint §Razor Budget Summary. Largest planned file is `match-store.ts` a
 
 ## Related Documents
 
+- Concept: [`CONCEPT.md`](CONCEPT.md)
 - Blueprint: [`plans/2026-04-17-hexawars-scope-2-plan-a-v2-identity-substrate.md`](plans/2026-04-17-hexawars-scope-2-plan-a-v2-identity-substrate.md)
 - Predecessor (vetoed v17): [`plans/2026-04-17-hexawars-scope-2-plan-a-identity-substrate.md`](plans/2026-04-17-hexawars-scope-2-plan-a-identity-substrate.md)
 - Scope-2 parent plan: [`plans/2026-04-17-hexawars-scope-2-depth-expansion.md`](plans/2026-04-17-hexawars-scope-2-depth-expansion.md)

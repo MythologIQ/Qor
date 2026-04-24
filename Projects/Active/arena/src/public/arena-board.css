@@ -1,0 +1,78 @@
+.hex-cell polygon {
+  stroke: rgba(255, 255, 255, 0.14);
+  stroke-width: 1.05;
+}
+
+.hex-plains {
+  fill: #223243;
+}
+
+.hex-forest {
+  fill: #1c3422;
+}
+
+.hex-hills {
+  fill: #4a5b51;
+}
+
+.hex-mountain {
+  fill: #746a5a;
+}
+
+.hex-water {
+  fill: #12304f;
+}
+
+.hex-control-ring {
+  fill: none;
+  stroke-width: 2.8;
+  opacity: 0.96;
+}
+
+.hex-control-ring[data-side="A"] {
+  stroke: rgba(114, 179, 255, 0.84);
+  filter: drop-shadow(0 0 5px rgba(53, 124, 255, 0.42));
+}
+
+.hex-control-ring[data-side="B"] {
+  stroke: rgba(255, 120, 109, 0.84);
+  filter: drop-shadow(0 0 5px rgba(255, 75, 68, 0.42));
+}
+
+.hex-center-mark {
+  fill: rgba(255, 200, 110, 0.9);
+}
+
+.board-label {
+  fill: rgba(232, 240, 255, 0.34);
+  font-size: 4px;
+  letter-spacing: 0.08em;
+}
+
+.hex-cell.fog {
+  opacity: 0.35;
+}
+
+.unit-shadow {
+  fill: rgba(0, 0, 0, 0.42);
+}
+
+.unit-shell {
+  stroke: rgba(255, 255, 255, 0.9);
+  stroke-width: 1.5;
+}
+
+.unit-shell[data-side="A"] {
+  fill: var(--blue-strong);
+}
+
+.unit-shell[data-side="B"] {
+  fill: var(--red-strong);
+}
+
+.unit-type {
+  fill: rgba(255, 255, 255, 0.96);
+  font-size: 5.2px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}

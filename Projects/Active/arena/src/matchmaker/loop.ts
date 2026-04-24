@@ -5,7 +5,6 @@ import type { MatchQueue } from './queue';
 import type { PresenceTracker } from './presence';
 import type { MatchPair, PairingCriteria } from './types';
 import { findPair } from './pair';
-import { recordPair } from '../router';
 
 export function startMatchmaker(deps: {
   queue: MatchQueue;
@@ -22,7 +21,6 @@ export function startMatchmaker(deps: {
     if (!deps.presence.isOnline(pair.a.operatorId)) return;
     if (!deps.presence.isOnline(pair.b.operatorId)) return;
     deps.onPair(pair);
-    recordPair();
     deps.queue.dequeue(pair.a.operatorId);
     deps.queue.dequeue(pair.b.operatorId);
   }, intervalMs);

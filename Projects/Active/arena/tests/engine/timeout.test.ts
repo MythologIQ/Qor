@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach } from 'bun:test';
 import { withTimeout, TimeoutError, enforceActionDeadline } from '../../src/gateway/timeout.js';
 import { AgentSessionManager } from '../../src/gateway/session.js';
 
@@ -31,12 +31,14 @@ describe('Timeout', () => {
 
   describe('enforceActionDeadline', () => {
     let manager: AgentSessionManager;
-    let forfeitSpy: ReturnType<typeof vi.fn>;
+    let forfeitCalls: [string, string][];
 
     beforeEach(() => {
-      forfeitSpy = vi.fn();
+      forfeitCalls = [];
       manager = {
-        forfeit: forfeitSpy,
+        forfeit: ((sessionId: string, reason: string) => {
+          forfeitCalls.push([sessionId, reason]);
+        }) as AgentSessionManager["forfeit"],
       } as unknown as AgentSessionManager;
     });
 
@@ -44,28 +46,30 @@ describe('Timeout', () => {
       const futureDeadline = Date.now() + 5000;
       const result = enforceActionDeadline(manager, 'session-1', futureDeadline);
       expect(result).toBe(true);
-      expect(forfeitSpy).not.toHaveBeenCalled();
+      expect(forfeitCalls).toHaveLength(0);
     });
 
     it('returns false and forfeits session when deadline is missed', () => {
       const pastDeadline = Date.now() - 100;
       const result = enforceActionDeadline(manager, 'session-1', pastDeadline);
       expect(result).toBe(false);
-      expect(forfeitSpy).toHaveBeenCalledOnce();
-      expect(forfeitSpy).toHaveBeenCalledWith('session-1', expect.stringContaining('Deadline exceeded'));
+      expect(forfeitCalls).toHaveLength(1);
+      expect(forfeitCalls[0]?.[0]).toBe('session-1');
+      expect(forfeitCalls[0]?.[1]).toContain('Deadline exceeded');
     });
 
     it('forfeits with correct session id and deadline message', () => {
       const pastDeadline = Date.now() - 50;
       enforceActionDeadline(manager, 'session-abc', pastDeadline);
-      expect(forfeitSpy).toHaveBeenCalledWith('session-abc', expect.stringContaining('Deadline exceeded'));
+      expect(forfeitCalls[0]?.[0]).toBe('session-abc');
+      expect(forfeitCalls[0]?.[1]).toContain('Deadline exceeded');
     });
 
     it('returns true when deadline equals current time (edge case)', () => {
       const now = Date.now();
       const result = enforceActionDeadline(manager, 'session-1', now);
       expect(result).toBe(true);
-      expect(forfeitSpy).not.toHaveBeenCalled();
+      expect(forfeitCalls).toHaveLength(0);
     });
   });
 });

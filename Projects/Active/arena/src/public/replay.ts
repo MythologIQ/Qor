@@ -2,7 +2,13 @@
  * Replay scrubber — step through match events one at a time.
  * Deterministic: same events always produce identical state sequence.
  */
-import type { MatchEvent, MatchState } from "../shared/types.ts";
+export type ReplayEvent =
+  | { type: "spawn"; unitId: string; owner: "A" | "B"; q: number; r: number; strength: number }
+  | { type: "move"; unitId: string; toQ: number; toR: number }
+  | { type: "attack"; unitId: string; targetId: string; damage: number; recoil: number }
+  | { type: "turn_end" }
+  | { type: "concluded"; winner: "A" | "B" | null }
+  | { type: "pass" };
 
 /**
  * Minimal initial state used as the replay starting point.
@@ -26,7 +32,7 @@ export interface ReplayState {
 
 /** Seedable replay machine. */
 export class Replay {
-  private events: MatchEvent[] = [];
+  private events: ReplayEvent[] = [];
   private index = 0;
   private state: ReplayState;
 
@@ -38,7 +44,7 @@ export class Replay {
    * Load an ordered sequence of match events.
    * Resets index to 0 before loading.
    */
-  load(events: MatchEvent[]): void {
+  load(events: ReplayEvent[]): void {
     this.events = events ?? [];
     this.index = 0;
   }
@@ -73,7 +79,7 @@ export class Replay {
 
   // ─── private ───────────────────────────────────────────────────────────────
 
-  private apply(event: MatchEvent): void {
+  private apply(event: ReplayEvent): void {
     switch (event.type) {
       case "spawn":
         this.state.units.set(event.unitId, {

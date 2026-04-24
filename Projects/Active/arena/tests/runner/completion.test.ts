@@ -135,7 +135,7 @@ describe("MatchRunner completion", () => {
     // Close B immediately — this triggers the onClose callback which sets forfeitResult.
     // Firing A's onMessage lets the first iteration resolve so the runner can check
     // forfeitResult on the next loop start and return early.
-    channelB.close();
+    channelB.close?.();
 
     const result = await runner.start(ctx, channels);
     expect(result.reason).toBe("forfeit");

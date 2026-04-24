@@ -7,6 +7,8 @@ export interface CubeCoord {
   s: number; // invariant: q + r + s = 0
 }
 
+export type UnitWeight = 1 | 2 | 3; // 1=light (scout), 2=medium (infantry), 3=heavy
+
 export interface Unit {
   id: string;
   owner: "A" | "B";
@@ -14,6 +16,7 @@ export interface Unit {
   strength: number; // 1–10
   hp: number; // 1–10
   type: "infantry" | "scout" | "heavy";
+  weight?: UnitWeight;
 }
 
 export interface HexCell {
@@ -25,21 +28,11 @@ export interface HexCell {
 
 export interface MatchState {
   turn: number;
-  yourTurn: boolean;
   visible: HexCell[];
   units: Unit[];
   score: { a: number; b: number };
   deadline: number; // Unix ms
-}
-
-export type AgentActionType = "move" | "attack" | "pass";
-
-export interface AgentAction {
-  type: AgentActionType;
-  from?: CubeCoord;
-  to?: CubeCoord;
-  confidence: number; // 0.0–1.0
-  metadata?: Record<string, unknown>;
+  roundCap: number;
 }
 
 export type EngineEventType =
@@ -47,7 +40,9 @@ export type EngineEventType =
   | "unit_attacked"
   | "unit_destroyed"
   | "territory_claimed"
-  | "turn_ended";
+  | "turn_ended"
+  | "action_retargeted"
+  | "slots_refunded";
 
 export interface EngineEvent {
   type: EngineEventType;
@@ -57,7 +52,6 @@ export interface EngineEvent {
 
 export const BOARD_SIZE = 9;
 export const TIME_BUDGET_MS = 5000;
-export const TURN_CAP = 50;
 export const STARTING_UNITS = 3;
 
 // Plan D v2 Phase 1: Round Economy substrate (additive; AgentAction + TURN_CAP
@@ -132,6 +126,39 @@ export interface RetargetEvent {
   actualTargetUnitId: string;
   damage: number;
   reason: "rushed_shot";
+}
+
+export interface BidResolverInput {
+  matchId: string;
+  round: number;
+  agentA: { bid: number; plan: RoundPlan };
+  agentB: { bid: number; plan: RoundPlan };
+}
+
+export interface ResolvedBidOrder {
+  round: number;
+  first: "A" | "B";
+  bidA: number;
+  bidB: number;
+  tieBroken: boolean;
+}
+
+export interface RunRoundInput {
+  matchId: string;
+  round: number;
+  state: MatchState;
+  planA: RoundPlan;
+  planB: RoundPlan;
+  budgetA: AgentRoundBudget;
+  budgetB: AgentRoundBudget;
+}
+
+export interface RunRoundResult {
+  events: EngineEvent[];
+  nextState: MatchState;
+  nextBudgetA: AgentRoundBudget;
+  nextBudgetB: AgentRoundBudget;
+  ended: boolean;
 }
 
 // Identity Substrate (Plan A v2, Phase 1): storage-shape types.

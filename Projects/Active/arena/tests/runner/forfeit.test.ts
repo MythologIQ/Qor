@@ -60,13 +60,14 @@ describe("MatchRunner forfeit", () => {
       send = async () => {};
       dispose = () => {};
       operatorId = 20;
-      onClose: (() => void) | undefined;
+      closeHandler: (() => void) | undefined;
       onMessage: ((msg: unknown) => void) | undefined;
-      close() { this.closed = true; this.fired = true; this.onClose?.(); }
+      onClose(fn: () => void) { this.closeHandler = fn; }
+      close() { this.closed = true; this.fired = true; this.closeHandler?.(); }
       // B waits for message and never responds — only A closes mid-turn
       triggerClose() {
         this.fired = true;
-        this.onClose?.();
+        this.closeHandler?.();
       }
     })();
 
@@ -76,20 +77,11 @@ describe("MatchRunner forfeit", () => {
       send = async () => {};
       dispose = () => {};
       operatorId = 10;
-      onClose: (() => void) | undefined;
+      closeHandler: (() => void) | undefined;
       onMessage: ((msg: unknown) => void) | undefined;
-      close() { this.closed = true; this.onClose?.(); }
+      onClose(fn: () => void) { this.closeHandler = fn; }
+      close() { this.closed = true; this.closeHandler?.(); }
     })();
-
-    // Wire up onClose before starting
-    let closeHandlerA: (() => void) | undefined;
-    channelAclose.onClose = (fn: () => void) => {
-      closeHandlerA = fn;
-    };
-    let closeHandlerB: (() => void) | undefined;
-    channelBclose.onClose = (fn: () => void) => {
-      closeHandlerB = fn;
-    };
 
     const channels = { a: channelAclose, b: channelBclose };
 
@@ -160,7 +152,7 @@ describe("MatchRunner forfeit", () => {
     const channels = { a: channelA, b: channelB };
     const startPromise = runner.start(ctx, channels);
 
-    channelA.close();
+    channelA.close?.();
     await startPromise;
 
     const row = getMatch(db, "forfeit-persist-check");
@@ -193,7 +185,7 @@ describe("MatchRunner forfeit", () => {
     const channels = { a: channelA, b: channelB };
 
     // Fire close immediately — match should terminate right away
-    channelA.close();
+    channelA.close?.();
 
     const result = await runner.start(ctx, channels);
 

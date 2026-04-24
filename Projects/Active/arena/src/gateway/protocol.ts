@@ -1,10 +1,9 @@
-// HexaWars WebSocket Frame Protocol
-// task-035-ws-protocol | phase C
+// HexaWars WebSocket Frame Protocol (Plan D v2)
 
 import type {
   HelloFrame,
   ReadyFrame,
-  ActionFrame,
+  PlanFrame,
   StateFrame,
   AckFrame,
   EventFrame,
@@ -14,7 +13,7 @@ import type {
 // ─── Union Types ────────────────────────────────────────────────────────────
 
 export type ServerFrame = HelloFrame | StateFrame | AckFrame | EventFrame | EndFrame;
-export type ClientFrame = ReadyFrame | ActionFrame;
+export type ClientFrame = ReadyFrame | PlanFrame;
 export type WsFrame = ServerFrame | ClientFrame;
 
 // ─── sendFrame ─────────────────────────────────────────────────────────────
@@ -27,11 +26,12 @@ export function sendFrame(ws: WebSocket, frame: WsFrame): void {
 
 export function parseFrame(data: string | Buffer | ArrayBuffer): WsFrame | null {
   try {
-    const raw = data instanceof ArrayBuffer
-      ? new TextDecoder().decode(data)
-      : data instanceof Buffer
-        ? data.toString()
-        : data;
+    const raw =
+      typeof data === 'string'
+        ? data
+        : data instanceof ArrayBuffer
+          ? new TextDecoder().decode(data)
+          : Buffer.from(data).toString();
     const parsed = JSON.parse(raw);
     if (!parsed || typeof parsed !== 'object') return null;
     if (!parsed.type || typeof parsed.type !== 'string') return null;
@@ -43,7 +43,7 @@ export function parseFrame(data: string | Buffer | ArrayBuffer): WsFrame | null 
       case 'EVENT':
       case 'END':
       case 'READY':
-      case 'ACTION':
+      case 'PLAN':
         return parsed as WsFrame;
       default:
         return null;
@@ -70,7 +70,6 @@ function validateHelloFrame(frame: HelloFrame): boolean {
     typeof frame.boardSize.width === 'number' &&
     typeof frame.boardSize.height === 'number' &&
     typeof frame.timeBudgetMs === 'number' &&
-    typeof frame.turnCap === 'number' &&
     typeof frame.protocolVersion === 'string'
   );
 }
@@ -80,13 +79,18 @@ function validateStateFrame(frame: StateFrame): boolean {
     typeof frame.type === 'string' &&
     frame.type === 'STATE' &&
     typeof frame.turn === 'number' &&
-    typeof frame.yourTurn === 'boolean' &&
+    typeof frame.roundCap === 'number' &&
     Array.isArray(frame.visible) &&
     Array.isArray(frame.units) &&
     typeof frame.score === 'object' &&
     typeof frame.score.a === 'number' &&
     typeof frame.score.b === 'number' &&
-    typeof frame.deadline === 'number'
+    typeof frame.deadline === 'number' &&
+    typeof frame.budget === 'object' &&
+    typeof frame.budget.apPool === 'number' &&
+    typeof frame.budget.apCarry === 'number' &&
+    typeof frame.budget.freeMove === 'number' &&
+    typeof frame.budget.freeAction === 'number'
   );
 }
 
@@ -112,11 +116,8 @@ function validateEndFrame(frame: EndFrame): boolean {
   return (
     typeof frame.type === 'string' &&
     frame.type === 'END' &&
-    (frame.winner === 'A' || frame.winner === 'B' || frame.winner === 'draw') &&
+    (frame.winner === 'A' || frame.winner === 'B' || frame.winner === 'draw' || frame.winner === null) &&
     typeof frame.reason === 'string' &&
-    typeof frame.finalScore === 'object' &&
-    typeof frame.finalScore.a === 'number' &&
-    typeof frame.finalScore.b === 'number' &&
     typeof frame.metrics === 'object' &&
     typeof frame.metrics.totalActions === 'number' &&
     typeof frame.metrics.avgDecisionMs === 'number' &&
@@ -133,13 +134,14 @@ function validateReadyFrame(frame: ReadyFrame): boolean {
   );
 }
 
-function validateActionFrame(frame: ActionFrame): boolean {
-  return (
-    typeof frame.type === 'string' &&
-    frame.type === 'ACTION' &&
-    (frame.action === 'move' || frame.action === 'attack' || frame.action === 'pass') &&
-    typeof frame.confidence === 'number'
-  );
+function validatePlanFrame(frame: PlanFrame): boolean {
+  if (typeof frame.type !== 'string' || frame.type !== 'PLAN') return false;
+  if (typeof frame.confidence !== 'number') return false;
+  const plan = frame.plan;
+  if (!plan || typeof plan !== 'object') return false;
+  if (typeof plan.bid !== 'number') return false;
+  if (!Array.isArray(plan.extras)) return false;
+  return true;
 }
 
 export function isValidFrame(frame: unknown): frame is WsFrame {
@@ -155,7 +157,7 @@ export function isValidFrame(frame: unknown): frame is WsFrame {
     case 'EVENT': return validateEventFrame(frame as EventFrame);
     case 'END': return validateEndFrame(frame as EndFrame);
     case 'READY': return validateReadyFrame(frame as ReadyFrame);
-    case 'ACTION': return validateActionFrame(frame as ActionFrame);
+    case 'PLAN': return validatePlanFrame(frame as PlanFrame);
     default: return false;
   }
 }

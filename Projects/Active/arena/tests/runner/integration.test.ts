@@ -55,7 +55,8 @@ function agentChannel(agent: RandomAgent): AgentChannel {
   };
 
   return {
-    send(state: Parameters<RandomAgent["decide"]>[0]) {
+    send(frame: unknown) {
+      const state = frame as Parameters<RandomAgent["decide"]>[0];
       _state = state;
       fire(); // fire immediately if a cb is already registered
     },
@@ -66,7 +67,7 @@ function agentChannel(agent: RandomAgent): AgentChannel {
     close() { _closed = true; },
     get closed() { return _closed; },
     set closed(v: boolean) { _closed = v; },
-  } as AgentChannel;
+  } as unknown as AgentChannel;
 }
 
 describe("Runner Integration", () => {

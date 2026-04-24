@@ -23,6 +23,10 @@ export class PresenceTracker {
   size(): number {
     return this.online.size;
   }
+
+  reset(): void {
+    this.online.clear();
+  }
 }
 
 export const presenceTracker = new PresenceTracker();

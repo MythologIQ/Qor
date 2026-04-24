@@ -26,6 +26,21 @@ describe("createUnit", () => {
     expect(unit.type).toBe("infantry");
     expect(unit.hp).toBe(5);
     expect(unit.strength).toBe(3);
+    expect(unit.weight).toBe(2);
+  });
+
+  it("assigns weight scout=1, infantry=2, heavy=3", () => {
+    const pos = { q: 0, r: 0, s: 0 };
+    expect(createUnit("A", pos, "scout").weight).toBe(1);
+    expect(createUnit("A", pos, "infantry").weight).toBe(2);
+    expect(createUnit("A", pos, "heavy").weight).toBe(3);
+  });
+
+  it("weight stable across repeated calls", () => {
+    const pos = { q: 2, r: -1, s: -1 };
+    const a = createUnit("B", pos, "heavy");
+    const b = createUnit("B", pos, "heavy");
+    expect(a.weight).toBe(b.weight);
   });
 
   it("different owners produce different ids", () => {

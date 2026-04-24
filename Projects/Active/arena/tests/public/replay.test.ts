@@ -1,6 +1,5 @@
 import { describe, it, expect } from "bun:test";
-import type { MatchEvent } from "../../src/shared/types.ts";
-import { Replay, type ReplayState } from "../../src/public/replay.ts";
+import { Replay, type ReplayEvent, type ReplayState } from "../../src/public/replay.ts";
 
 function makeState(): ReplayState {
   return {
@@ -13,14 +12,14 @@ function makeState(): ReplayState {
   };
 }
 
-function spawn(id: string, owner: "A" | "B", q = 0, r = 0, strength = 10): MatchEvent {
-  return { type: "spawn", unitId: id, owner, q, r, strength } as MatchEvent;
+function spawn(id: string, owner: "A" | "B", q = 0, r = 0, strength = 10): ReplayEvent {
+  return { type: "spawn", unitId: id, owner, q, r, strength };
 }
-function move(id: string, toQ: number, toR: number): MatchEvent {
-  return { type: "move", unitId: id, toQ, toR } as MatchEvent;
+function move(id: string, toQ: number, toR: number): ReplayEvent {
+  return { type: "move", unitId: id, toQ, toR };
 }
-function concluded(winner: "A" | "B"): MatchEvent {
-  return { type: "concluded", winner } as MatchEvent;
+function concluded(winner: "A" | "B"): ReplayEvent {
+  return { type: "concluded", winner };
 }
 
 describe("Replay", () => {
@@ -31,7 +30,7 @@ describe("Replay", () => {
         spawn("u1", "A", 0, 0),
         spawn("u2", "B", 1, 0),
         move("u1", 0, 1),
-        { type: "attack", unitId: "u1", targetId: "u2", damage: 4, recoil: 0 } as MatchEvent,
+        { type: "attack", unitId: "u1", targetId: "u2", damage: 4, recoil: 0 },
         concluded("A"),
       ]);
 

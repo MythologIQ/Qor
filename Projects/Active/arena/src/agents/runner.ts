@@ -1,35 +1,27 @@
-// Agent Runner — HexaWars
-// task-046-agent-runner | phase D
-// Connects a BaseAgent subclass to a HexaWars WebSocket gateway.
+// Agent Runner — HexaWars (Plan D v2)
+// Connects a BaseAgent subclass to a HexaWars WebSocket gateway. Per-round
+// flow: receive STATE frame, call agent.getRoundPlan(state, budget), send PLAN.
 
 import type { BaseAgent } from './base';
-import type { ActionFrame, AgentAction, EndFrame, EventFrame, HelloFrame, ServerFrame, StateFrame } from '../gateway/contract';
+import type {
+  EndFrame,
+  EventFrame,
+  HelloFrame,
+  PlanFrame,
+  StateFrame,
+} from '../gateway/contract';
+import type { MatchState } from '../shared/types';
 import { parseFrame, sendFrame } from '../gateway/protocol';
 
 export interface RunnerOptions {
-  /**
-   * Milliseconds to wait for the HELLO frame after opening the WebSocket.
-   * @default 5000
-   */
+  /** Milliseconds to wait for the HELLO frame. @default 5000 */
   handshakeTimeoutMs?: number;
 }
 
-/**
- * Runs an agent against a HexaWars game server via WebSocket.
- *
- * Protocol flow:
- * 1. Open WS to wsUrl
- * 2. Receive HELLO frame from server
- * 3. Call agent.onHello(matchId, side, seed)
- * 4. Send READY frame { type: 'READY', agentId, agentVersion }
- * 5. Receive STATE frames; for each, call agent.decide(state) and send ACTION
- * 6. Receive EVENT frames; call agent.onAck for ACK-type events
- * 7. Receive END frame; call agent.onEnd, then close
- */
 export async function runAgent(
   agent: BaseAgent,
   wsUrl: string,
-  opts: RunnerOptions = {}
+  opts: RunnerOptions = {},
 ): Promise<void> {
   const { handshakeTimeoutMs = 5000 } = opts;
 
@@ -41,7 +33,6 @@ export async function runAgent(
       try { ws.close(); } catch { /* ignore */ }
     };
 
-    // Timeout if HELLO doesn't arrive
     const handshakeTimer = setTimeout(() => {
       if (!handshakeDone) {
         cleanup();
@@ -49,11 +40,7 @@ export async function runAgent(
       }
     }, handshakeTimeoutMs);
 
-    ws.addEventListener('open', () => {
-      // Wait for HELLO before sending READY
-    });
-
-    ws.addEventListener('message', (event) => {
+    ws.addEventListener('message', async (event) => {
       const frame = parseFrame(event.data as string | ArrayBuffer);
       if (!frame) return;
 
@@ -73,22 +60,25 @@ export async function runAgent(
 
         case 'STATE': {
           const state = frame as StateFrame;
-          // Convert StateFrame shape to MatchState for agent.decide
-          const matchState = {
+          const matchState: MatchState = {
             turn: state.turn,
-            yourTurn: state.yourTurn,
             visible: state.visible,
             units: state.units,
             score: state.score,
             deadline: state.deadline,
+            roundCap: state.roundCap,
           };
-          const action = agent.decide(matchState);
-          sendAction(ws, action);
+          const plan = await agent.getRoundPlan(matchState, state.budget);
+          const planFrame: PlanFrame = {
+            type: 'PLAN',
+            plan,
+            confidence: 1.0,
+          };
+          sendFrame(ws, planFrame);
           break;
         }
 
         case 'ACK': {
-          // Server accepted or rejected our last action
           const ack = frame as { type: 'ACK'; accepted: boolean; reason?: string };
           agent.onAck?.(ack.accepted, ack.reason);
           break;
@@ -96,7 +86,6 @@ export async function runAgent(
 
         case 'EVENT': {
           const evt = frame as EventFrame;
-          // Map EVENT to onAck for informational consistency
           agent.onAck?.(true, evt.event);
           break;
         }
@@ -123,16 +112,4 @@ export async function runAgent(
       }
     });
   });
-}
-
-function sendAction(ws: WebSocket, action: AgentAction): void {
-  const frame: ActionFrame = {
-    type: 'ACTION',
-    action: action.type,
-    from: action.from,
-    to: action.to,
-    confidence: action.confidence,
-    metadata: action.metadata,
-  };
-  sendFrame(ws, frame);
 }

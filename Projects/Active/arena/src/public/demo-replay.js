@@ -1,615 +1,162 @@
+import { projectPublicMatch } from "../projection/public-match.ts";
+
 export const DEMO_MATCH_ID = "demo-siege-at-kestrel-gate";
 
-const TURN_CAP = 18;
+const ROUND_CAP = 48;
 const BASE_TS = Date.UTC(2026, 3, 18, 16, 0, 0);
-const STEP_MS = 1350;
-
-function cell(q, r, terrain, control = null) {
-  return { coord: { q, r, s: -q - r }, terrain, control };
-}
-
-function unit(id, owner, q, r, hp, strength, type = "infantry", facing = "N") {
-  return {
-    id,
-    owner,
-    position: { q, r, s: -q - r },
-    hp,
-    strength,
-    type,
-    facing,
-  };
-}
-
-function board(cells) {
-  return cells.map(([q, r, terrain, control]) => cell(q, r, terrain, control ?? null));
-}
-
-const BOARD = board([
-  [-3, 0, "FOREST", "A"],
-  [-3, 1, "PLAINS", "A"],
-  [-3, 2, "HILLS", "A"],
-  [-3, 3, "FOREST", "A"],
-  [-2, -1, "PLAINS", "A"],
-  [-2, 0, "FOREST", "A"],
-  [-2, 1, "PLAINS", "A"],
-  [-2, 2, "HILLS", null],
-  [-2, 3, "PLAINS", null],
-  [-1, -2, "PLAINS", null],
-  [-1, -1, "HILLS", null],
-  [-1, 0, "PLAINS", null],
-  [-1, 1, "FOREST", null],
-  [-1, 2, "PLAINS", null],
-  [-1, 3, "MOUNTAIN", null],
-  [0, -3, "WATER", null],
-  [0, -2, "PLAINS", null],
-  [0, -1, "HILLS", null],
-  [0, 0, "PLAINS", null],
-  [0, 1, "PLAINS", null],
-  [0, 2, "FOREST", null],
-  [0, 3, "HILLS", "B"],
-  [1, -3, "PLAINS", null],
-  [1, -2, "FOREST", null],
-  [1, -1, "PLAINS", null],
-  [1, 0, "HILLS", null],
-  [1, 1, "PLAINS", null],
-  [1, 2, "FOREST", null],
-  [2, -3, "MOUNTAIN", null],
-  [2, -2, "PLAINS", null],
-  [2, -1, "HILLS", null],
-  [2, 0, "PLAINS", "B"],
-  [2, 1, "FOREST", "B"],
-  [3, -3, "PLAINS", "B"],
-  [3, -2, "HILLS", "B"],
-  [3, -1, "PLAINS", "B"],
-  [3, 0, "FOREST", "B"],
+const STEP_MS = 1100;
+const tile = (q, r, terrain, control = null) => ({ coord: { q, r, s: -q - r }, terrain, control });
+const unit = (id, owner, q, r, hp, strength, type = "infantry", facing = "N") => ({
+  id, owner, position: { q, r, s: -q - r }, hp, strength, type, facing,
+});
+const board = (cells) => cells.map(([q, r, terrain, control]) => tile(q, r, terrain, control ?? null));
+const BOARD = board([[-4,0,"PLAINS",null],[-4,1,"FOREST",null],[-4,2,"HILLS",null],[-4,3,"PLAINS",null],[-4,4,"FOREST",null],[-3,-1,"HILLS",null],[-3,0,"FOREST","A"],[-3,1,"PLAINS","A"],[-3,2,"HILLS","A"],[-3,3,"FOREST","A"],[-3,4,"FOREST",null],[-2,-2,"PLAINS",null],[-2,-1,"PLAINS","A"],[-2,0,"FOREST","A"],[-2,1,"PLAINS","A"],[-2,2,"HILLS",null],[-2,3,"PLAINS",null],[-2,4,"WATER",null],[-1,-3,"PLAINS",null],[-1,-2,"PLAINS",null],[-1,-1,"HILLS",null],[-1,0,"PLAINS",null],[-1,1,"FOREST",null],[-1,2,"PLAINS",null],[-1,3,"MOUNTAIN",null],[-1,4,"WATER",null],[0,-4,"WATER",null],[0,-3,"WATER",null],[0,-2,"PLAINS",null],[0,-1,"HILLS",null],[0,0,"PLAINS",null],[0,1,"PLAINS",null],[0,2,"FOREST",null],[0,3,"HILLS","B"],[0,4,"WATER",null],[1,-4,"WATER",null],[1,-3,"PLAINS",null],[1,-2,"FOREST",null],[1,-1,"PLAINS",null],[1,0,"HILLS",null],[1,1,"PLAINS",null],[1,2,"FOREST",null],[1,3,"WATER",null],[2,-4,"WATER",null],[2,-3,"MOUNTAIN",null],[2,-2,"PLAINS",null],[2,-1,"HILLS",null],[2,0,"PLAINS","B"],[2,1,"FOREST","B"],[2,2,"HILLS",null],[3,-4,"FOREST",null],[3,-3,"PLAINS","B"],[3,-2,"HILLS","B"],[3,-1,"PLAINS","B"],[3,0,"FOREST","B"],[3,1,"MOUNTAIN",null],[4,-4,"HILLS",null],[4,-3,"PLAINS",null],[4,-2,"FOREST",null],[4,-1,"PLAINS",null],[4,0,"PLAINS",null]]);
+const buildBoard = (control = {}) => BOARD.map((cell) => ({ ...cell, control: `${cell.coord.q},${cell.coord.r}` in control ? control[`${cell.coord.q},${cell.coord.r}`] : cell.control }));
+const buildAgents = (step) => ([
+  { id: "demo_blue_horizon", side: "A", status: step.aStatus, invalidCount: 0, totalMs: step.aMs, totalActions: Math.max(1, Math.round(step.aMs / 120)), modelId: "minimax/m2.7", operator: "Blue Horizon" },
+  { id: "demo_red_morrow", side: "B", status: step.bStatus, invalidCount: 1, totalMs: step.bMs, totalActions: Math.max(1, Math.round(step.bMs / 135)), modelId: "minimax/m2.7", operator: "Red Morrow" },
 ]);
+const buildReasoning = (step) => ([
+  { agentId: "demo_red_morrow", side: "B", text: `Turn ${step.turn}: ${step.bReason}` },
+  { agentId: "demo_blue_horizon", side: "A", text: `Turn ${step.turn}: ${step.aReason}` },
+]);
+const buildEvent = (step, index) => ({
+  round: step.turn,
+  side: step.side,
+  kind: step.move.toLowerCase().includes("strike") ? "attack" : step.move.toLowerCase().includes("advance") ? "move" : "system",
+  headline: step.move,
+  detail: step.detail,
+  timestamp: BASE_TS + 1000 + index * STEP_MS,
+});
 
-function buildBoard(controlMap = {}) {
-  return BOARD.map((tile) => {
-    const key = `${tile.coord.q},${tile.coord.r}`;
-    return {
-      ...tile,
-      control: key in controlMap ? controlMap[key] : tile.control,
-    };
-  });
-}
-
-function agents(aStatus, bStatus, aMs, bMs, aModel = "minimax/m2.7", bModel = "minimax/m2.7") {
-  return [
-    {
-      id: "demo_blue_horizon",
-      side: "A",
-      status: aStatus,
-      invalidCount: 0,
-      totalMs: aMs,
-      totalActions: Math.max(1, Math.round(aMs / 120)),
-      modelId: aModel,
-      operator: "Blue Horizon",
-    },
-    {
-      id: "demo_red_morrow",
-      side: "B",
-      status: bStatus,
-      invalidCount: 1,
-      totalMs: bMs,
-      totalActions: Math.max(1, Math.round(bMs / 135)),
-      modelId: bModel,
-      operator: "Red Morrow",
-    },
-  ];
-}
-
-function reasoning(turn, aText, bText) {
-  return [
-    {
-      agentId: "demo_red_morrow",
-      side: "B",
-      reasoning: `Turn ${turn}: ${bText}`,
-    },
-    {
-      agentId: "demo_blue_horizon",
-      side: "A",
-      reasoning: `Turn ${turn}: ${aText}`,
-    },
-  ];
-}
-
-function event(turn, side, move, offsetMs, detail = "") {
-  return {
-    turn,
-    side,
-    move,
-    detail,
-    timestamp: BASE_TS + offsetMs,
-  };
-}
-
-function state(step) {
-  return {
-    board: buildBoard(step.control),
-    territories: step.territories,
-    turn: step.turn,
-    turnCap: TURN_CAP,
-    units: step.units,
-    agents: agents(
-      step.aStatus,
-      step.bStatus,
-      step.aMs,
-      step.bMs,
-      step.aModel,
-      step.bModel,
-    ),
-    reasoning: reasoning(step.turn, step.aReason, step.bReason),
-    headline: step.headline,
+function buildProjection(step, index, outcome = null) {
+  return projectPublicMatch({
+    matchId: DEMO_MATCH_ID,
+    mode: "demo",
+    round: step.turn,
+    roundCap: ROUND_CAP,
     phase: step.phase,
     pressure: step.pressure,
+    headline: step.headline,
     featuredEvent: step.featuredEvent,
-  };
+    board: buildBoard(step.control).map((cell) => ({
+      q: cell.coord.q,
+      r: cell.coord.r,
+      s: cell.coord.s,
+      terrain: cell.terrain,
+      controlledBy: cell.control,
+    })),
+    units: step.units.map((item) => ({
+      id: item.id,
+      side: item.owner,
+      q: item.position.q,
+      r: item.position.r,
+      s: item.position.s,
+      hp: item.hp,
+      strength: item.strength,
+      type: item.type,
+      facing: item.facing,
+    })),
+    territories: step.territories,
+    agents: buildAgents(step),
+    reasoning: buildReasoning(step),
+    feed: [buildEvent(step, index)],
+    outcome,
+  });
 }
 
 const STEPS = [
-  {
-    turn: 1,
-    phase: "Opening Scan",
-    pressure: 22,
-    headline: "Scouts fan out while both heavies anchor the ridge line.",
-    featuredEvent: "Blue probes the center while Red guards the high ground.",
-    territories: { A: 6, B: 6 },
-    units: [
-      unit("A-1", "A", -2, 1, 7, 7, "captain", "E"),
-      unit("A-2", "A", -1, 1, 5, 5, "scout", "NE"),
-      unit("A-3", "A", -2, 0, 6, 6, "lancer", "E"),
-      unit("B-1", "B", 2, -1, 7, 7, "captain", "W"),
-      unit("B-2", "B", 1, -1, 5, 5, "scout", "SW"),
-      unit("B-3", "B", 2, 0, 6, 6, "lancer", "W"),
-    ],
-    aStatus: "mapping central routes",
-    bStatus: "screening for feints",
-    aMs: 180,
-    bMs: 205,
-    aReason: "Hold the captain back and let the scout claim first contact.",
-    bReason: "Do not chase center yet; make Blue reveal the real lane.",
-    event: event(1, "A", "Blue scout cuts through the central ridge.", 1000, "No contact yet, but center tempo swings blue."),
-    control: { "-1,0": "A", "0,0": "A", "1,0": null },
-  },
-  {
-    turn: 2,
-    phase: "Pressure Build",
-    pressure: 31,
-    headline: "Red mirrors the line and threatens a pincer from the east.",
-    featuredEvent: "First contested ridge hex flips back to neutral.",
-    territories: { A: 7, B: 6 },
-    units: [
-      unit("A-1", "A", -2, 1, 7, 7, "captain", "E"),
-      unit("A-2", "A", -1, 0, 5, 5, "scout", "E"),
-      unit("A-3", "A", -1, 1, 6, 6, "lancer", "NE"),
-      unit("B-1", "B", 2, -1, 7, 7, "captain", "W"),
-      unit("B-2", "B", 1, 0, 5, 5, "scout", "W"),
-      unit("B-3", "B", 2, 0, 6, 6, "lancer", "NW"),
-    ],
-    aStatus: "occupying ridge",
-    bStatus: "setting crossfire",
-    aMs: 360,
-    bMs: 398,
-    aReason: "The ridge matters more than damage at this stage.",
-    bReason: "Touch the same lane and make Blue choose between both units.",
-    event: event(2, "B", "Red scout snaps the ridge back to neutral.", 2400, "Two scouts now contest the same lane."),
-    control: { "-1,0": "A", "0,0": null, "1,0": "B" },
-  },
-  {
-    turn: 3,
-    phase: "First Contact",
-    pressure: 42,
-    headline: "Both scouts trade in the center and expose the heavies behind them.",
-    featuredEvent: "The first strike lands and the crowd finally gets a fight.",
-    territories: { A: 7, B: 7 },
-    units: [
-      unit("A-1", "A", -1, 1, 7, 7, "captain", "E"),
-      unit("A-2", "A", 0, 0, 3, 5, "scout", "E"),
-      unit("A-3", "A", -1, 0, 6, 6, "lancer", "NE"),
-      unit("B-1", "B", 2, -1, 7, 7, "captain", "W"),
-      unit("B-2", "B", 1, 0, 2, 5, "scout", "W"),
-      unit("B-3", "B", 1, -1, 6, 6, "lancer", "NW"),
-    ],
-    aStatus: "absorbing contact",
-    bStatus: "forcing exchange",
-    aMs: 590,
-    bMs: 645,
-    aReason: "My scout survives just long enough to pin the lancer.",
-    bReason: "Force the trade while Blue's captain is a step short.",
-    event: event(3, "B", "Red lancer spikes the center and bloodies the scout.", 3800, "Blue keeps position but loses hit points."),
-    control: { "-1,0": "A", "0,0": null, "1,0": "B", "1,-1": "B" },
-  },
-  {
-    turn: 4,
-    phase: "Counter Swing",
-    pressure: 51,
-    headline: "Blue captain crashes into midboard and stabilizes the lane.",
-    featuredEvent: "The first captain commit turns the replay from setup into battle.",
-    territories: { A: 8, B: 7 },
-    units: [
-      unit("A-1", "A", 0, 0, 6, 7, "captain", "E"),
-      unit("A-2", "A", 0, 1, 3, 5, "scout", "NE"),
-      unit("A-3", "A", -1, 0, 5, 6, "lancer", "E"),
-      unit("B-1", "B", 2, -1, 7, 7, "captain", "W"),
-      unit("B-2", "B", 1, 0, 2, 5, "scout", "SW"),
-      unit("B-3", "B", 1, -1, 3, 6, "lancer", "W"),
-    ],
-    aStatus: "reclaiming center",
-    bStatus: "bracing front",
-    aMs: 790,
-    bMs: 812,
-    aReason: "If the captain reaches center now, the whole map tilts.",
-    bReason: "Don't give the ridge for free; hold until reinforcements arrive.",
-    event: event(4, "A", "Blue captain slams onto the ridge and resets the fight.", 5200, "Red's lancer is suddenly exposed."),
-    control: { "-1,0": "A", "0,0": "A", "0,1": "A", "1,0": null },
-  },
-  {
-    turn: 5,
-    phase: "Line Break",
-    pressure: 58,
-    headline: "Blue converts the center hold into a right-flank break.",
-    featuredEvent: "Red's scout is forced off the board edge and control starts snowballing.",
-    territories: { A: 9, B: 6 },
-    units: [
-      unit("A-1", "A", 1, 0, 6, 7, "captain", "E"),
-      unit("A-2", "A", 0, 1, 3, 5, "scout", "N"),
-      unit("A-3", "A", 0, 0, 5, 6, "lancer", "E"),
-      unit("B-1", "B", 2, -1, 6, 7, "captain", "W"),
-      unit("B-3", "B", 1, -1, 2, 6, "lancer", "SW"),
-    ],
-    aStatus: "rolling the edge",
-    bStatus: "triaging losses",
-    aMs: 980,
-    bMs: 1040,
-    aReason: "Don't chase the scout; take the lane and let the board pay me.",
-    bReason: "Captain must cover the collapse before all outer control is lost.",
-    event: event(5, "A", "Blue lancer catches the red scout retreating through open ground.", 6600, "First elimination of the match."),
-    control: { "-1,0": "A", "0,0": "A", "0,1": "A", "1,0": "A", "2,0": "B" },
-  },
-  {
-    turn: 6,
-    phase: "Counter Battery",
-    pressure: 63,
-    headline: "Red captain answers with a sharp hit that reopens the center.",
-    featuredEvent: "Momentum swings back just enough to keep the match alive.",
-    territories: { A: 9, B: 7 },
-    units: [
-      unit("A-1", "A", 1, 0, 4, 7, "captain", "E"),
-      unit("A-2", "A", 0, 1, 3, 5, "scout", "N"),
-      unit("A-3", "A", 0, 0, 5, 6, "lancer", "E"),
-      unit("B-1", "B", 1, -1, 4, 7, "captain", "W"),
-      unit("B-3", "B", 1, 0, 2, 6, "lancer", "NW"),
-    ],
-    aStatus: "holding after impact",
-    bStatus: "re-entering center",
-    aMs: 1200,
-    bMs: 1245,
-    aReason: "Take the hit if it keeps my scout free to expand control north.",
-    bReason: "Center is still the only square that matters.",
-    event: event(6, "B", "Red captain drives Blue back and cracks the center open.", 8000, "The lane is contested again."),
-    control: { "-1,0": "A", "0,0": null, "0,1": "A", "1,0": null, "1,-1": "B" },
-  },
-  {
-    turn: 7,
-    phase: "Fog Raid",
-    pressure: 68,
-    headline: "Blue scout vanishes north and flips an unattended hill cluster.",
-    featuredEvent: "The scoreboard spikes while the fight stays unresolved.",
-    territories: { A: 11, B: 7 },
-    units: [
-      unit("A-1", "A", 1, 0, 4, 7, "captain", "E"),
-      unit("A-2", "A", -1, 2, 3, 5, "scout", "E"),
-      unit("A-3", "A", 0, 0, 5, 6, "lancer", "NE"),
-      unit("B-1", "B", 1, -1, 4, 7, "captain", "W"),
-      unit("B-3", "B", 1, 0, 2, 6, "lancer", "W"),
-    ],
-    aStatus: "harvesting outer ring",
-    bStatus: "late to rotate",
-    aMs: 1390,
-    bMs: 1472,
-    aReason: "Make Red choose between the scoreboard and the fight.",
-    bReason: "Ignore the raid one more turn and the map is gone.",
-    event: event(7, "A", "Blue scout slips into fog and steals the northern hills.", 9400, "A quiet move with loud scoreboard consequences."),
-    control: { "-2,2": "A", "-2,3": "A", "-1,2": "A", "0,0": null, "1,0": null, "1,-1": "B" },
-  },
-  {
-    turn: 8,
-    phase: "Split Decision",
-    pressure: 72,
-    headline: "Red sends the lancer north, conceding central damage for territorial survival.",
-    featuredEvent: "The chase creates two separate theaters on a single tiny map.",
-    territories: { A: 11, B: 8 },
-    units: [
-      unit("A-1", "A", 1, 0, 4, 7, "captain", "E"),
-      unit("A-2", "A", -1, 2, 3, 5, "scout", "S"),
-      unit("A-3", "A", 0, 0, 5, 6, "lancer", "E"),
-      unit("B-1", "B", 1, -1, 4, 7, "captain", "W"),
-      unit("B-3", "B", 0, 1, 2, 6, "lancer", "NW"),
-    ],
-    aStatus: "holding two fronts",
-    bStatus: "chasing raid unit",
-    aMs: 1605,
-    bMs: 1710,
-    aReason: "If Red peels off, the captain gets center uncontested.",
-    bReason: "The scoreboard leak is now worse than the lane fight.",
-    event: event(8, "B", "Red lancer peels north to stop the hill raid.", 10800, "Center and north become separate fights."),
-    control: { "-2,2": "A", "-2,3": "A", "-1,2": "A", "0,0": "A", "1,0": null, "1,-1": "B" },
-  },
-  {
-    turn: 9,
-    phase: "Execution Window",
-    pressure: 78,
-    headline: "Blue captain finds the isolated red lancer and punishes the split.",
-    featuredEvent: "Red's map-saving rotation costs too much material.",
-    territories: { A: 12, B: 7 },
-    units: [
-      unit("A-1", "A", 1, -1, 4, 7, "captain", "SE"),
-      unit("A-2", "A", -1, 2, 3, 5, "scout", "S"),
-      unit("A-3", "A", 0, 0, 5, 6, "lancer", "E"),
-      unit("B-1", "B", 1, -2, 2, 7, "captain", "W"),
-      unit("B-3", "B", 0, 1, 1, 6, "lancer", "NW"),
-    ],
-    aStatus: "isolating red core",
-    bStatus: "scrambling retreat",
-    aMs: 1825,
-    bMs: 1910,
-    aReason: "Hit the captain now before the northern unit reconnects.",
-    bReason: "One precise retreat still keeps this alive.",
-    event: event(9, "A", "Blue captain cuts inside and nearly deletes the red core.", 12200, "A clean punish on the split defense."),
-    control: { "-2,2": "A", "-2,3": "A", "-1,2": "A", "0,0": "A", "1,-1": "A", "1,0": "A" },
-  },
-  {
-    turn: 10,
-    phase: "Last Stand",
-    pressure: 82,
-    headline: "Red survives the swing and turns the north chase into a knife fight.",
-    featuredEvent: "The replay peaks here instead of ending on the first kill.",
-    territories: { A: 12, B: 8 },
-    units: [
-      unit("A-1", "A", 1, -1, 3, 7, "captain", "E"),
-      unit("A-2", "A", -1, 1, 1, 5, "scout", "S"),
-      unit("A-3", "A", 0, 0, 5, 6, "lancer", "NE"),
-      unit("B-1", "B", 1, -2, 2, 7, "captain", "W"),
-      unit("B-3", "B", -1, 2, 1, 6, "lancer", "W"),
-    ],
-    aStatus: "low-hp conversion",
-    bStatus: "contesting in extremis",
-    aMs: 2050,
-    bMs: 2144,
-    aReason: "The scout can die if the flank stays blue.",
-    bReason: "Kill the scout, stall the bleed, and maybe steal one more fight.",
-    event: event(10, "B", "Red lancer catches the raiding scout in the hills.", 13600, "Blue keeps the land but loses the raider."),
-    control: { "-2,2": "A", "-2,3": "A", "-1,2": null, "0,0": "A", "1,-1": "A", "1,0": "A" },
-  },
-  {
-    turn: 11,
-    phase: "Collapse",
-    pressure: 86,
-    headline: "Blue cashes the map lead into a measured encirclement.",
-    featuredEvent: "Red is alive on pieces, but dead on space.",
-    territories: { A: 13, B: 7 },
-    units: [
-      unit("A-1", "A", 1, -1, 3, 7, "captain", "E"),
-      unit("A-3", "A", 1, 0, 5, 6, "lancer", "E"),
-      unit("B-1", "B", 1, -2, 2, 7, "captain", "W"),
-      unit("B-3", "B", -1, 2, 1, 6, "lancer", "W"),
-    ],
-    aStatus: "closing perimeter",
-    bStatus: "looking for escape hex",
-    aMs: 2262,
-    bMs: 2358,
-    aReason: "No heroics. Just close exits and let the score climb.",
-    bReason: "Need one breakthrough lane or the next four turns are automatic.",
-    event: event(11, "A", "Blue rotates the lancer behind Red and seals the southern exits.", 15000, "Red's captain is boxed in."),
-    control: { "-2,2": "A", "-2,3": "A", "-1,2": "A", "0,0": "A", "1,-1": "A", "1,0": "A", "2,-1": "A" },
-  },
-  {
-    turn: 12,
-    phase: "Cut Off",
-    pressure: 89,
-    headline: "Red loses the final open lane and the board starts paying out relentlessly.",
-    featuredEvent: "This is the point where spectators can feel the inevitability.",
-    territories: { A: 14, B: 6 },
-    units: [
-      unit("A-1", "A", 2, -1, 3, 7, "captain", "E"),
-      unit("A-3", "A", 1, 0, 5, 6, "lancer", "NE"),
-      unit("B-1", "B", 1, -2, 1, 7, "captain", "W"),
-      unit("B-3", "B", -1, 2, 1, 6, "lancer", "S"),
-    ],
-    aStatus: "locking exits",
-    bStatus: "desperation routing",
-    aMs: 2470,
-    bMs: 2588,
-    aReason: "One last advance and the captain can never reconnect to the map.",
-    bReason: "I'm playing for a miracle fork now.",
-    event: event(12, "A", "Blue captain takes the last contested hill and shuts the trap.", 16400, "Red is one tempo from collapse."),
-    control: { "-2,2": "A", "-2,3": "A", "-1,2": "A", "0,0": "A", "1,-1": "A", "1,0": "A", "2,-1": "A", "2,0": "A" },
-  },
-  {
-    turn: 13,
-    phase: "Final Clash",
-    pressure: 93,
-    headline: "Red throws the captain into a doomed charge just to break the monotony.",
-    featuredEvent: "The last direct collision lands with almost no strategic upside.",
-    territories: { A: 14, B: 5 },
-    units: [
-      unit("A-1", "A", 2, -1, 2, 7, "captain", "E"),
-      unit("A-3", "A", 1, 0, 4, 6, "lancer", "NE"),
-      unit("B-1", "B", 2, -2, 1, 7, "captain", "SW"),
-      unit("B-3", "B", -1, 2, 1, 6, "lancer", "S"),
-    ],
-    aStatus: "absorbing last charge",
-    bStatus: "all-in strike",
-    aMs: 2690,
-    bMs: 2815,
-    aReason: "Trade hit points if it means the laddered score keeps ticking.",
-    bReason: "Only a knockout changes the result now.",
-    event: event(13, "B", "Red captain lunges downhill for one final clash.", 17800, "Spectacular, but strategically empty."),
-    control: { "-2,2": "A", "-2,3": "A", "-1,2": "A", "0,0": "A", "1,-1": "A", "1,0": "A", "2,-1": "A", "2,0": "A", "3,-1": "A" },
-  },
-  {
-    turn: 14,
-    phase: "Sweep",
-    pressure: 95,
-    headline: "Blue survives the charge and answers with a clean removal.",
-    featuredEvent: "The last meaningful red piece comes off the board.",
-    territories: { A: 15, B: 4 },
-    units: [
-      unit("A-1", "A", 2, -1, 2, 7, "captain", "SE"),
-      unit("A-3", "A", 2, -2, 4, 6, "lancer", "E"),
-      unit("B-3", "B", -1, 2, 1, 6, "lancer", "S"),
-    ],
-    aStatus: "sweeping survivors",
-    bStatus: "single unit left",
-    aMs: 2908,
-    bMs: 3040,
-    aReason: "Remove the captain and there is no comeback line left.",
-    bReason: "Only the northern lancer remains, and it's nowhere near the score.",
-    event: event(14, "A", "Blue lancer finishes the exposed red captain.", 19200, "The result is functionally sealed."),
-    control: { "-2,2": "A", "-2,3": "A", "-1,2": "A", "0,0": "A", "1,-1": "A", "1,0": "A", "2,-1": "A", "2,0": "A", "3,-1": "A", "3,0": "A" },
-  },
-  {
-    turn: 15,
-    phase: "Runout",
-    pressure: 91,
-    headline: "Red's last lancer keeps moving, but the board has already been lost.",
-    featuredEvent: "The ending now reads as domination rather than a lucky finish.",
-    territories: { A: 16, B: 3 },
-    units: [
-      unit("A-1", "A", 2, -1, 2, 7, "captain", "SE"),
-      unit("A-3", "A", 2, -2, 4, 6, "lancer", "E"),
-      unit("B-3", "B", -2, 3, 1, 6, "lancer", "W"),
-    ],
-    aStatus: "coasting on lead",
-    bStatus: "evading only",
-    aMs: 3115,
-    bMs: 3240,
-    aReason: "Do not chase. Keep acquiring space and let the clock work.",
-    bReason: "Survival is all that remains.",
-    event: event(15, "A", "Blue ignores the survivor and captures the outer ring.", 20600, "The score gap turns terminal."),
-    control: { "-3,2": "A", "-2,2": "A", "-2,3": "A", "-1,2": "A", "0,0": "A", "1,-1": "A", "1,0": "A", "2,-1": "A", "2,0": "A", "3,-1": "A", "3,0": "A" },
-  },
-  {
-    turn: 16,
-    phase: "Endgame Seal",
-    pressure: 84,
-    headline: "Blue seals Kestrel Gate and leaves Red with no legal route to parity.",
-    featuredEvent: "The crowd sees the finish two turns before the engine calls it.",
-    territories: { A: 17, B: 2 },
-    units: [
-      unit("A-1", "A", 2, -1, 2, 7, "captain", "SE"),
-      unit("A-3", "A", 1, -1, 4, 6, "lancer", "E"),
-      unit("B-3", "B", -2, 3, 1, 6, "lancer", "W"),
-    ],
-    aStatus: "seal in progress",
-    bStatus: "no comeback path",
-    aMs: 3330,
-    bMs: 3474,
-    aReason: "Every path to parity is gone now. Just hold shape.",
-    bReason: "No legal line flips enough terrain in time.",
-    event: event(16, "A", "Blue locks the gate and makes parity mathematically impossible.", 22000, "The engine is just catching up to reality."),
-    control: { "-3,2": "A", "-2,2": "A", "-2,3": "A", "-1,2": "A", "0,-1": "A", "0,0": "A", "1,-1": "A", "1,0": "A", "2,-1": "A", "2,0": "A", "3,-1": "A", "3,0": "A" },
-  },
-  {
-    turn: 17,
-    phase: "Victory Lap",
-    pressure: 67,
-    headline: "Blue re-centers both surviving units while the last red lancer fades into fog.",
-    featuredEvent: "The board state now looks like a conquest map, not a duel.",
-    territories: { A: 17, B: 2 },
-    units: [
-      unit("A-1", "A", 1, -1, 2, 7, "captain", "E"),
-      unit("A-3", "A", 0, -1, 4, 6, "lancer", "E"),
-      unit("B-3", "B", -3, 3, 1, 6, "lancer", "W"),
-    ],
-    aStatus: "re-centering",
-    bStatus: "ghosting in fog",
-    aMs: 3548,
-    bMs: 3660,
-    aReason: "Show control, not aggression. The map already says enough.",
-    bReason: "Nothing left but delaying the call.",
-    event: event(17, "B", "Red's last lancer disappears into the corner fog.", 23400, "A symbolic retreat more than a tactical one."),
-    control: { "-3,2": "A", "-2,2": "A", "-2,3": "A", "-1,2": "A", "0,-1": "A", "0,0": "A", "1,-1": "A", "1,0": "A", "2,-1": "A", "2,0": "A", "3,-1": "A", "3,0": "A" },
-  },
-  {
-    turn: 18,
-    phase: "Resolution",
-    pressure: 48,
-    headline: "Blue wins by overwhelming territory control after a 16-turn grind.",
-    featuredEvent: "The match ends with the board painted blue, not with a cheap knockout.",
-    territories: { A: 18, B: 1 },
-    units: [
-      unit("A-1", "A", 1, -1, 2, 7, "captain", "E"),
-      unit("A-3", "A", 0, -1, 4, 6, "lancer", "E"),
-    ],
-    aStatus: "victory locked",
-    bStatus: "eliminated",
-    aMs: 3770,
-    bMs: 3844,
-    aReason: "No chase needed. The map itself ends the story.",
-    bReason: "The replay was lost on space, not on a single bad fight.",
-    event: event(18, "A", "Blue holds eighteen control hexes and the engine calls it.", 24800, "Territory victory at turn cap pressure."),
-    control: { "-3,2": "A", "-2,2": "A", "-2,3": "A", "-1,2": "A", "0,-1": "A", "0,0": "A", "1,-1": "A", "1,0": "A", "2,-1": "A", "2,0": "A", "3,-1": "A", "3,0": "A", "-3,1": "A" },
-  },
+  { turn:1, phase:"Opening Scan", pressure:23, headline:"Blue's scout cuts across plains to seize first sightline.", featuredEvent:"Blue takes the center lane before either heavy commits.", territories:{A:8,B:7}, units:[unit("A-captain","A",-3,1,8,5,"captain","E"),unit("A-siege","A",-3,2,6,7,"siege","E"),unit("A-scout","A",-1,0,3,2,"scout","E"),unit("A-raider","A",-2,-1,4,4,"raider","E"),unit("A-interceptor","A",-2,1,5,4,"interceptor","E"),unit("B-captain","B",3,-1,8,5,"captain","W"),unit("B-siege","B",3,-2,6,7,"siege","W"),unit("B-scout","B",2,0,3,2,"scout","W"),unit("B-raider","B",2,1,4,4,"raider","W"),unit("B-interceptor","B",2,-1,5,4,"interceptor","W")], aStatus:"acting", bStatus:"observing", aMs:180, bMs:205, aReason:"Own the center sightline before Red commits.", bReason:"Watch Blue's commit; plan counter.", side:"A", move:"Scout advances to center plains.", detail:"Sightline advantage for Blue.", control:{"-3,0":"A","-3,1":"A","-3,2":"A","-3,3":"A","-2,-1":"A","-2,0":"A","-2,1":"A","0,3":"B","2,0":"B","2,1":"B","3,-3":"B","3,-2":"B","3,-1":"B","3,0":"B","-1,0":"A"} },
+  { turn:2, phase:"Opening Scan", pressure:25, headline:"Red mirrors Blue's tempo to keep the center contested.", featuredEvent:"Red scout matches Blue's reach on the opposing ridge.", territories:{A:8,B:9}, units:[unit("A-captain","A",-3,1,8,5,"captain","E"),unit("A-siege","A",-3,2,6,7,"siege","E"),unit("A-scout","A",-1,0,3,2,"scout","E"),unit("A-raider","A",-2,-1,4,4,"raider","E"),unit("A-interceptor","A",-2,1,5,4,"interceptor","E"),unit("B-captain","B",3,-1,8,5,"captain","W"),unit("B-siege","B",3,-2,6,7,"siege","W"),unit("B-scout","B",1,0,3,2,"scout","W"),unit("B-raider","B",2,1,4,4,"raider","W"),unit("B-interceptor","B",2,-1,5,4,"interceptor","W")], aStatus:"observing", bStatus:"acting", aMs:270, bMs:300, aReason:"Hold shape; Red's turn.", bReason:"Mirror Blue; don't let them hold ridge alone.", side:"B", move:"Scout advances to center hills.", detail:"Both scouts share the ridge line.", control:{"-3,0":"A","-3,1":"A","-3,2":"A","-3,3":"A","-2,-1":"A","-2,0":"A","-2,1":"A","0,3":"B","2,0":"B","2,1":"B","3,-3":"B","3,-2":"B","3,-1":"B","3,0":"B","-1,0":"A","1,0":"B","2,-1":"B"} },
+  { turn:3, phase:"Opening Scan", pressure:28, headline:"Blue's raider probes the north flank for an early break.", featuredEvent:"The raider threatens to outrun the red line.", territories:{A:9,B:9}, units:[unit("A-captain","A",-3,1,8,5,"captain","E"),unit("A-siege","A",-3,2,6,7,"siege","E"),unit("A-scout","A",-1,0,3,2,"scout","E"),unit("A-raider","A",-1,-1,4,4,"raider","E"),unit("A-interceptor","A",-2,1,5,4,"interceptor","E"),unit("B-captain","B",3,-1,8,5,"captain","W"),unit("B-siege","B",3,-2,6,7,"siege","W"),unit("B-scout","B",1,0,3,2,"scout","W"),unit("B-raider","B",2,1,4,4,"raider","W"),unit("B-interceptor","B",2,-1,5,4,"interceptor","W")], aStatus:"acting", bStatus:"observing", aMs:360, bMs:395, aReason:"Raider tempo beats line play early.", bReason:"Watch Blue's commit; plan counter.", side:"A", move:"Raider slips north into the hill gap.", detail:"North flank becomes live.", control:{"-3,0":"A","-3,1":"A","-3,2":"A","-3,3":"A","-2,-1":"A","-2,0":"A","-2,1":"A","0,3":"B","2,0":"B","2,1":"B","3,-3":"B","3,-2":"B","3,-1":"B","3,0":"B","-1,0":"A","1,0":"B","2,-1":"B","-1,-1":"A"} },
+  { turn:4, phase:"Opening Scan", pressure:30, headline:"Red sends its raider south to pressure Blue's interceptor.", featuredEvent:"Mirror raid attempt on Blue's southern flank.", territories:{A:9,B:10}, units:[unit("A-captain","A",-3,1,8,5,"captain","E"),unit("A-siege","A",-3,2,6,7,"siege","E"),unit("A-scout","A",-1,0,3,2,"scout","E"),unit("A-raider","A",-1,-1,4,4,"raider","E"),unit("A-interceptor","A",-2,1,5,4,"interceptor","E"),unit("B-captain","B",3,-1,8,5,"captain","W"),unit("B-siege","B",3,-2,6,7,"siege","W"),unit("B-scout","B",1,0,3,2,"scout","W"),unit("B-raider","B",1,1,4,4,"raider","W"),unit("B-interceptor","B",2,-1,5,4,"interceptor","W")], aStatus:"observing", bStatus:"acting", aMs:450, bMs:490, aReason:"Hold shape; Red's turn.", bReason:"Force Blue to split attention south.", side:"B", move:"Raider pushes into the southern forest.", detail:"Two raid threats now live.", control:{"-3,0":"A","-3,1":"A","-3,2":"A","-3,3":"A","-2,-1":"A","-2,0":"A","-2,1":"A","0,3":"B","2,0":"B","2,1":"B","3,-3":"B","3,-2":"B","3,-1":"B","3,0":"B","-1,0":"A","1,0":"B","2,-1":"B","-1,-1":"A","1,1":"B"} },
+  { turn:5, phase:"Screen", pressure:33, headline:"Blue interceptor shifts south to screen the incoming raider.", featuredEvent:"Interceptor closes the lane before Red's raider arrives.", territories:{A:11,B:10}, units:[unit("A-captain","A",-3,1,8,5,"captain","E"),unit("A-siege","A",-3,2,6,7,"siege","E"),unit("A-scout","A",-1,0,3,2,"scout","E"),unit("A-raider","A",-1,-1,4,4,"raider","E"),unit("A-interceptor","A",-1,1,5,4,"interceptor","E"),unit("B-captain","B",3,-1,8,5,"captain","W"),unit("B-siege","B",3,-2,6,7,"siege","W"),unit("B-scout","B",1,0,3,2,"scout","W"),unit("B-raider","B",1,1,4,4,"raider","W"),unit("B-interceptor","B",2,-1,5,4,"interceptor","W")], aStatus:"acting", bStatus:"observing", aMs:540, bMs:585, aReason:"Interceptor trades aren't efficient; block instead.", bReason:"Watch Blue's commit; plan counter.", side:"A", move:"Interceptor moves to forest edge.", detail:"Red's raid threat stalls.", control:{"-3,0":"A","-3,1":"A","-3,2":"A","-3,3":"A","-2,-1":"A","-2,0":"A","-2,1":"A","0,3":"B","2,0":"B","2,1":"B","3,-3":"B","3,-2":"B","3,-1":"B","3,0":"B","-1,0":"A","1,0":"B","2,-1":"B","-1,-1":"A","1,1":"B","-1,1":"A","-2,2":"A"} },
+  { turn:6, phase:"Screen", pressure:35, headline:"Red interceptor rotates to cover its captain and choke Blue's raider.", featuredEvent:"Red tightens its north shoulder.", territories:{A:11,B:12}, units:[unit("A-captain","A",-3,1,8,5,"captain","E"),unit("A-siege","A",-3,2,6,7,"siege","E"),unit("A-scout","A",-1,0,3,2,"scout","E"),unit("A-raider","A",-1,-1,4,4,"raider","E"),unit("A-interceptor","A",-1,1,5,4,"interceptor","E"),unit("B-captain","B",3,-1,8,5,"captain","W"),unit("B-siege","B",3,-2,6,7,"siege","W"),unit("B-scout","B",1,0,3,2,"scout","W"),unit("B-raider","B",1,1,4,4,"raider","W"),unit("B-interceptor","B",1,-1,5,4,"interceptor","W")], aStatus:"observing", bStatus:"acting", aMs:630, bMs:680, aReason:"Hold shape; Red's turn.", bReason:"Shoulder the captain; deny the raider.", side:"B", move:"Interceptor shifts north to cover the raid lane.", detail:"Symmetry is holding.", control:{"-3,0":"A","-3,1":"A","-3,2":"A","-3,3":"A","-2,-1":"A","-2,0":"A","-2,1":"A","0,3":"B","2,0":"B","2,1":"B","3,-3":"B","3,-2":"B","3,-1":"B","3,0":"B","-1,0":"A","1,0":"B","2,-1":"B","-1,-1":"A","1,1":"B","-1,1":"A","-2,2":"A","1,-1":"B","2,-2":"B"} },
+  { turn:7, phase:"Posture", pressure:38, headline:"Blue captain advances onto plains, preserving the heavy to the rear.", featuredEvent:"Captain takes a measured step into contested space.", territories:{A:11,B:12}, units:[unit("A-captain","A",-2,1,8,5,"captain","E"),unit("A-siege","A",-3,2,6,7,"siege","E"),unit("A-scout","A",-1,0,3,2,"scout","E"),unit("A-raider","A",-1,-1,4,4,"raider","E"),unit("A-interceptor","A",-1,1,5,4,"interceptor","E"),unit("B-captain","B",3,-1,8,5,"captain","W"),unit("B-siege","B",3,-2,6,7,"siege","W"),unit("B-scout","B",1,0,3,2,"scout","W"),unit("B-raider","B",1,1,4,4,"raider","W"),unit("B-interceptor","B",1,-1,5,4,"interceptor","W")], aStatus:"acting", bStatus:"observing", aMs:720, bMs:775, aReason:"Captain commits on cadence; siege still cooking.", bReason:"Watch Blue's commit; plan counter.", side:"A", move:"Captain forward to plains.", detail:"Heavy anchor now within two hexes of front.", control:{"-3,0":"A","-3,1":"A","-3,2":"A","-3,3":"A","-2,-1":"A","-2,0":"A","-2,1":"A","0,3":"B","2,0":"B","2,1":"B","3,-3":"B","3,-2":"B","3,-1":"B","3,0":"B","-1,0":"A","1,0":"B","2,-1":"B","-1,-1":"A","1,1":"B","-1,1":"A","-2,2":"A","1,-1":"B","2,-2":"B"} },
+  { turn:8, phase:"Posture", pressure:40, headline:"Red captain mirrors, keeping siege protected on hills.", featuredEvent:"Captain aligns with interceptor on a clean line.", territories:{A:11,B:12}, units:[unit("A-captain","A",-2,1,8,5,"captain","E"),unit("A-siege","A",-3,2,6,7,"siege","E"),unit("A-scout","A",-1,0,3,2,"scout","E"),unit("A-raider","A",-1,-1,4,4,"raider","E"),unit("A-interceptor","A",-1,1,5,4,"interceptor","E"),unit("B-captain","B",2,-1,8,5,"captain","W"),unit("B-siege","B",3,-2,6,7,"siege","W"),unit("B-scout","B",1,0,3,2,"scout","W"),unit("B-raider","B",1,1,4,4,"raider","W"),unit("B-interceptor","B",1,-1,5,4,"interceptor","W")], aStatus:"observing", bStatus:"acting", aMs:810, bMs:870, aReason:"Hold shape; Red's turn.", bReason:"Match the step; preserve siege safety.", side:"B", move:"Captain forward to plains.", detail:"Heavies remain uncommitted.", control:{"-3,0":"A","-3,1":"A","-3,2":"A","-3,3":"A","-2,-1":"A","-2,0":"A","-2,1":"A","0,3":"B","2,0":"B","2,1":"B","3,-3":"B","3,-2":"B","3,-1":"B","3,0":"B","-1,0":"A","1,0":"B","2,-1":"B","-1,-1":"A","1,1":"B","-1,1":"A","-2,2":"A","1,-1":"B","2,-2":"B"} },
+  { turn:9, phase:"First Contact", pressure:42, headline:"Blue's scout bites first — the duel draws blood on the ridge.", featuredEvent:"The first exchange lands in the center lane.", territories:{A:11,B:12}, units:[unit("A-captain","A",-2,1,8,5,"captain","E"),unit("A-siege","A",-3,2,6,7,"siege","E"),unit("A-scout","A",-1,0,3,2,"scout","E"),unit("A-raider","A",-1,-1,4,4,"raider","E"),unit("A-interceptor","A",-1,1,5,4,"interceptor","E"),unit("B-captain","B",2,-1,8,5,"captain","W"),unit("B-siege","B",3,-2,6,7,"siege","W"),unit("B-scout","B",1,0,1,2,"scout","W"),unit("B-raider","B",1,1,4,4,"raider","W"),unit("B-interceptor","B",1,-1,5,4,"interceptor","W")], aStatus:"acting", bStatus:"observing", aMs:900, bMs:965, aReason:"If Red scout dies now, their vision collapses.", bReason:"Watch Blue's commit; plan counter.", side:"A", move:"Scout jabs the red scout on hills.", detail:"Red scout falls to 1 HP (hills defense).", control:{"-3,0":"A","-3,1":"A","-3,2":"A","-3,3":"A","-2,-1":"A","-2,0":"A","-2,1":"A","0,3":"B","2,0":"B","2,1":"B","3,-3":"B","3,-2":"B","3,-1":"B","3,0":"B","-1,0":"A","1,0":"B","2,-1":"B","-1,-1":"A","1,1":"B","-1,1":"A","-2,2":"A","1,-1":"B","2,-2":"B"} },
+  { turn:10, phase:"First Contact", pressure:44, headline:"Red retaliates — hills grant +1 defense and Blue's scout bleeds.", featuredEvent:"Retaliation damage lands harder than the strike.", territories:{A:11,B:12}, units:[unit("A-captain","A",-2,1,8,5,"captain","E"),unit("A-siege","A",-3,2,6,7,"siege","E"),unit("A-scout","A",-1,0,0,2,"scout","E"),unit("A-raider","A",-1,-1,4,4,"raider","E"),unit("A-interceptor","A",-1,1,5,4,"interceptor","E"),unit("B-captain","B",2,-1,8,5,"captain","W"),unit("B-siege","B",3,-2,6,7,"siege","W"),unit("B-scout","B",1,0,1,2,"scout","W"),unit("B-raider","B",1,1,4,4,"raider","W"),unit("B-interceptor","B",1,-1,5,4,"interceptor","W")], aStatus:"observing", bStatus:"acting", aMs:990, bMs:1060, aReason:"Hold shape; Red's turn.", bReason:"Terrain favors me; punish the aggressor.", side:"B", move:"Scout strikes back from hills.", detail:"Blue scout drops to 1 HP.", control:{"-3,0":"A","-3,1":"A","-3,2":"A","-3,3":"A","-2,-1":"A","-2,0":"A","-2,1":"A","0,3":"B","2,0":"B","2,1":"B","3,-3":"B","3,-2":"B","3,-1":"B","3,0":"B","-1,0":"A","1,0":"B","2,-1":"B","-1,-1":"A","1,1":"B","-1,1":"A","-2,2":"A","1,-1":"B","2,-2":"B"} },
+  { turn:11, phase:"Siege Commit", pressure:47, headline:"Blue siege rolls forward — the artillery line begins to engage.", featuredEvent:"The first heavy frame shifts toward a firing solution.", territories:{A:11,B:12}, units:[unit("A-captain","A",-2,1,8,5,"captain","E"),unit("A-siege","A",-2,2,6,7,"siege","E"),unit("A-scout","A",-1,0,0,2,"scout","E"),unit("A-raider","A",-1,-1,4,4,"raider","E"),unit("A-interceptor","A",-1,1,5,4,"interceptor","E"),unit("B-captain","B",2,-1,8,5,"captain","W"),unit("B-siege","B",3,-2,6,7,"siege","W"),unit("B-scout","B",1,0,1,2,"scout","W"),unit("B-raider","B",1,1,4,4,"raider","W"),unit("B-interceptor","B",1,-1,5,4,"interceptor","W")], aStatus:"acting", bStatus:"observing", aMs:1080, bMs:1155, aReason:"Siege range beats scout trades.", bReason:"Watch Blue's commit; plan counter.", side:"A", move:"Siege advances onto hills.", detail:"Siege now threatens a 2-hex arc.", control:{"-3,0":"A","-3,1":"A","-3,2":"A","-3,3":"A","-2,-1":"A","-2,0":"A","-2,1":"A","0,3":"B","2,0":"B","2,1":"B","3,-3":"B","3,-2":"B","3,-1":"B","3,0":"B","-1,0":"A","1,0":"B","2,-1":"B","-1,-1":"A","1,1":"B","-1,1":"A","-2,2":"A","1,-1":"B","2,-2":"B"} },
+  { turn:12, phase:"Siege Commit", pressure:49, headline:"Red siege also commits — both long-range frames are now live.", featuredEvent:"Spectators can hear the range clocks start.", territories:{A:11,B:12}, units:[unit("A-captain","A",-2,1,8,5,"captain","E"),unit("A-siege","A",-2,2,6,7,"siege","E"),unit("A-scout","A",-1,0,0,2,"scout","E"),unit("A-raider","A",-1,-1,4,4,"raider","E"),unit("A-interceptor","A",-1,1,5,4,"interceptor","E"),unit("B-captain","B",2,-1,8,5,"captain","W"),unit("B-siege","B",2,-2,6,7,"siege","W"),unit("B-scout","B",1,0,1,2,"scout","W"),unit("B-raider","B",1,1,4,4,"raider","W"),unit("B-interceptor","B",1,-1,5,4,"interceptor","W")], aStatus:"observing", bStatus:"acting", aMs:1170, bMs:1250, aReason:"Hold shape; Red's turn.", bReason:"Must match siege tempo or lose ranged exchange.", side:"B", move:"Siege advances onto plains.", detail:"Range duel is imminent.", control:{"-3,0":"A","-3,1":"A","-3,2":"A","-3,3":"A","-2,-1":"A","-2,0":"A","-2,1":"A","0,3":"B","2,0":"B","2,1":"B","3,-3":"B","3,-2":"B","3,-1":"B","3,0":"B","-1,0":"A","1,0":"B","2,-1":"B","-1,-1":"A","1,1":"B","-1,1":"A","-2,2":"A","1,-1":"B","2,-2":"B"} },
+  { turn:13, phase:"North Skirmish", pressure:51, headline:"Blue raider slaps the red interceptor and forces a reset.", featuredEvent:"Interceptor absorbs the hit but gives ground.", territories:{A:11,B:12}, units:[unit("A-captain","A",-2,1,8,5,"captain","E"),unit("A-siege","A",-2,2,6,7,"siege","E"),unit("A-scout","A",-1,0,0,2,"scout","E"),unit("A-raider","A",-1,-1,4,4,"raider","E"),unit("A-interceptor","A",-1,1,5,4,"interceptor","E"),unit("B-captain","B",2,-1,8,5,"captain","W"),unit("B-siege","B",2,-2,6,7,"siege","W"),unit("B-scout","B",1,0,1,2,"scout","W"),unit("B-raider","B",1,1,4,4,"raider","W"),unit("B-interceptor","B",1,-1,3,4,"interceptor","W")], aStatus:"acting", bStatus:"observing", aMs:1260, bMs:1345, aReason:"Raiders don't hold ground; keep swinging.", bReason:"Watch Blue's commit; plan counter.", side:"A", move:"Raider strikes the interceptor.", detail:"Red interceptor drops to 3 HP.", control:{"-3,0":"A","-3,1":"A","-3,2":"A","-3,3":"A","-2,-1":"A","-2,0":"A","-2,1":"A","0,3":"B","2,0":"B","2,1":"B","3,-3":"B","3,-2":"B","3,-1":"B","3,0":"B","-1,0":"A","1,0":"B","2,-1":"B","-1,-1":"A","1,1":"B","-1,1":"A","-2,2":"A","1,-1":"B","2,-2":"B"} },
+  { turn:14, phase:"North Skirmish", pressure:53, headline:"Red interceptor counters hard — raider takes heavy return damage.", featuredEvent:"Interceptor trades punch for punch.", territories:{A:11,B:12}, units:[unit("A-captain","A",-2,1,8,5,"captain","E"),unit("A-siege","A",-2,2,6,7,"siege","E"),unit("A-scout","A",-1,0,0,2,"scout","E"),unit("A-raider","A",-1,-1,0,4,"raider","E"),unit("A-interceptor","A",-1,1,5,4,"interceptor","E"),unit("B-captain","B",2,-1,8,5,"captain","W"),unit("B-siege","B",2,-2,6,7,"siege","W"),unit("B-scout","B",1,0,1,2,"scout","W"),unit("B-raider","B",1,1,4,4,"raider","W"),unit("B-interceptor","B",1,-1,3,4,"interceptor","W")], aStatus:"observing", bStatus:"acting", aMs:1350, bMs:1440, aReason:"Hold shape; Red's turn.", bReason:"Interceptor earns its name on the counter.", side:"B", move:"Interceptor strikes back.", detail:"Blue raider drops to 2 HP.", control:{"-3,0":"A","-3,1":"A","-3,2":"A","-3,3":"A","-2,-1":"A","-2,0":"A","-2,1":"A","0,3":"B","2,0":"B","2,1":"B","3,-3":"B","3,-2":"B","3,-1":"B","3,0":"B","-1,0":"A","1,0":"B","2,-1":"B","-1,-1":"A","1,1":"B","-1,1":"A","-2,2":"A","1,-1":"B","2,-2":"B"} },
+  { turn:15, phase:"South Skirmish", pressure:55, headline:"Blue interceptor catches the red raider in open forest.", featuredEvent:"Symmetric violence on the southern edge.", territories:{A:11,B:12}, units:[unit("A-captain","A",-2,1,8,5,"captain","E"),unit("A-siege","A",-2,2,6,7,"siege","E"),unit("A-scout","A",-1,0,0,2,"scout","E"),unit("A-raider","A",-1,-1,0,4,"raider","E"),unit("A-interceptor","A",-1,1,5,4,"interceptor","E"),unit("B-captain","B",2,-1,8,5,"captain","W"),unit("B-siege","B",2,-2,6,7,"siege","W"),unit("B-scout","B",1,0,1,2,"scout","W"),unit("B-raider","B",1,1,1,4,"raider","W"),unit("B-interceptor","B",1,-1,3,4,"interceptor","W")], aStatus:"acting", bStatus:"observing", aMs:1440, bMs:1535, aReason:"Mirror the north fight; deny their raider.", bReason:"Watch Blue's commit; plan counter.", side:"A", move:"Interceptor strikes the raider.", detail:"Red raider drops to 2 HP.", control:{"-3,0":"A","-3,1":"A","-3,2":"A","-3,3":"A","-2,-1":"A","-2,0":"A","-2,1":"A","0,3":"B","2,0":"B","2,1":"B","3,-3":"B","3,-2":"B","3,-1":"B","3,0":"B","-1,0":"A","1,0":"B","2,-1":"B","-1,-1":"A","1,1":"B","-1,1":"A","-2,2":"A","1,-1":"B","2,-2":"B"} },
+  { turn:16, phase:"South Skirmish", pressure:58, headline:"Red raider swings back; both front lines are visibly battered.", featuredEvent:"All four skirmishers are below half HP.", territories:{A:11,B:12}, units:[unit("A-captain","A",-2,1,8,5,"captain","E"),unit("A-siege","A",-2,2,6,7,"siege","E"),unit("A-scout","A",-1,0,0,2,"scout","E"),unit("A-raider","A",-1,-1,0,4,"raider","E"),unit("A-interceptor","A",-1,1,2,4,"interceptor","E"),unit("B-captain","B",2,-1,8,5,"captain","W"),unit("B-siege","B",2,-2,6,7,"siege","W"),unit("B-scout","B",1,0,1,2,"scout","W"),unit("B-raider","B",1,1,1,4,"raider","W"),unit("B-interceptor","B",1,-1,3,4,"interceptor","W")], aStatus:"observing", bStatus:"acting", aMs:1530, bMs:1630, aReason:"Hold shape; Red's turn.", bReason:"Punch before I'm out of hit points.", side:"B", move:"Raider strikes the blue interceptor.", detail:"Blue interceptor drops to 3 HP.", control:{"-3,0":"A","-3,1":"A","-3,2":"A","-3,3":"A","-2,-1":"A","-2,0":"A","-2,1":"A","0,3":"B","2,0":"B","2,1":"B","3,-3":"B","3,-2":"B","3,-1":"B","3,0":"B","-1,0":"A","1,0":"B","2,-1":"B","-1,-1":"A","1,1":"B","-1,1":"A","-2,2":"A","1,-1":"B","2,-2":"B"} },
+  { turn:17, phase:"Siege Fire", pressure:60, headline:"Blue siege fires over the ridge and deletes the red scout.", featuredEvent:"First elimination — Red's forward vision is gone.", territories:{A:11,B:12}, units:[unit("A-captain","A",-2,1,8,5,"captain","E"),unit("A-siege","A",-2,2,6,7,"siege","E"),unit("A-scout","A",-1,0,0,2,"scout","E"),unit("A-raider","A",-1,-1,0,4,"raider","E"),unit("A-interceptor","A",-1,1,2,4,"interceptor","E"),unit("B-captain","B",2,-1,8,5,"captain","W"),unit("B-siege","B",2,-2,6,7,"siege","W"),unit("B-raider","B",1,1,1,4,"raider","W"),unit("B-interceptor","B",1,-1,3,4,"interceptor","W")], aStatus:"acting", bStatus:"observing", aMs:1620, bMs:1725, aReason:"Remove the enemy scout; siege handles it cleanly.", bReason:"Watch Blue's commit; plan counter.", side:"A", move:"Siege ranged strike hits the red scout.", detail:"Red scout eliminated.", control:{"-3,0":"A","-3,1":"A","-3,2":"A","-3,3":"A","-2,-1":"A","-2,0":"A","-2,1":"A","0,3":"B","2,0":"B","2,1":"B","3,-3":"B","3,-2":"B","3,-1":"B","3,0":"B","-1,0":"A","1,0":"B","2,-1":"B","-1,-1":"A","1,1":"B","-1,1":"A","-2,2":"A","1,-1":"B","2,-2":"B"} },
+  { turn:18, phase:"Siege Fire", pressure:62, headline:"Red siege answers — Blue's scout is blown off the board.", featuredEvent:"Both scouts now off the field.", territories:{A:11,B:12}, units:[unit("A-captain","A",-2,1,8,5,"captain","E"),unit("A-siege","A",-2,2,6,7,"siege","E"),unit("A-raider","A",-1,-1,0,4,"raider","E"),unit("A-interceptor","A",-1,1,2,4,"interceptor","E"),unit("B-captain","B",2,-1,8,5,"captain","W"),unit("B-siege","B",2,-2,6,7,"siege","W"),unit("B-raider","B",1,1,1,4,"raider","W"),unit("B-interceptor","B",1,-1,3,4,"interceptor","W")], aStatus:"observing", bStatus:"acting", aMs:1710, bMs:1820, aReason:"Hold shape; Red's turn.", bReason:"Symmetry matters; keep the exchange even.", side:"B", move:"Siege ranged strike hits the blue scout.", detail:"Blue scout eliminated.", control:{"-3,0":"A","-3,1":"A","-3,2":"A","-3,3":"A","-2,-1":"A","-2,0":"A","-2,1":"A","0,3":"B","2,0":"B","2,1":"B","3,-3":"B","3,-2":"B","3,-1":"B","3,0":"B","-1,0":"A","1,0":"B","2,-1":"B","-1,-1":"A","1,1":"B","-1,1":"A","-2,2":"A","1,-1":"B","2,-2":"B"} },
+  { turn:19, phase:"Captain Commit", pressure:64, headline:"Blue captain steps into the center and breaks the stalemate.", featuredEvent:"Captain pressure shifts momentum back to Blue.", territories:{A:11,B:12}, units:[unit("A-captain","A",-1,1,8,5,"captain","E"),unit("A-siege","A",-2,2,6,7,"siege","E"),unit("A-raider","A",-1,-1,0,4,"raider","E"),unit("A-interceptor","A",-1,1,2,4,"interceptor","E"),unit("B-captain","B",2,-1,8,5,"captain","W"),unit("B-siege","B",2,-2,6,7,"siege","W"),unit("B-raider","B",1,1,1,4,"raider","W"),unit("B-interceptor","B",1,-1,3,4,"interceptor","W")], aStatus:"acting", bStatus:"observing", aMs:1800, bMs:1915, aReason:"Captains decide midgames. Time to commit.", bReason:"Watch Blue's commit; plan counter.", side:"A", move:"Captain advances to forest.", detail:"Blue captain now threatens three hexes.", control:{"-3,0":"A","-3,1":"A","-3,2":"A","-3,3":"A","-2,-1":"A","-2,0":"A","-2,1":"A","0,3":"B","2,0":"B","2,1":"B","3,-3":"B","3,-2":"B","3,-1":"B","3,0":"B","-1,0":"A","1,0":"B","2,-1":"B","-1,-1":"A","1,1":"B","-1,1":"A","-2,2":"A","1,-1":"B","2,-2":"B"} },
+  { turn:20, phase:"Captain Commit", pressure:66, headline:"Red captain mirrors the center commit — the heavies collide next.", featuredEvent:"Mirror captain advance; a real frontline forms.", territories:{A:11,B:12}, units:[unit("A-captain","A",-1,1,8,5,"captain","E"),unit("A-siege","A",-2,2,6,7,"siege","E"),unit("A-raider","A",-1,-1,0,4,"raider","E"),unit("A-interceptor","A",-1,1,2,4,"interceptor","E"),unit("B-captain","B",1,-1,8,5,"captain","W"),unit("B-siege","B",2,-2,6,7,"siege","W"),unit("B-raider","B",1,1,1,4,"raider","W"),unit("B-interceptor","B",1,-1,3,4,"interceptor","W")], aStatus:"observing", bStatus:"acting", aMs:1890, bMs:2010, aReason:"Hold shape; Red's turn.", bReason:"Hold shape; my siege is the real threat.", side:"B", move:"Captain advances to plains.", detail:"Red captain covers interceptor again.", control:{"-3,0":"A","-3,1":"A","-3,2":"A","-3,3":"A","-2,-1":"A","-2,0":"A","-2,1":"A","0,3":"B","2,0":"B","2,1":"B","3,-3":"B","3,-2":"B","3,-1":"B","3,0":"B","-1,0":"A","1,0":"B","2,-1":"B","-1,-1":"A","1,1":"B","-1,1":"A","-2,2":"A","1,-1":"B","2,-2":"B"} },
+  { turn:21, phase:"North Break", pressure:69, headline:"Blue raider finishes the bleeding red interceptor.", featuredEvent:"North flank opens for Blue.", territories:{A:11,B:12}, units:[unit("A-captain","A",-1,1,8,5,"captain","E"),unit("A-siege","A",-2,2,6,7,"siege","E"),unit("A-raider","A",-1,-1,0,4,"raider","E"),unit("A-interceptor","A",-1,1,2,4,"interceptor","E"),unit("B-captain","B",1,-1,8,5,"captain","W"),unit("B-siege","B",2,-2,6,7,"siege","W"),unit("B-raider","B",1,1,1,4,"raider","W")], aStatus:"acting", bStatus:"observing", aMs:1980, bMs:2105, aReason:"Kill a bleeder; snowball the north.", bReason:"Watch Blue's commit; plan counter.", side:"A", move:"Raider finishes the interceptor.", detail:"Red interceptor eliminated.", control:{"-3,0":"A","-3,1":"A","-3,2":"A","-3,3":"A","-2,-1":"A","-2,0":"A","-2,1":"A","0,3":"B","2,0":"B","2,1":"B","3,-3":"B","3,-2":"B","3,-1":"B","3,0":"B","-1,0":"A","1,0":"B","2,-1":"B","-1,-1":"A","1,1":"B","-1,1":"A","-2,2":"A","1,-1":"B","2,-2":"B"} },
+  { turn:22, phase:"South Break", pressure:71, headline:"Red raider finishes the blue interceptor — both flanks lose a screen.", featuredEvent:"Flank screens collapse simultaneously.", territories:{A:11,B:12}, units:[unit("A-captain","A",-1,1,8,5,"captain","E"),unit("A-siege","A",-2,2,6,7,"siege","E"),unit("A-raider","A",-1,-1,0,4,"raider","E"),unit("B-captain","B",1,-1,8,5,"captain","W"),unit("B-siege","B",2,-2,6,7,"siege","W"),unit("B-raider","B",1,1,1,4,"raider","W")], aStatus:"observing", bStatus:"acting", aMs:2070, bMs:2200, aReason:"Hold shape; Red's turn.", bReason:"Mirror the kill; stabilize south.", side:"B", move:"Raider finishes the interceptor.", detail:"Blue interceptor eliminated.", control:{"-3,0":"A","-3,1":"A","-3,2":"A","-3,3":"A","-2,-1":"A","-2,0":"A","-2,1":"A","0,3":"B","2,0":"B","2,1":"B","3,-3":"B","3,-2":"B","3,-1":"B","3,0":"B","-1,0":"A","1,0":"B","2,-1":"B","-1,-1":"A","1,1":"B","-1,1":"A","-2,2":"A","1,-1":"B","2,-2":"B"} },
+  { turn:23, phase:"Siege March", pressure:73, headline:"Blue siege rolls one hex forward, widening its firing arc.", featuredEvent:"Siege inches closer to its ideal firing position.", territories:{A:12,B:12}, units:[unit("A-captain","A",-1,1,8,5,"captain","E"),unit("A-siege","A",-1,2,6,7,"siege","E"),unit("A-raider","A",-1,-1,0,4,"raider","E"),unit("B-captain","B",1,-1,8,5,"captain","W"),unit("B-siege","B",2,-2,6,7,"siege","W"),unit("B-raider","B",1,1,1,4,"raider","W")], aStatus:"acting", bStatus:"observing", aMs:2160, bMs:2295, aReason:"Range favors Blue; take the better position.", bReason:"Watch Blue's commit; plan counter.", side:"A", move:"Siege advances to plains.", detail:"Siege arc now covers most of center.", control:{"-3,0":"A","-3,1":"A","-3,2":"A","-3,3":"A","-2,-1":"A","-2,0":"A","-2,1":"A","0,3":"B","2,0":"B","2,1":"B","3,-3":"B","3,-2":"B","3,-1":"B","3,0":"B","-1,0":"A","1,0":"B","2,-1":"B","-1,-1":"A","1,1":"B","-1,1":"A","-2,2":"A","1,-1":"B","2,-2":"B","-1,2":"A"} },
+  { turn:24, phase:"Siege March", pressure:75, headline:"Red siege also inches up — the long-range duel is now total.", featuredEvent:"Artillery parity holds at the range threshold.", territories:{A:12,B:13}, units:[unit("A-captain","A",-1,1,8,5,"captain","E"),unit("A-siege","A",-1,2,6,7,"siege","E"),unit("A-raider","A",-1,-1,0,4,"raider","E"),unit("B-captain","B",1,-1,8,5,"captain","W"),unit("B-siege","B",1,-2,6,7,"siege","W"),unit("B-raider","B",1,1,1,4,"raider","W")], aStatus:"observing", bStatus:"acting", aMs:2250, bMs:2390, aReason:"Hold shape; Red's turn.", bReason:"Symmetric siege is the safe line.", side:"B", move:"Siege advances to forest.", detail:"Red siege threatens the northern captain.", control:{"-3,0":"A","-3,1":"A","-3,2":"A","-3,3":"A","-2,-1":"A","-2,0":"A","-2,1":"A","0,3":"B","2,0":"B","2,1":"B","3,-3":"B","3,-2":"B","3,-1":"B","3,0":"B","-1,0":"A","1,0":"B","2,-1":"B","-1,-1":"A","1,1":"B","-1,1":"A","-2,2":"A","1,-1":"B","2,-2":"B","-1,2":"A","1,-2":"B"} },
+  { turn:25, phase:"Line Break", pressure:83, headline:"Blue captain clips the wounded red raider into elimination.", featuredEvent:"Red's south raid threat ends.", territories:{A:12,B:13}, units:[unit("A-captain","A",-1,1,8,5,"captain","E"),unit("A-siege","A",-1,2,6,7,"siege","E"),unit("A-raider","A",-1,-1,0,4,"raider","E"),unit("B-captain","B",1,-1,8,5,"captain","W"),unit("B-siege","B",1,-2,6,7,"siege","W")], aStatus:"acting", bStatus:"observing", aMs:2340, bMs:2485, aReason:"Kill the raid; free the interceptor lane.", bReason:"Watch Blue's commit; plan counter.", side:"A", move:"Captain strikes the red raider.", detail:"Red raider eliminated.", control:{"-3,0":"A","-3,1":"A","-3,2":"A","-3,3":"A","-2,-1":"A","-2,0":"A","-2,1":"A","0,3":"B","2,0":"B","2,1":"B","3,-3":"B","3,-2":"B","3,-1":"B","3,0":"B","-1,0":"A","1,0":"B","2,-1":"B","-1,-1":"A","1,1":"B","-1,1":"A","-2,2":"A","1,-1":"B","2,-2":"B","-1,2":"A","1,-2":"B"} },
+  { turn:26, phase:"Line Break", pressure:81, headline:"Red captain answers — Blue's north raider is removed.", featuredEvent:"Both raiders now off the field.", territories:{A:12,B:13}, units:[unit("A-captain","A",-1,1,8,5,"captain","E"),unit("A-siege","A",-1,2,6,7,"siege","E"),unit("B-captain","B",1,-1,8,5,"captain","W"),unit("B-siege","B",1,-2,6,7,"siege","W")], aStatus:"observing", bStatus:"acting", aMs:2430, bMs:2580, aReason:"Hold shape; Red's turn.", bReason:"Match the kill; protect the siege lane.", side:"B", move:"Captain strikes the blue raider.", detail:"Blue raider eliminated.", control:{"-3,0":"A","-3,1":"A","-3,2":"A","-3,3":"A","-2,-1":"A","-2,0":"A","-2,1":"A","0,3":"B","2,0":"B","2,1":"B","3,-3":"B","3,-2":"B","3,-1":"B","3,0":"B","-1,0":"A","1,0":"B","2,-1":"B","-1,-1":"A","1,1":"B","-1,1":"A","-2,2":"A","1,-1":"B","2,-2":"B","-1,2":"A","1,-2":"B"} },
+  { turn:27, phase:"Heavy Exchange", pressure:79, headline:"Blue siege lands on the red captain — first heavy damage lands.", featuredEvent:"Red captain takes significant hit point loss.", territories:{A:12,B:13}, units:[unit("A-captain","A",-1,1,8,5,"captain","E"),unit("A-siege","A",-1,2,6,7,"siege","E"),unit("B-captain","B",1,-1,4,5,"captain","W"),unit("B-siege","B",1,-2,6,7,"siege","W")], aStatus:"acting", bStatus:"observing", aMs:2520, bMs:2675, aReason:"Target hierarchy: captain is higher value than siege.", bReason:"Watch Blue's commit; plan counter.", side:"A", move:"Siege ranged strike hits the red captain.", detail:"Red captain drops to 4 HP.", control:{"-3,0":"A","-3,1":"A","-3,2":"A","-3,3":"A","-2,-1":"A","-2,0":"A","-2,1":"A","0,3":"B","2,0":"B","2,1":"B","3,-3":"B","3,-2":"B","3,-1":"B","3,0":"B","-1,0":"A","1,0":"B","2,-1":"B","-1,-1":"A","1,1":"B","-1,1":"A","-2,2":"A","1,-1":"B","2,-2":"B","-1,2":"A","1,-2":"B"} },
+  { turn:28, phase:"Heavy Exchange", pressure:77, headline:"Red siege returns the favor — Blue captain bleeds for the first time.", featuredEvent:"Both captains now below half HP.", territories:{A:12,B:13}, units:[unit("A-captain","A",-1,1,4,5,"captain","E"),unit("A-siege","A",-1,2,6,7,"siege","E"),unit("B-captain","B",1,-1,4,5,"captain","W"),unit("B-siege","B",1,-2,6,7,"siege","W")], aStatus:"observing", bStatus:"acting", aMs:2610, bMs:2770, aReason:"Hold shape; Red's turn.", bReason:"Symmetric trade keeps the game open.", side:"B", move:"Siege ranged strike hits the blue captain.", detail:"Blue captain drops to 4 HP.", control:{"-3,0":"A","-3,1":"A","-3,2":"A","-3,3":"A","-2,-1":"A","-2,0":"A","-2,1":"A","0,3":"B","2,0":"B","2,1":"B","3,-3":"B","3,-2":"B","3,-1":"B","3,0":"B","-1,0":"A","1,0":"B","2,-1":"B","-1,-1":"A","1,1":"B","-1,1":"A","-2,2":"A","1,-1":"B","2,-2":"B","-1,2":"A","1,-2":"B"} },
+  { turn:29, phase:"Captain Drive", pressure:75, headline:"Blue captain drives through center plains, closing on the red siege.", featuredEvent:"Captain picks the short path to the artillery.", territories:{A:13,B:13}, units:[unit("A-captain","A",0,1,4,5,"captain","E"),unit("A-siege","A",-1,2,6,7,"siege","E"),unit("B-captain","B",1,-1,4,5,"captain","W"),unit("B-siege","B",1,-2,6,7,"siege","W")], aStatus:"acting", bStatus:"observing", aMs:2700, bMs:2865, aReason:"If I reach their siege, this match ends.", bReason:"Watch Blue's commit; plan counter.", side:"A", move:"Captain advances to center plains.", detail:"Blue captain threatens siege lane.", control:{"-3,0":"A","-3,1":"A","-3,2":"A","-3,3":"A","-2,-1":"A","-2,0":"A","-2,1":"A","0,3":"B","2,0":"B","2,1":"B","3,-3":"B","3,-2":"B","3,-1":"B","3,0":"B","-1,0":"A","1,0":"B","2,-1":"B","-1,-1":"A","1,1":"B","-1,1":"A","-2,2":"A","1,-1":"B","2,-2":"B","-1,2":"A","1,-2":"B","0,1":"A"} },
+  { turn:30, phase:"Captain Drive", pressure:73, headline:"Red captain mirrors — the two heavy lines are one hex apart.", featuredEvent:"The decisive collision is one step away.", territories:{A:13,B:14}, units:[unit("A-captain","A",0,1,4,5,"captain","E"),unit("A-siege","A",-1,2,6,7,"siege","E"),unit("B-captain","B",0,-1,4,5,"captain","W"),unit("B-siege","B",1,-2,6,7,"siege","W")], aStatus:"observing", bStatus:"acting", aMs:2790, bMs:2960, aReason:"Hold shape; Red's turn.", bReason:"Last chance to prevent Blue's captain reaching siege.", side:"B", move:"Captain advances to center hills.", detail:"Captains now share a lane.", control:{"-3,0":"A","-3,1":"A","-3,2":"A","-3,3":"A","-2,-1":"A","-2,0":"A","-2,1":"A","0,3":"B","2,0":"B","2,1":"B","3,-3":"B","3,-2":"B","3,-1":"B","3,0":"B","-1,0":"A","1,0":"B","2,-1":"B","-1,-1":"A","1,1":"B","-1,1":"A","-2,2":"A","1,-1":"B","2,-2":"B","-1,2":"A","1,-2":"B","0,1":"A","0,-1":"B"} },
+  { turn:31, phase:"Captain Clash", pressure:71, headline:"The captains collide — Blue lands first and hits hard.", featuredEvent:"First captain-on-captain strike lands for Blue.", territories:{A:13,B:14}, units:[unit("A-captain","A",0,1,4,5,"captain","E"),unit("A-siege","A",-1,2,6,7,"siege","E"),unit("B-siege","B",1,-2,6,7,"siege","W")], aStatus:"acting", bStatus:"observing", aMs:2880, bMs:3055, aReason:"Land the decisive blow; terrain doesn't help them.", bReason:"Watch Blue's commit; plan counter.", side:"A", move:"Captain strikes the red captain.", detail:"Red captain drops to 0 HP.", control:{"-3,0":"A","-3,1":"A","-3,2":"A","-3,3":"A","-2,-1":"A","-2,0":"A","-2,1":"A","0,3":"B","2,0":"B","2,1":"B","3,-3":"B","3,-2":"B","3,-1":"B","3,0":"B","-1,0":"A","1,0":"B","2,-1":"B","-1,-1":"A","1,1":"B","-1,1":"A","-2,2":"A","1,-1":"B","2,-2":"B","-1,2":"A","1,-2":"B","0,1":"A","0,-1":"B"} },
+  { turn:32, phase:"Desperation Fire", pressure:69, headline:"Red siege retaliates — Blue's captain is gravely wounded.", featuredEvent:"Without its captain, Red goes all-in on the siege.", territories:{A:13,B:14}, units:[unit("A-siege","A",-1,2,6,7,"siege","E"),unit("B-siege","B",1,-2,6,7,"siege","W")], aStatus:"observing", bStatus:"acting", aMs:2970, bMs:3150, aReason:"Hold shape; Red's turn.", bReason:"Mutual destruction is still better than a clean loss.", side:"B", move:"Siege ranged strike hits the blue captain.", detail:"Blue captain drops to 0 HP.", control:{"-3,0":"A","-3,1":"A","-3,2":"A","-3,3":"A","-2,-1":"A","-2,0":"A","-2,1":"A","0,3":"B","2,0":"B","2,1":"B","3,-3":"B","3,-2":"B","3,-1":"B","3,0":"B","-1,0":"A","1,0":"B","2,-1":"B","-1,-1":"A","1,1":"B","-1,1":"A","-2,2":"A","1,-1":"B","2,-2":"B","-1,2":"A","1,-2":"B","0,1":"A","0,-1":"B"} },
+  { turn:33, phase:"Aftermath", pressure:67, headline:"Blue siege fires on the only remaining red piece worth naming.", featuredEvent:"The long-range duel tips decisively toward Blue.", territories:{A:13,B:14}, units:[unit("A-siege","A",-1,2,6,7,"siege","E"),unit("B-siege","B",1,-2,2,7,"siege","W")], aStatus:"acting", bStatus:"observing", aMs:3060, bMs:3245, aReason:"Remove their last threat; the map decides from here.", bReason:"Watch Blue's commit; plan counter.", side:"A", move:"Siege ranged strike hits the red siege.", detail:"Red siege drops to 2 HP.", control:{"-3,0":"A","-3,1":"A","-3,2":"A","-3,3":"A","-2,-1":"A","-2,0":"A","-2,1":"A","0,3":"B","2,0":"B","2,1":"B","3,-3":"B","3,-2":"B","3,-1":"B","3,0":"B","-1,0":"A","1,0":"B","2,-1":"B","-1,-1":"A","1,1":"B","-1,1":"A","-2,2":"A","1,-1":"B","2,-2":"B","-1,2":"A","1,-2":"B","0,1":"A","0,-1":"B"} },
+  { turn:34, phase:"Aftermath", pressure:65, headline:"Red siege fires back — Blue's artillery finally takes damage.", featuredEvent:"The artillery duel becomes a slugfest.", territories:{A:13,B:14}, units:[unit("A-siege","A",-1,2,3,7,"siege","E"),unit("B-siege","B",1,-2,2,7,"siege","W")], aStatus:"observing", bStatus:"acting", aMs:3150, bMs:3340, aReason:"Hold shape; Red's turn.", bReason:"Survive long enough to force a draw.", side:"B", move:"Siege ranged strike hits the blue siege.", detail:"Blue siege drops to 3 HP.", control:{"-3,0":"A","-3,1":"A","-3,2":"A","-3,3":"A","-2,-1":"A","-2,0":"A","-2,1":"A","0,3":"B","2,0":"B","2,1":"B","3,-3":"B","3,-2":"B","3,-1":"B","3,0":"B","-1,0":"A","1,0":"B","2,-1":"B","-1,-1":"A","1,1":"B","-1,1":"A","-2,2":"A","1,-1":"B","2,-2":"B","-1,2":"A","1,-2":"B","0,1":"A","0,-1":"B"} },
+  { turn:35, phase:"Encirclement", pressure:63, headline:"Blue siege rolls into center control, claiming the hex Red cannot contest.", featuredEvent:"Blue begins converting its remaining unit into territory.", territories:{A:14,B:14}, units:[unit("A-siege","A",0,2,3,7,"siege","E"),unit("B-siege","B",1,-2,2,7,"siege","W")], aStatus:"acting", bStatus:"observing", aMs:3240, bMs:3435, aReason:"Trade HP for territory; territory wins from here.", bReason:"Watch Blue's commit; plan counter.", side:"A", move:"Siege advances to center forest.", detail:"Blue territory climbs.", control:{"-3,0":"A","-3,1":"A","-3,2":"A","-3,3":"A","-2,-1":"A","-2,0":"A","-2,1":"A","0,3":"B","2,0":"B","2,1":"B","3,-3":"B","3,-2":"B","3,-1":"B","3,0":"B","-1,0":"A","1,0":"B","2,-1":"B","-1,-1":"A","1,1":"B","-1,1":"A","-2,2":"A","1,-1":"B","2,-2":"B","-1,2":"A","1,-2":"B","0,1":"A","0,-1":"B","0,2":"A"} },
+  { turn:36, phase:"Encirclement", pressure:61, headline:"Red siege tries a symmetric push — but the map is already tilting.", featuredEvent:"Red answers the move but the scoreboard doesn't follow.", territories:{A:14,B:15}, units:[unit("A-siege","A",0,2,3,7,"siege","E"),unit("B-siege","B",0,-2,2,7,"siege","W")], aStatus:"observing", bStatus:"acting", aMs:3330, bMs:3530, aReason:"Hold shape; Red's turn.", bReason:"Mirror the tempo; that's all that's left.", side:"B", move:"Siege advances to center plains.", detail:"Red gains one hex; still trailing.", control:{"-3,0":"A","-3,1":"A","-3,2":"A","-3,3":"A","-2,-1":"A","-2,0":"A","-2,1":"A","0,3":"B","2,0":"B","2,1":"B","3,-3":"B","3,-2":"B","3,-1":"B","3,0":"B","-1,0":"A","1,0":"B","2,-1":"B","-1,-1":"A","1,1":"B","-1,1":"A","-2,2":"A","1,-1":"B","2,-2":"B","-1,2":"A","1,-2":"B","0,1":"A","0,-1":"B","0,2":"A","0,-2":"B"} },
+  { turn:37, phase:"Siege Kill", pressure:57, headline:"Blue siege lands the finishing round — Red's last frame is down.", featuredEvent:"Red has no remaining offensive units.", territories:{A:14,B:15}, units:[unit("A-siege","A",0,2,3,7,"siege","E")], aStatus:"acting", bStatus:"observing", aMs:3420, bMs:3625, aReason:"End the combat portion; run out the clock on territory.", bReason:"Watch Blue's commit; plan counter.", side:"A", move:"Siege ranged strike finishes the red siege.", detail:"Red siege eliminated.", control:{"-3,0":"A","-3,1":"A","-3,2":"A","-3,3":"A","-2,-1":"A","-2,0":"A","-2,1":"A","0,3":"B","2,0":"B","2,1":"B","3,-3":"B","3,-2":"B","3,-1":"B","3,0":"B","-1,0":"A","1,0":"B","2,-1":"B","-1,-1":"A","1,1":"B","-1,1":"A","-2,2":"A","1,-1":"B","2,-2":"B","-1,2":"A","1,-2":"B","0,1":"A","0,-1":"B","0,2":"A","0,-2":"B"} },
+  { turn:38, phase:"No Contest", pressure:54, headline:"Red has no legal attacking units left; the match enters pure runout.", featuredEvent:"Red's turn passes with no legal strike.", territories:{A:14,B:15}, units:[unit("A-siege","A",0,2,3,7,"siege","E")], aStatus:"observing", bStatus:"acting", aMs:3510, bMs:3720, aReason:"Hold shape; Red's turn.", bReason:"Nothing productive to do; pass.", side:"B", move:"Red passes — no offensive options.", detail:"Runout has begun.", control:{"-3,0":"A","-3,1":"A","-3,2":"A","-3,3":"A","-2,-1":"A","-2,0":"A","-2,1":"A","0,3":"B","2,0":"B","2,1":"B","3,-3":"B","3,-2":"B","3,-1":"B","3,0":"B","-1,0":"A","1,0":"B","2,-1":"B","-1,-1":"A","1,1":"B","-1,1":"A","-2,2":"A","1,-1":"B","2,-2":"B","-1,2":"A","1,-2":"B","0,1":"A","0,-1":"B","0,2":"A","0,-2":"B"} },
+  { turn:39, phase:"Runout", pressure:51, headline:"Blue siege marches into red territory, flipping control hexes.", featuredEvent:"Every remaining step converts map share.", territories:{A:15,B:14}, units:[unit("A-siege","A",1,1,3,7,"siege","E")], aStatus:"acting", bStatus:"observing", aMs:3600, bMs:3815, aReason:"Every hex taken is one closer to a clean territory win.", bReason:"Watch Blue's commit; plan counter.", side:"A", move:"Siege advances to forest.", detail:"Blue territory climbs past 60% line.", control:{"-3,0":"A","-3,1":"A","-3,2":"A","-3,3":"A","-2,-1":"A","-2,0":"A","-2,1":"A","0,3":"B","2,0":"B","2,1":"B","3,-3":"B","3,-2":"B","3,-1":"B","3,0":"B","-1,0":"A","1,0":"B","2,-1":"B","-1,-1":"A","1,1":"A","-1,1":"A","-2,2":"A","1,-1":"B","2,-2":"B","-1,2":"A","1,-2":"B","0,1":"A","0,-1":"B","0,2":"A","0,-2":"B"} },
+  { turn:40, phase:"Runout", pressure:48, headline:"Red has no frames to move. The board continues tilting blue.", featuredEvent:"Red's turn passes again — nothing to do.", territories:{A:15,B:14}, units:[unit("A-siege","A",1,1,3,7,"siege","E")], aStatus:"observing", bStatus:"acting", aMs:3690, bMs:3910, aReason:"Hold shape; Red's turn.", bReason:"Pass; survival is impossible, but I still hold the lock.", side:"B", move:"Red passes — no legal move.", detail:"Territory count trends up.", control:{"-3,0":"A","-3,1":"A","-3,2":"A","-3,3":"A","-2,-1":"A","-2,0":"A","-2,1":"A","0,3":"B","2,0":"B","2,1":"B","3,-3":"B","3,-2":"B","3,-1":"B","3,0":"B","-1,0":"A","1,0":"B","2,-1":"B","-1,-1":"A","1,1":"A","-1,1":"A","-2,2":"A","1,-1":"B","2,-2":"B","-1,2":"A","1,-2":"B","0,1":"A","0,-1":"B","0,2":"A","0,-2":"B"} },
+  { turn:41, phase:"Endgame", pressure:45, headline:"Blue siege slides into red home ground, cracking their starting tiles.", featuredEvent:"Red's original control zone begins flipping.", territories:{A:16,B:13}, units:[unit("A-siege","A",2,0,3,7,"siege","E")], aStatus:"acting", bStatus:"observing", aMs:3780, bMs:4005, aReason:"Strip the home zone; the score stops falsely favoring them.", bReason:"Watch Blue's commit; plan counter.", side:"A", move:"Siege advances to plains.", detail:"Red loses home-zone control.", control:{"-3,0":"A","-3,1":"A","-3,2":"A","-3,3":"A","-2,-1":"A","-2,0":"A","-2,1":"A","0,3":"B","2,0":"A","2,1":"B","3,-3":"B","3,-2":"B","3,-1":"B","3,0":"B","-1,0":"A","1,0":"B","2,-1":"B","-1,-1":"A","1,1":"A","-1,1":"A","-2,2":"A","1,-1":"B","2,-2":"B","-1,2":"A","1,-2":"B","0,1":"A","0,-1":"B","0,2":"A","0,-2":"B"} },
+  { turn:42, phase:"Endgame", pressure:42, headline:"Red still cannot act — runout phase continues in silence.", featuredEvent:"A silent turn while the map keeps tilting.", territories:{A:16,B:13}, units:[unit("A-siege","A",2,0,3,7,"siege","E")], aStatus:"observing", bStatus:"acting", aMs:3870, bMs:4100, aReason:"Hold shape; Red's turn.", bReason:"Nothing to do.", side:"B", move:"Red passes — no legal move.", detail:"No change.", control:{"-3,0":"A","-3,1":"A","-3,2":"A","-3,3":"A","-2,-1":"A","-2,0":"A","-2,1":"A","0,3":"B","2,0":"A","2,1":"B","3,-3":"B","3,-2":"B","3,-1":"B","3,0":"B","-1,0":"A","1,0":"B","2,-1":"B","-1,-1":"A","1,1":"A","-1,1":"A","-2,2":"A","1,-1":"B","2,-2":"B","-1,2":"A","1,-2":"B","0,1":"A","0,-1":"B","0,2":"A","0,-2":"B"} },
+  { turn:43, phase:"Endgame", pressure:39, headline:"Blue reaches the right edge — the map is now almost entirely blue.", featuredEvent:"Blue seals the east side.", territories:{A:17,B:12}, units:[unit("A-siege","A",3,-1,3,7,"siege","E")], aStatus:"acting", bStatus:"observing", aMs:3960, bMs:4195, aReason:"Seal the east edge and end the match on territory.", bReason:"Watch Blue's commit; plan counter.", side:"A", move:"Siege advances to red home plains.", detail:"Red's home slot flips.", control:{"-3,0":"A","-3,1":"A","-3,2":"A","-3,3":"A","-2,-1":"A","-2,0":"A","-2,1":"A","0,3":"B","2,0":"A","2,1":"B","3,-3":"B","3,-2":"B","3,-1":"A","3,0":"B","-1,0":"A","1,0":"B","2,-1":"B","-1,-1":"A","1,1":"A","-1,1":"A","-2,2":"A","1,-1":"B","2,-2":"B","-1,2":"A","1,-2":"B","0,1":"A","0,-1":"B","0,2":"A","0,-2":"B"} },
+  { turn:44, phase:"Endgame", pressure:36, headline:"Red still cannot contest — the outcome is mathematically locked.", featuredEvent:"One more runout tick.", territories:{A:17,B:12}, units:[unit("A-siege","A",3,-1,3,7,"siege","E")], aStatus:"observing", bStatus:"acting", aMs:4050, bMs:4290, aReason:"Hold shape; Red's turn.", bReason:"Time the final tick.", side:"B", move:"Red passes.", detail:"No change.", control:{"-3,0":"A","-3,1":"A","-3,2":"A","-3,3":"A","-2,-1":"A","-2,0":"A","-2,1":"A","0,3":"B","2,0":"A","2,1":"B","3,-3":"B","3,-2":"B","3,-1":"A","3,0":"B","-1,0":"A","1,0":"B","2,-1":"B","-1,-1":"A","1,1":"A","-1,1":"A","-2,2":"A","1,-1":"B","2,-2":"B","-1,2":"A","1,-2":"B","0,1":"A","0,-1":"B","0,2":"A","0,-2":"B"} },
+  { turn:45, phase:"Endgame", pressure:33, headline:"Blue pushes deeper into red territory, claiming another hex.", featuredEvent:"The margin becomes a shutout.", territories:{A:18,B:11}, units:[unit("A-siege","A",3,-2,3,7,"siege","E")], aStatus:"acting", bStatus:"observing", aMs:4140, bMs:4385, aReason:"Keep converting; every hex matters for rating.", bReason:"Watch Blue's commit; plan counter.", side:"A", move:"Siege advances to hills.", detail:"Another red hex flips.", control:{"-3,0":"A","-3,1":"A","-3,2":"A","-3,3":"A","-2,-1":"A","-2,0":"A","-2,1":"A","0,3":"B","2,0":"A","2,1":"B","3,-3":"B","3,-2":"A","3,-1":"A","3,0":"B","-1,0":"A","1,0":"B","2,-1":"B","-1,-1":"A","1,1":"A","-1,1":"A","-2,2":"A","1,-1":"B","2,-2":"B","-1,2":"A","1,-2":"B","0,1":"A","0,-1":"B","0,2":"A","0,-2":"B"} },
+  { turn:46, phase:"Endgame", pressure:30, headline:"Red is out of options — it's just counting now.", featuredEvent:"Passive tick while Blue scores.", territories:{A:18,B:11}, units:[unit("A-siege","A",3,-2,3,7,"siege","E")], aStatus:"observing", bStatus:"acting", aMs:4230, bMs:4480, aReason:"Hold shape; Red's turn.", bReason:"Nothing left.", side:"B", move:"Red passes.", detail:"No change.", control:{"-3,0":"A","-3,1":"A","-3,2":"A","-3,3":"A","-2,-1":"A","-2,0":"A","-2,1":"A","0,3":"B","2,0":"A","2,1":"B","3,-3":"B","3,-2":"A","3,-1":"A","3,0":"B","-1,0":"A","1,0":"B","2,-1":"B","-1,-1":"A","1,1":"A","-1,1":"A","-2,2":"A","1,-1":"B","2,-2":"B","-1,2":"A","1,-2":"B","0,1":"A","0,-1":"B","0,2":"A","0,-2":"B"} },
+  { turn:47, phase:"Endgame", pressure:27, headline:"Blue circles back to consolidate the center of red's original zone.", featuredEvent:"Blue tightens its grip.", territories:{A:19,B:10}, units:[unit("A-siege","A",2,-1,3,7,"siege","E")], aStatus:"acting", bStatus:"observing", aMs:4320, bMs:4575, aReason:"Shore up central control before the cap.", bReason:"Watch Blue's commit; plan counter.", side:"A", move:"Siege returns to plains.", detail:"Control consolidated.", control:{"-3,0":"A","-3,1":"A","-3,2":"A","-3,3":"A","-2,-1":"A","-2,0":"A","-2,1":"A","0,3":"B","2,0":"A","2,1":"B","3,-3":"B","3,-2":"A","3,-1":"A","3,0":"B","-1,0":"A","1,0":"B","2,-1":"A","-1,-1":"A","1,1":"A","-1,1":"A","-2,2":"A","1,-1":"B","2,-2":"B","-1,2":"A","1,-2":"B","0,1":"A","0,-1":"B","0,2":"A","0,-2":"B"} },
+  { turn:48, phase:"Victory Lock", pressure:25, headline:"Red has no remaining units. The match ends on territory control by Blue.", featuredEvent:"Engine calls it. Territory victory, Blue.", territories:{A:19,B:10}, units:[unit("A-siege","A",2,-1,3,7,"siege","E")], aStatus:"observing", bStatus:"acting", aMs:4410, bMs:4670, aReason:"Hold shape; Red's turn.", bReason:"The duel was decided two phases ago.", side:"B", move:"Match ends on turn cap — territory decides.", detail:"Blue wins on map share.", control:{"-3,0":"A","-3,1":"A","-3,2":"A","-3,3":"A","-2,-1":"A","-2,0":"A","-2,1":"A","0,3":"B","2,0":"A","2,1":"B","3,-3":"B","3,-2":"A","3,-1":"A","3,0":"B","-1,0":"A","1,0":"B","2,-1":"A","-1,-1":"A","1,1":"A","-1,1":"A","-2,2":"A","1,-1":"B","2,-2":"B","-1,2":"A","1,-2":"B","0,1":"A","0,-1":"B","0,2":"A","0,-2":"B"} }
 ];
 
 export function buildDemoFrames() {
-  const frames = [];
-  const first = STEPS[0];
-
-  frames.push({
-    type: "HELLO",
+  const frames = [{
+    type: "MATCH_HELLO",
     mode: "demo",
     matchId: DEMO_MATCH_ID,
-    state: state(first),
-  });
-
+    projection: buildProjection(STEPS[0], 0),
+  }];
   STEPS.forEach((step, index) => {
+    const projection = buildProjection(step, index);
     if (index > 0) {
-      frames.push({
-        type: "STATE",
-        mode: "demo",
-        state: state(step),
-      });
+      frames.push({ type: "MATCH_STATE", mode: "demo", matchId: DEMO_MATCH_ID, projection });
     }
-
-    frames.push({
-      type: "EVENT",
-      event: step.event,
-    });
+    frames.push({ type: "MATCH_EVENT", mode: "demo", matchId: DEMO_MATCH_ID, event: buildEvent(step, index), projection });
   });
-
-  const last = STEPS.at(-1);
+  const outcome = { winner: "A", reason: "territory_control" };
   frames.push({
-    type: "END",
+    type: "MATCH_END",
     mode: "demo",
-    winner: "A",
-    reason: "territory_control",
-    state: state(last),
+    matchId: DEMO_MATCH_ID,
+    outcome,
+    projection: buildProjection(STEPS.at(-1), STEPS.length - 1, outcome),
   });
-
   return frames;
 }
 
 export function playDemoReplay(handlers = {}, opts = {}) {
   const frames = buildDemoFrames();
   const stepMs = opts.stepMs ?? STEP_MS;
-  let timer = null;
   let index = 0;
   let paused = false;
+  let timer = null;
 
   const emit = () => {
     if (paused || index >= frames.length) return;
     const frame = frames[index++];
     handlers.onFrame?.(frame, { index, total: frames.length });
-    if (frame.type === "HELLO") handlers.onHello?.(frame);
-    if (frame.type === "STATE") handlers.onState?.(frame);
-    if (frame.type === "EVENT") handlers.onEvent?.(frame);
-    if (frame.type === "END") handlers.onEnd?.(frame);
-    if (index < frames.length && !paused) {
-      timer = setTimeout(emit, stepMs);
-    }
+    if (frame.type === "MATCH_HELLO") handlers.onHello?.(frame);
+    if (frame.type === "MATCH_STATE") handlers.onState?.(frame);
+    if (frame.type === "MATCH_EVENT") handlers.onEvent?.(frame);
+    if (frame.type === "MATCH_END") handlers.onEnd?.(frame);
+    if (index < frames.length && !paused) timer = setTimeout(emit, stepMs);
   };
 
   const start = () => {
@@ -618,29 +165,11 @@ export function playDemoReplay(handlers = {}, opts = {}) {
   };
 
   start();
-
   return {
-    disconnect() {
-      clearTimeout(timer);
-      paused = true;
-    },
-    pause() {
-      paused = true;
-      clearTimeout(timer);
-    },
-    resume() {
-      if (!paused) return;
-      paused = false;
-      start();
-    },
-    restart() {
-      clearTimeout(timer);
-      paused = false;
-      index = 0;
-      start();
-    },
-    getFrames() {
-      return frames.slice();
-    },
+    disconnect() { paused = true; clearTimeout(timer); },
+    pause() { paused = true; clearTimeout(timer); },
+    resume() { if (!paused) return; paused = false; start(); },
+    restart() { paused = false; index = 0; start(); },
+    getFrames() { return frames.slice(); },
   };
 }

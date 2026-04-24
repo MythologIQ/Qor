@@ -5,11 +5,11 @@ import type { RoundPlan, MatchState } from "../../src/shared/types";
 function makeState(units: MatchState["units"]): MatchState {
   return {
     turn: 1,
-    yourTurn: true,
     visible: [],
     units,
     score: { a: 0, b: 0 },
     deadline: 0,
+    roundCap: 48,
   };
 }
 
@@ -48,7 +48,7 @@ test("validateRoundPlan: ap exceeds pool rejects", () => {
   expect(validateRoundPlan(plan, "A", state, makeBudget())).toEqual({ ok: false, reason: "ap_exceeds_pool" });
 });
 
-test("validateRoundPlan: duplicate extras rejects", () => {
+test("validateRoundPlan: duplicate extras rejects (before extras-disallowed)", () => {
   const state = makeState([
     { id: "u1", owner: "A", position: { q: 0, r: 0, s: 0 }, strength: 1, hp: 1, type: "infantry" },
   ]);
@@ -62,7 +62,7 @@ test("validateRoundPlan: duplicate extras rejects", () => {
   expect(validateRoundPlan(plan, "A", state, makeBudget())).toEqual({ ok: false, reason: "duplicate_extra_on_unit:u1" });
 });
 
-test("validateRoundPlan: full valid plan passes", () => {
+test("validateRoundPlan: full valid plan with empty extras passes", () => {
   const state = makeState([
     { id: "u1", owner: "A", position: { q: 0, r: 0, s: 0 }, strength: 1, hp: 1, type: "infantry" },
     { id: "u2", owner: "A", position: { q: 2, r: 0, s: -2 }, strength: 1, hp: 1, type: "scout" },
@@ -70,7 +70,7 @@ test("validateRoundPlan: full valid plan passes", () => {
   const plan: RoundPlan = {
     bid: 1,
     freeMove: { unitId: "u1", from: { q: 0, r: 0, s: 0 }, to: { q: 2, r: 0, s: -2 } },
-    extras: [{ kind: "boosted_ability", unitId: "u2" }],
+    extras: [],
   };
   expect(validateRoundPlan(plan, "A", state, makeBudget())).toEqual({ ok: true });
 });

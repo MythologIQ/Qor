@@ -1,8 +1,7 @@
-// Base Agent Interface
-// HexaWars Agent Contract v1
-// Agent tier: base
+// Base Agent Interface — HexaWars Agent Contract (Plan D v2)
+// Agents emit a RoundPlan per round given the current state + AP budget.
 
-import type { AgentAction, MatchState } from '../shared/types';
+import type { MatchState, RoundPlan, AgentRoundBudget } from '../shared/types';
 
 export abstract class BaseAgent {
   readonly id: string;
@@ -14,24 +13,24 @@ export abstract class BaseAgent {
   }
 
   /**
-   * decide is called when it is the agent's turn.
-   * @param state Current match state (yourTurn is guaranteed true when called)
-   * @returns AgentAction to send to the game server
+   * Called once per round. Return a RoundPlan the runner will submit.
+   * Agents are expected to bid ≤ budget.apPool and leave extras as [].
    */
-  abstract decide(state: MatchState): AgentAction | Promise<AgentAction>;
+  abstract getRoundPlan(
+    state: MatchState,
+    budget: AgentRoundBudget,
+  ): RoundPlan | Promise<RoundPlan>;
 
-  /**
-   * Optional lifecycle hook called when the agent receives game metadata.
-   */
+  decide(state: MatchState, budget: AgentRoundBudget = {
+    freeMove: 1,
+    freeAction: 1,
+    apPool: 3,
+    apCarry: 0,
+  }): RoundPlan | Promise<RoundPlan> {
+    return this.getRoundPlan(state, budget);
+  }
+
   onHello?(matchId: string, side: 'A' | 'B', seed: string): void;
-
-  /**
-   * Optional lifecycle hook called after each accepted action.
-   */
   onAck?(accepted: boolean, reason?: string): void;
-
-  /**
-   * Optional lifecycle hook called on game end.
-   */
-  onEnd?(winner: 'A' | 'B' | 'draw', reason: string): void;
+  onEnd?(winner: 'A' | 'B' | 'draw' | null, reason: string): void;
 }

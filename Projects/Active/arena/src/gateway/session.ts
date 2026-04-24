@@ -1,8 +1,6 @@
 // HexaWars Agent Session Manager
 // task-032-session-impl | phase C | reads: contract.ts
 
-import type { GameState } from '../shared/types';
-
 export type AgentSessionStatus = 'connected' | 'ready' | 'playing' | 'ended' | 'forfeit';
 
 export interface AgentMetrics {

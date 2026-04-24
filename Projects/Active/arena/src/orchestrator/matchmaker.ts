@@ -1,4 +1,4 @@
-import type { MatchState } from "../engine/match.ts";
+import type { MatchState } from "../shared/types.ts";
 import { createMatch } from "../engine/match.ts";
 
 export interface Matchmaker {

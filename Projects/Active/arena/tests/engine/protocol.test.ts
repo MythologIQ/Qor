@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { parseFrame, isValidFrame, sendFrame } from '../../src/gateway/protocol.js';
+import { parseFrame, isValidFrame } from '../../src/gateway/protocol.js';
 import type {
   HelloFrame,
   StateFrame,
@@ -7,13 +7,12 @@ import type {
   EventFrame,
   EndFrame,
   ReadyFrame,
-  ActionFrame,
+  PlanFrame,
 } from '../../src/gateway/contract.js';
 
 // ─── parseFrame ────────────────────────────────────────────────────────────
 
 describe('parseFrame', () => {
-  // HELLO frame
   test('parses valid HELLO frame', () => {
     const raw = JSON.stringify({
       type: 'HELLO',
@@ -22,8 +21,7 @@ describe('parseFrame', () => {
       seed: 'abc123',
       boardSize: { width: 11, height: 11 },
       timeBudgetMs: 5000,
-      turnCap: 100,
-      protocolVersion: '1.0',
+      protocolVersion: '2.0',
     } satisfies HelloFrame);
     const frame = parseFrame(raw);
     expect(frame).not.toBeNull();
@@ -32,25 +30,24 @@ describe('parseFrame', () => {
     expect((frame as HelloFrame).side).toBe('A');
   });
 
-  // STATE frame
   test('parses valid STATE frame', () => {
     const raw = JSON.stringify({
       type: 'STATE',
       turn: 5,
-      yourTurn: true,
       visible: [],
       units: [],
       score: { a: 0, b: 0 },
       deadline: Date.now() + 5000,
+      roundCap: 48,
+      budget: { freeMove: 1, freeAction: 1, apPool: 3, apCarry: 0 },
     } satisfies StateFrame);
     const frame = parseFrame(raw);
     expect(frame).not.toBeNull();
     expect((frame as StateFrame).type).toBe('STATE');
     expect((frame as StateFrame).turn).toBe(5);
-    expect((frame as StateFrame).yourTurn).toBe(true);
+    expect((frame as StateFrame).roundCap).toBe(48);
   });
 
-  // ACK frame
   test('parses valid ACK frame with accepted true', () => {
     const raw = JSON.stringify({ type: 'ACK', accepted: true } satisfies AckFrame);
     const frame = parseFrame(raw);
@@ -63,15 +60,14 @@ describe('parseFrame', () => {
     const raw = JSON.stringify({
       type: 'ACK',
       accepted: false,
-      reason: 'invalid_action',
+      reason: 'invalid_plan',
     } satisfies AckFrame);
     const frame = parseFrame(raw);
     expect(frame).not.toBeNull();
     expect((frame as AckFrame).accepted).toBe(false);
-    expect((frame as AckFrame).reason).toBe('invalid_action');
+    expect((frame as AckFrame).reason).toBe('invalid_plan');
   });
 
-  // EVENT frame
   test('parses valid EVENT frame', () => {
     const raw = JSON.stringify({
       type: 'EVENT',
@@ -85,7 +81,6 @@ describe('parseFrame', () => {
     expect((frame as EventFrame).event).toBe('unit_moved');
   });
 
-  // END frame
   test('parses valid END frame', () => {
     const raw = JSON.stringify({
       type: 'END',
@@ -105,7 +100,7 @@ describe('parseFrame', () => {
     const raw = JSON.stringify({
       type: 'END',
       winner: 'draw',
-      reason: 'turn_cap',
+      reason: 'round_cap',
       finalScore: { a: 5, b: 5 },
       metrics: { totalActions: 100, avgDecisionMs: 80, invalidActions: 0 },
     } satisfies EndFrame);
@@ -114,7 +109,6 @@ describe('parseFrame', () => {
     expect((frame as EndFrame).winner).toBe('draw');
   });
 
-  // READY frame
   test('parses valid READY frame', () => {
     const raw = JSON.stringify({
       type: 'READY',
@@ -127,48 +121,49 @@ describe('parseFrame', () => {
     expect((frame as ReadyFrame).agentId).toBe('agent-alpha');
   });
 
-  // ACTION frame
-  test('parses valid ACTION frame with move', () => {
+  test('parses valid PLAN frame with move', () => {
     const raw = JSON.stringify({
-      type: 'ACTION',
-      action: 'move',
-      from: { q: 0, r: 0, s: 0 },
-      to: { q: 1, r: -1, s: 0 },
+      type: 'PLAN',
+      plan: {
+        bid: 0,
+        extras: [],
+        freeMove: { unitId: 'u1', from: { q: 0, r: 0, s: 0 }, to: { q: 1, r: -1, s: 0 } },
+      },
       confidence: 0.95,
-    } satisfies ActionFrame);
+    } satisfies PlanFrame);
     const frame = parseFrame(raw);
     expect(frame).not.toBeNull();
-    expect((frame as ActionFrame).type).toBe('ACTION');
-    expect((frame as ActionFrame).action).toBe('move');
+    expect((frame as PlanFrame).type).toBe('PLAN');
   });
 
-  test('parses valid ACTION frame with attack', () => {
+  test('parses valid PLAN frame with attack', () => {
     const raw = JSON.stringify({
-      type: 'ACTION',
-      action: 'attack',
-      from: { q: 2, r: -1, s: -1 },
-      to: { q: 3, r: -2, s: -1 },
+      type: 'PLAN',
+      plan: {
+        bid: 2,
+        extras: [],
+        freeAction: { unitId: 'u2', type: 'attack', from: { q: 2, r: -1, s: -1 }, to: { q: 3, r: -2, s: -1 } },
+      },
       confidence: 0.8,
       metadata: { reasoning: 'eliminate enemy unit' },
-    } satisfies ActionFrame);
+    } satisfies PlanFrame);
     const frame = parseFrame(raw);
     expect(frame).not.toBeNull();
-    expect((frame as ActionFrame).action).toBe('attack');
-    expect((frame as ActionFrame).metadata?.reasoning).toBe('eliminate enemy unit');
+    expect((frame as PlanFrame).plan.freeAction?.type).toBe('attack');
+    expect((frame as PlanFrame).metadata?.reasoning).toBe('eliminate enemy unit');
   });
 
-  test('parses valid ACTION frame with pass', () => {
+  test('parses valid PLAN frame with pass (bid 0)', () => {
     const raw = JSON.stringify({
-      type: 'ACTION',
-      action: 'pass',
+      type: 'PLAN',
+      plan: { bid: 0, extras: [] },
       confidence: 1.0,
-    } satisfies ActionFrame);
+    } satisfies PlanFrame);
     const frame = parseFrame(raw);
     expect(frame).not.toBeNull();
-    expect((frame as ActionFrame).action).toBe('pass');
+    expect((frame as PlanFrame).plan.bid).toBe(0);
   });
 
-  // Malformed frames
   test('rejects null input', () => {
     expect(parseFrame('null')).toBeNull();
   });
@@ -198,7 +193,7 @@ describe('parseFrame', () => {
     expect((frame as HelloFrame).type).toBe('HELLO');
   });
 
-  test('rejects Buffer encoding', () => {
+  test('accepts Buffer encoding', () => {
     const buf = Buffer.from('{"type":"HELLO"}');
     const frame = parseFrame(buf);
     expect(frame).not.toBeNull();
@@ -222,8 +217,7 @@ describe('isValidFrame', () => {
       seed: 'seed456',
       boardSize: { width: 11, height: 11 },
       timeBudgetMs: 3000,
-      turnCap: 200,
-      protocolVersion: '1.0',
+      protocolVersion: '2.0',
     };
     expect(isValidFrame(frame)).toBe(true);
   });
@@ -232,12 +226,11 @@ describe('isValidFrame', () => {
     const frame = {
       type: 'HELLO',
       matchId: 'match-xyz',
-      side: 'C', // invalid
+      side: 'C',
       seed: 'seed456',
       boardSize: { width: 11, height: 11 },
       timeBudgetMs: 3000,
-      turnCap: 200,
-      protocolVersion: '1.0',
+      protocolVersion: '2.0',
     };
     expect(isValidFrame(frame)).toBe(false);
   });
@@ -248,10 +241,8 @@ describe('isValidFrame', () => {
       matchId: 'match-xyz',
       side: 'A',
       seed: 'seed456',
-      // boardSize missing
       timeBudgetMs: 3000,
-      turnCap: 200,
-      protocolVersion: '1.0',
+      protocolVersion: '2.0',
     };
     expect(isValidFrame(frame)).toBe(false);
   });
@@ -260,11 +251,12 @@ describe('isValidFrame', () => {
     const frame: StateFrame = {
       type: 'STATE',
       turn: 1,
-      yourTurn: false,
       visible: [],
       units: [],
       score: { a: 1, b: 2 },
       deadline: Date.now() + 1000,
+      roundCap: 48,
+      budget: { freeMove: 1, freeAction: 1, apPool: 3, apCarry: 0 },
     };
     expect(isValidFrame(frame)).toBe(true);
   });
@@ -273,11 +265,12 @@ describe('isValidFrame', () => {
     const frame = {
       type: 'STATE',
       turn: 1,
-      yourTurn: false,
       visible: 'not-array',
       units: [],
       score: { a: 1, b: 2 },
       deadline: Date.now(),
+      roundCap: 48,
+      budget: { freeMove: 1, freeAction: 1, apPool: 3, apCarry: 0 },
     };
     expect(isValidFrame(frame)).toBe(false);
   });
@@ -317,42 +310,35 @@ describe('isValidFrame', () => {
     expect(isValidFrame(frame)).toBe(true);
   });
 
-  test('accepts valid ACTION frame move', () => {
-    const frame: ActionFrame = {
-      type: 'ACTION',
-      action: 'move',
-      from: { q: 0, r: 0, s: 0 },
-      to: { q: -1, r: 1, s: 0 },
+  test('accepts valid PLAN frame move', () => {
+    const frame: PlanFrame = {
+      type: 'PLAN',
+      plan: {
+        bid: 0,
+        extras: [],
+        freeMove: { unitId: 'u1', from: { q: 0, r: 0, s: 0 }, to: { q: -1, r: 1, s: 0 } },
+      },
       confidence: 0.9,
     };
     expect(isValidFrame(frame)).toBe(true);
   });
 
-  test('accepts valid ACTION frame pass', () => {
-    const frame: ActionFrame = {
-      type: 'ACTION',
-      action: 'pass',
+  test('accepts valid PLAN frame pass', () => {
+    const frame: PlanFrame = {
+      type: 'PLAN',
+      plan: { bid: 0, extras: [] },
       confidence: 1.0,
     };
     expect(isValidFrame(frame)).toBe(true);
   });
 
-  test('rejects ACTION frame with invalid action type', () => {
+  test('rejects PLAN frame with missing plan.bid', () => {
     const frame = {
-      type: 'ACTION',
-      action: 'teleport', // invalid
+      type: 'PLAN',
+      plan: { extras: [] },
       confidence: 0.5,
     };
     expect(isValidFrame(frame)).toBe(false);
-  });
-
-  test('rejects ACTION frame with out-of-range confidence', () => {
-    const frame: ActionFrame = {
-      type: 'ACTION',
-      action: 'pass',
-      confidence: 1.5, // should be 0-1
-    };
-    expect(isValidFrame(frame)).toBe(true); // validation is structural, not range
   });
 
   test('rejects null input', () => {
@@ -379,26 +365,12 @@ describe('version mismatch', () => {
     const frame: EndFrame = {
       type: 'END',
       winner: 'A',
-      reason: 'timeout', // used as version mismatch signal
+      reason: 'timeout',
       finalScore: { a: 0, b: 0 },
       metrics: { totalActions: 0, avgDecisionMs: 0, invalidActions: 0 },
     };
     expect(isValidFrame(frame)).toBe(true);
     expect(parseFrame(JSON.stringify(frame))?.type).toBe('END');
-  });
-
-  test('server signals version mismatch via END frame reason field', () => {
-    // When client sends READY with mismatched protocolVersion,
-    // server responds with END(reason: 'timeout') to indicate incompatibility
-    const mismatchEnd: EndFrame = {
-      type: 'END',
-      winner: 'A',
-      reason: 'timeout',
-      finalScore: { a: 0, b: 0 },
-      metrics: { totalActions: 0, avgDecisionMs: 0, invalidActions: 0 },
-    };
-    expect(mismatchEnd.reason).toBe('timeout');
-    expect(isValidFrame(mismatchEnd)).toBe(true);
   });
 });
 
@@ -413,10 +385,8 @@ describe('round-trip sendFrame then parseFrame', () => {
       seed: 's3cr3t',
       boardSize: { width: 11, height: 11 },
       timeBudgetMs: 4000,
-      turnCap: 150,
-      protocolVersion: '1.0',
+      protocolVersion: '2.0',
     };
-    // sendFrame uses JSON.stringify internally; simulate with parseFrame
     const serialized = JSON.stringify(hello);
     const parsed = parseFrame(serialized);
     expect(parsed).toEqual(hello);
@@ -426,11 +396,12 @@ describe('round-trip sendFrame then parseFrame', () => {
     const state: StateFrame = {
       type: 'STATE',
       turn: 10,
-      yourTurn: true,
       visible: [],
       units: [],
       score: { a: 5, b: 3 },
       deadline: 1700000000000,
+      roundCap: 48,
+      budget: { freeMove: 1, freeAction: 1, apPool: 3, apCarry: 0 },
     };
     const parsed = parseFrame(JSON.stringify(state));
     expect(parsed).toEqual(state);
@@ -440,7 +411,7 @@ describe('round-trip sendFrame then parseFrame', () => {
     const ack: AckFrame = {
       type: 'ACK',
       accepted: false,
-      reason: 'out_of_range',
+      reason: 'invalid_plan',
     };
     const parsed = parseFrame(JSON.stringify(ack));
     expect(parsed).toEqual(ack);
@@ -467,16 +438,18 @@ describe('round-trip sendFrame then parseFrame', () => {
     expect(parsed).toEqual(ready);
   });
 
-  test('ACTION with metadata round-trip', () => {
-    const action: ActionFrame = {
-      type: 'ACTION',
-      action: 'attack',
-      from: { q: 1, r: 0, s: -1 },
-      to: { q: 2, r: 0, s: -2 },
+  test('PLAN with metadata round-trip', () => {
+    const plan: PlanFrame = {
+      type: 'PLAN',
+      plan: {
+        bid: 1,
+        extras: [],
+        freeAction: { unitId: 'u1', type: 'attack', from: { q: 1, r: 0, s: -1 }, to: { q: 2, r: 0, s: -2 } },
+      },
       confidence: 0.75,
       metadata: { reasoning: 'high-value target', urgency: 'high' },
     };
-    const parsed = parseFrame(JSON.stringify(action));
-    expect(parsed).toEqual(action);
+    const parsed = parseFrame(JSON.stringify(plan));
+    expect(parsed).toEqual(plan);
   });
 });

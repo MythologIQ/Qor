@@ -1,59 +1,90 @@
 import type { Database } from "bun:sqlite";
-import type { MatchRecord, AgentAction, MatchState, MatchEvent } from "../shared/types.ts";
-import { createMatch, stepMatch, computeMatchHash } from "../engine/match.ts";
-import { saveMatch, appendEvents, updateForfeit, updateMatchOutcome } from "../persistence/match-store.ts";
-import type { RunnerContext, AgentChannel, RunnerResult } from "./types.ts";
+import type { MatchRecord, MatchState, AgentRoundBudget, RoundPlan } from "../shared/types.ts";
+import { createMatch } from "../engine/match.ts";
+import { runRound } from "../engine/roundDriver.ts";
+import { newBudget, PASS_PLAN } from "../engine/round-state.ts";
+import { ROUND_CAP } from "../engine/constants.ts";
+import { validateRoundPlan } from "../gateway/validator.ts";
+import { checkVictory } from "../engine/victory.ts";
+import {
+  saveMatch,
+  appendEvents,
+  updateForfeit,
+  updateMatchOutcome,
+} from "../persistence/match-store.ts";
+import type {
+  RunnerContext,
+  AgentChannel,
+  RunnerResult,
+  MatchConclusionReason,
+} from "./types.ts";
 
 const DEFAULT_TURN_TIMEOUT_MS = 5000;
 
-function withTimeout<T>(promise: Promise<T>, ms: number, onTimeout: () => T): Promise<T> {
+function withTimeout<T>(promise: Promise<T>, ms: number): Promise<{ ok: true; value: T } | { ok: false }> {
   return Promise.race([
-    promise,
-    new Promise<T>((_, reject) => setTimeout(() => reject("TIMEOUT"), ms)),
-  ]).catch((err) => {
-    if (err === "TIMEOUT") return onTimeout();
-    throw err;
-  }) as Promise<T>;
+    promise.then((value) => ({ ok: true as const, value })),
+    new Promise<{ ok: false }>((resolve) => setTimeout(() => resolve({ ok: false }), ms)),
+  ]);
 }
 
-/** Temporary match engine facade — replaces the full engine stub for turn dispatch. */
-class TurnEngine {
-  private _state: MatchState;
-  private _actions: { a: AgentAction | null; b: AgentAction | null } = { a: null, b: null };
-  private _done = false;
-  private _maxTurns: number;
+function isRoundPlanMessage(message: unknown): message is { plan: RoundPlan } {
+  return Boolean(
+    message &&
+    typeof message === "object" &&
+    "plan" in message &&
+    (message as { plan?: unknown }).plan &&
+    typeof (message as { plan?: RoundPlan }).plan?.bid === "number",
+  );
+}
 
-  constructor(seed: string, sideA: string, sideB: string, maxTurns = 50) {
-    this._state = createMatch(seed, sideA, sideB);
-    this._maxTurns = maxTurns;
-  }
+function isLegacyActionMessage(message: unknown): message is { action: { type: string } } {
+  return Boolean(
+    message &&
+    typeof message === "object" &&
+    "action" in message &&
+    typeof (message as { action?: { type?: unknown } }).action?.type === "string",
+  );
+}
 
-  get state(): MatchState {
-    return this._state;
-  }
+function actionToRoundPlan(message: { action: { type: string } }): RoundPlan {
+  const action = message.action;
+  if (action.type === "pass") return PASS_PLAN;
+  return PASS_PLAN;
+}
 
-  get publicState(): MatchState {
-    return this._state;
+function receivePlanFromChannel(channel: AgentChannel): Promise<RoundPlan> {
+  if (channel.receivePlan) {
+    return channel.receivePlan();
   }
+  if (channel.onMessage) {
+    return new Promise<RoundPlan>((resolve) => {
+      channel.onMessage?.((message) => {
+        if (isRoundPlanMessage(message)) {
+          resolve(message.plan);
+          return;
+        }
+        if (isLegacyActionMessage(message)) {
+          resolve(actionToRoundPlan(message));
+          return;
+        }
+        resolve(PASS_PLAN);
+      });
+    });
+  }
+  return Promise.resolve(PASS_PLAN);
+}
 
-  setActions(a: AgentAction, b: AgentAction): void {
-    this._actions = { a, b };
+function sendRoundFrame(
+  channel: AgentChannel,
+  state: MatchState,
+  budget: AgentRoundBudget,
+): void {
+  if (channel.receivePlan) {
+    channel.send({ state, budget });
+    return;
   }
-
-  get done(): boolean {
-    return this._done;
-  }
-
-  tick(): void {
-    if (this._done) return;
-    const result = stepMatch(this._state, this._actions.a!, this._actions.b!);
-    this._state = result.state;
-    this._actions = { a: null, b: null };
-    this._state.yourTurn = !this._state.yourTurn;
-    if (result.ended || this._state.turn >= this._maxTurns) {
-      this._done = true;
-    }
-  }
+  channel.send(state as unknown as { state: MatchState; budget: AgentRoundBudget });
 }
 
 export class MatchRunner {
@@ -74,162 +105,115 @@ export class MatchRunner {
       outcome: null,
       createdAt: Date.now(),
     };
-
     saveMatch(this.db, { ...matchRecord, originTag: "ladder" });
 
-    const engine = new TurnEngine(ctx.matchId, String(ctx.a.id), String(ctx.b.id));
-    const MAX_TURNS = 50; // hard cap — prevents infinite loops when agents only play pass
+    let state: MatchState = createMatch(ctx.matchId, String(ctx.a.id), String(ctx.b.id));
+    let budgetA: AgentRoundBudget = newBudget();
+    let budgetB: AgentRoundBudget = newBudget();
+    let round = 0;
     let seq = 0;
 
-    // Forfeit guard: if either channel closes mid-match, the other player wins by forfeit
-    let forfeitResult: RunnerResult | null = null;
-    const timedOutOperatorId = (timedOutSide: "A" | "B"): number | null =>
-      timedOutSide === "A" ? ctx.b.id : ctx.a.id;
-
-    // Attach close listeners before match loop begins
+    let forfeitWinnerId: number | null = null;
     channels.a.onClose?.(() => {
-      forfeitResult = { winnerOperatorId: ctx.b.id, reason: "forfeit" };
+      forfeitWinnerId = ctx.b.id;
     });
     channels.b.onClose?.(() => {
-      forfeitResult = { winnerOperatorId: ctx.a.id, reason: "forfeit" };
+      forfeitWinnerId = ctx.a.id;
     });
 
-    do {
-      // Check if a channel closed mid-match (forfeit) — poll closed flag synchronously
-      // in addition to the async onClose callback which may not have fired yet
+    while (true) {
       if (channels.a.closed || channels.b.closed) {
         const winnerId = channels.a.closed ? ctx.b.id : ctx.a.id;
-        updateForfeit(this.db, ctx.matchId, JSON.stringify({ winnerOperatorId: winnerId, reason: "forfeit" }), "ladder");
-        return { winnerOperatorId: winnerId, reason: "forfeit" };
+        return this.endForfeit(ctx.matchId, winnerId);
       }
-      // Check async forfeit result from onClose callback
-      if (forfeitResult) {
-        updateForfeit(this.db, ctx.matchId, JSON.stringify({ winnerOperatorId: forfeitResult.winnerOperatorId, reason: "forfeit" }), "ladder");
-        return forfeitResult;
+      if (forfeitWinnerId !== null) {
+        return this.endForfeit(ctx.matchId, forfeitWinnerId);
       }
-
-      // Hard termination: if we've hit the turn cap, end as a draw so the test
-      // doesn't hang when agents play only pass actions or no victor emerges.
-      if (engine.state.turn >= MAX_TURNS) {
-        updateMatchOutcome(
-          this.db,
-          ctx.matchId,
-          JSON.stringify({ winnerOperatorId: null, reason: "timeout" }),
-          null,
-          "ladder",
-        );
-        return { winnerOperatorId: null, reason: "timeout" };
+      if (round >= ROUND_CAP) {
+        return this.endTimeout(ctx.matchId, null);
       }
 
-      const isATurn = engine.state.yourTurn;
-      const activeChannel = isATurn ? channels.a : channels.b;
-      const waitingChannel = isATurn ? channels.b : channels.a;
-      const activeSide: "A" | "B" = isATurn ? "A" : "B";
+      const publicState: MatchState = { ...state, roundCap: ROUND_CAP };
+      sendRoundFrame(channels.a, publicState, budgetA);
+      sendRoundFrame(channels.b, publicState, budgetB);
 
-      activeChannel.send(engine.publicState);
+      const [resA, resB] = await Promise.all([
+        withTimeout(receivePlanFromChannel(channels.a), turnTimeoutMs),
+        withTimeout(receivePlanFromChannel(channels.b), turnTimeoutMs),
+      ]);
 
-      let action: AgentAction;
-      let timedOut = false;
-
-      try {
-        action = await withTimeout(
-          new Promise<AgentAction>((resolve) => {
-            if (typeof activeChannel.onMessage === "function") {
-              activeChannel.onMessage((msg: unknown) => {
-                resolve(((msg as any)?.action) ?? { type: "pass", confidence: 1 });
-              });
-            } else {
-              resolve({ type: "pass", confidence: 1 });
-            }
-          }),
-          turnTimeoutMs,
-          () => {
-            timedOut = true;
-            return { type: "pass", confidence: 0 };
-          },
-        );
-      } catch {
-        timedOut = true;
-        action = { type: "pass", confidence: 0 };
+      if (!resA.ok || !resB.ok) {
+        if (!resA.ok && !resB.ok) return this.endTimeout(ctx.matchId, null);
+        if (!resA.ok) return this.endTimeout(ctx.matchId, ctx.b.id);
+        return this.endTimeout(ctx.matchId, ctx.a.id);
       }
 
-      if (timedOut) {
-        const winnerOpId = timedOutOperatorId(activeSide);
-        updateMatchOutcome(this.db, ctx.matchId, JSON.stringify({ winnerOperatorId: winnerOpId, reason: "timeout" }), winnerOpId, "ladder");
-        return { winnerOperatorId: winnerOpId, reason: "timeout" };
+      const planA = resA.value;
+      const planB = resB.value;
+
+      const invalidA = validateRoundPlan(planA, "A", state, budgetA);
+      if (!invalidA.ok) {
+        return this.endInvalidPlan(ctx.matchId, ctx.b.id, "A", invalidA.reason);
+      }
+      const invalidB = validateRoundPlan(planB, "B", state, budgetB);
+      if (!invalidB.ok) {
+        return this.endInvalidPlan(ctx.matchId, ctx.a.id, "B", invalidB.reason);
       }
 
-      const otherAction: AgentAction = await new Promise<AgentAction>((resolve) => {
-        if (typeof waitingChannel.onMessage === "function") {
-          const timer = setTimeout(
-            () => resolve({ type: "pass", confidence: 0 }),
-            turnTimeoutMs,
-          );
-          waitingChannel.onMessage((msg: unknown) => {
-            clearTimeout(timer);
-            resolve(((msg as any)?.action) ?? { type: "pass", confidence: 1 });
-          });
-        } else {
-          resolve({ type: "pass", confidence: 1 });
-        }
+      const result = runRound({
+        matchId: ctx.matchId, round, state,
+        planA, planB, budgetA, budgetB,
       });
+      state = result.nextState;
+      budgetA = result.nextBudgetA;
+      budgetB = result.nextBudgetB;
 
-      engine.setActions(isATurn ? action : otherAction, isATurn ? otherAction : action);
-      engine.tick();
-
-      // Hard termination guard: if we've exhausted the turn cap, end the match
-      // as a draw (timeout) rather than looping forever when agents play pass
-      // actions or the engine never produces a victory within maxTurns.
-      if (engine.state.turn >= MAX_TURNS) {
-        updateMatchOutcome(
-          this.db,
-          ctx.matchId,
-          JSON.stringify({ winnerOperatorId: null, reason: "timeout" }),
-          null,
-          "ladder",
-        );
-        return { winnerOperatorId: null, reason: "timeout" };
+      for (const ev of result.events) {
+        appendEvents(this.db, ctx.matchId, [{
+          seq, eventType: ev.type,
+          payload: JSON.stringify(ev.payload),
+          ts: Date.now(),
+        }]);
+        seq++;
       }
+      round++;
 
-      // Persist turn event immediately — small batch (one turn at a time)
-      const turnEvent: Omit<MatchEvent, "matchId"> = {
-        seq,
-        eventType: "turn_action",
-        payload: JSON.stringify({ turn: engine.state.turn, actionA: action, actionB: otherAction }),
-        ts: Date.now(),
-      };
-      appendEvents(this.db, ctx.matchId, [turnEvent]);
-      seq++;
-    } while (!engine.done);
-
-    const finalState = engine.state;
-    const { checkVictory } = require("../engine/victory.ts");
-    const victory = checkVictory(finalState);
-
-    let reason: MatchConclusionReason = "timeout";
-    let winnerOperatorId: number | null = null;
-
-    if (victory.winner === "A") {
-      winnerOperatorId = ctx.a.id;
-      reason = "decisive";
-    } else if (victory.winner === "B") {
-      winnerOperatorId = ctx.b.id;
-      reason = "decisive";
-    } else {
-      winnerOperatorId = null;
-      reason = "timeout";
+      if (result.ended) break;
     }
 
-    updateMatchOutcome(
-      this.db,
-      ctx.matchId,
-      JSON.stringify({ winnerOperatorId, reason }),
-      winnerOperatorId,
-      "ladder",
-    );
+    return this.endByVictory(ctx.matchId, state, ctx.a.id, ctx.b.id);
+  }
 
+  private endForfeit(matchId: string, winnerId: number | null): RunnerResult {
+    updateForfeit(this.db, matchId,
+      JSON.stringify({ winnerOperatorId: winnerId, reason: "forfeit" }),
+      "ladder");
+    return { winnerOperatorId: winnerId, reason: "forfeit" };
+  }
+
+  private endTimeout(matchId: string, winnerId: number | null): RunnerResult {
+    updateMatchOutcome(this.db, matchId,
+      JSON.stringify({ winnerOperatorId: winnerId, reason: "timeout" }),
+      winnerId, "ladder");
+    return { winnerOperatorId: winnerId, reason: "timeout" };
+  }
+
+  private endInvalidPlan(matchId: string, winnerId: number, loser: "A" | "B", reason: string): RunnerResult {
+    updateMatchOutcome(this.db, matchId,
+      JSON.stringify({ winnerOperatorId: winnerId, reason: "invalid_plan", loser, detail: reason }),
+      winnerId, "ladder");
+    return { winnerOperatorId: winnerId, reason: "invalid_plan" };
+  }
+
+  private endByVictory(matchId: string, state: MatchState, aId: number, bId: number): RunnerResult {
+    const victory = checkVictory(state);
+    let winnerOperatorId: number | null = null;
+    let reason: MatchConclusionReason = "timeout";
+    if (victory.winner === "A") { winnerOperatorId = aId; reason = "decisive"; }
+    else if (victory.winner === "B") { winnerOperatorId = bId; reason = "decisive"; }
+    updateMatchOutcome(this.db, matchId,
+      JSON.stringify({ winnerOperatorId, reason }),
+      winnerOperatorId, "ladder");
     return { winnerOperatorId, reason };
   }
 }
-
-type MatchConclusionReason = "decisive" | "timeout" | "forfeit";

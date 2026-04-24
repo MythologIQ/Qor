@@ -16,34 +16,28 @@ import {
   EmptyHandleError,
 } from "./identity/operator";
 import { registerAgentVersion } from "./identity/agent-version";
-import { getMatch, listMatchesByOperator, streamEvents } from "./persistence/match-store";
-import { getLeaderboard } from "./rank/leaderboard";
-import { createTournament, signup } from "./tournament/signup";
 import { matchQueue as _moduleMatchQueue } from "./matchmaker/queue";
 import { presenceTracker as _modulePresenceTracker } from "./matchmaker/presence";
 import { matchmakerMetrics } from "./matchmaker/metrics";
+import type { MatchmakerStatus } from "./matchmaker/status";
+import { matchmakerStatus as defaultMatchmakerStatus } from "./matchmaker/status";
 import { runnerMetrics } from "./runner/metrics";
-
-let lastPairAt: number | null = null;
-
-export function recordPair(): void {
-  lastPairAt = Date.now();
-}
-
-export function getLastPairAt(): number | null {
-  return lastPairAt;
-}
+import { mountMatchRoutes } from "./routes/matches";
+import { mountTournamentRoutes } from "./routes/tournaments";
+import { mountLeaderboardRoutes } from "./routes/leaderboard";
 
 export interface MountOpts {
   limiter?: RateLimiter;
   matchQueue?: MatchQueue;
   presence?: PresenceTracker;
+  status?: MatchmakerStatus;
 }
 
 export function mount(app: Hono, db: Database, opts: MountOpts = {}): void {
   const limiter = opts.limiter ?? createLimiter();
   const matchQueue = opts.matchQueue ?? _moduleMatchQueue;
   const presenceTracker = opts.presence ?? _modulePresenceTracker;
+  const status = opts.status ?? defaultMatchmakerStatus;
 
   app.get("/api/arena/status", (c) => {
     const matchCount = db
@@ -57,7 +51,7 @@ export function mount(app: Hono, db: Database, opts: MountOpts = {}): void {
       .get() as { count: number };
     const mmMetrics = matchmakerMetrics.snapshot();
     const runMetrics = runnerMetrics.snapshot();
-    const lastPair = getLastPairAt();
+    const lastPair = status.getLastPairAt();
     return c.json({
       queueSize: matchQueue.size(),
       onlineCount: presenceTracker.size(),
@@ -70,119 +64,9 @@ export function mount(app: Hono, db: Database, opts: MountOpts = {}): void {
     });
   });
 
-  app.get("/api/arena/matches", (c) => {
-    const rawLimit = c.req.query("limit");
-    const limit = rawLimit ? Math.min(Math.max(parseInt(rawLimit, 10), 1), 100) : 20;
-    const rows = db
-      .prepare(
-        `SELECT m.id, oa.handle AS operator_a, ob.handle AS operator_b,
-                m.outcome, m.created_at
-         FROM matches m
-         JOIN operators oa ON m.operator_a_id = oa.id
-         JOIN operators ob ON m.operator_b_id = ob.id
-         ORDER BY m.created_at DESC
-         LIMIT ?`,
-      )
-      .all(limit);
-    return c.json({ matches: rows });
-  });
-
   app.get("/api/arena/match/:id", (c) =>
     c.json({ stub: true, path: "/api/arena/match/:id", id: c.req.param("id") }),
   );
-
-  // ── Match read surface (Plan A v2, Phase 3) ──────────────────────────
-
-  app.get("/api/arena/matches/:id", (c) => {
-    const rec = getMatch(db, c.req.param("id"));
-    if (!rec) return c.json({ error: "not_found" }, 404);
-    return c.json(rec);
-  });
-
-  app.get("/api/arena/matches/:id/events", (c) => {
-    const id = c.req.param("id");
-    const rec = getMatch(db, id);
-    if (!rec) return c.json({ error: "not_found" }, 404);
-    const events = [];
-    for (const ev of streamEvents(db, id)) events.push(ev);
-    return c.json({ matchId: id, events });
-  });
-
-  app.get("/api/arena/matches/:id/stream", (c) => {
-    const id = c.req.param("id");
-    const rec = getMatch(db, id);
-    if (!rec) return c.json({ error: "not_found" }, 404);
-
-    let lastSeq = 0;
-    const events = [];
-    for (const ev of streamEvents(db, id)) {
-      lastSeq = ev.seq;
-      events.push(ev);
-    }
-
-    let sentInitial = false;
-    let closed = false;
-
-    const stream = new ReadableStream({
-      async start(controller) {
-        const enc = new TextEncoder();
-        function sendEvent(data: string) {
-          if (closed) return;
-          controller.enqueue(enc.encode(`data: ${JSON.stringify(data)}\n\n`));
-        }
-
-        // Send initial snapshot
-        sendEvent({ type: "snapshot", matchId: id, events });
-        sentInitial = true;
-
-        // Poll for new events every 1s
-        const poll = setInterval(() => {
-          if (closed) {
-            clearInterval(poll);
-            return;
-          }
-          const current = getMatch(db, id);
-          if (current?.outcome != null) {
-            clearInterval(poll);
-            sendEvent({ type: "match-end", matchId: id, outcome: current.outcome });
-            closed = true;
-            controller.close();
-            return;
-          }
-          const newEvents = [];
-          for (const ev of streamEvents(db, id)) {
-            if (ev.seq > lastSeq) {
-              lastSeq = ev.seq;
-              newEvents.push(ev);
-            }
-          }
-          if (newEvents.length > 0) {
-            sendEvent({ type: "update", events: newEvents });
-          }
-        }, 1000);
-      },
-      cancel() {
-        closed = true;
-      },
-    });
-
-    return new Response(stream, {
-      headers: {
-        "Content-Type": "text/event-stream",
-        "Cache-Control": "no-cache",
-        "Connection": "keep-alive",
-      },
-    });
-  });
-
-  app.get("/api/arena/operators/:handle/matches", (c) => {
-    const handle = c.req.param("handle");
-    const op = db
-      .prepare("SELECT id FROM operators WHERE handle_normalized = ?")
-      .get(handle.toLowerCase()) as { id: number } | undefined;
-    if (!op) return c.json({ error: "not_found" }, 404);
-    return c.json({ matches: listMatchesByOperator(db, op.id) });
-  });
 
   app.post("/api/arena/match", (c) =>
     c.json({ stub: true, path: "/api/arena/match" }),
@@ -203,15 +87,6 @@ export function mount(app: Hono, db: Database, opts: MountOpts = {}): void {
       totalOperators: operatorCount.count,
       completedMatches: completedCount.count,
     });
-  });
-
-  // ── Leaderboard route (Phase E rank store) ─────────────────────────────
-
-  app.get("/api/arena/leaderboard", (c) => {
-    const raw = c.req.query("limit");
-    const limit = raw ? Math.min(Math.max(parseInt(raw, 10), 1), 100) : 100;
-    const entries = getLeaderboard(db, limit);
-    return c.json({ entries });
   });
 
   // ── Identity routes (Plan A v2, Phase 2) ─────────────────────────────
@@ -320,7 +195,7 @@ export function mount(app: Hono, db: Database, opts: MountOpts = {}): void {
   });
 
   app.get("/api/arena/matchmaker/status", (c) => {
-    const lastPair = getLastPairAt();
+    const lastPair = status.getLastPairAt();
     const queueSize = matchQueue.size();
     const presenceCount = presenceTracker.size();
     return c.json({
@@ -330,68 +205,7 @@ export function mount(app: Hono, db: Database, opts: MountOpts = {}): void {
     });
   });
 
-  // ── Tournament routes (Phase E) ──────────────────────────────────────
-
-  app.post("/api/arena/tournaments", async (c) => {
-    const auth = c.req.header("authorization") ?? "";
-    const m = /^Bearer\s+(.+)$/i.exec(auth);
-    if (!m) return c.json({ error: "unauthorized" }, 401);
-    const operator = getOperatorByToken(db, m[1]);
-    if (!operator) return c.json({ error: "unauthorized" }, 401);
-
-    let body: { name?: unknown; startAt?: unknown };
-    try {
-      body = c.req.query("name") !== "" ? { name: c.req.query("name"), startAt: c.req.query("startAt") } : await c.req.json();
-    } catch {
-      return c.json({ error: "invalid_json" }, 400);
-    }
-    const name = typeof body.name === "string" ? body.name : "";
-    const startAt =
-      typeof body.startAt === "number"
-        ? body.startAt
-        : typeof body.startAt === "string"
-          ? parseInt(body.startAt, 10)
-          : 0;
-    if (!name) return c.json({ error: "name_required" }, 400);
-    if (!startAt) return c.json({ error: "startAt_required" }, 400);
-
-    const id = createTournament(db, name, startAt);
-    return c.json({ id, name, startAt }, 201);
-  });
-
-  app.post("/api/arena/tournaments/:id/signup", (c) => {
-    const auth = c.req.header("authorization") ?? "";
-    const m = /^Bearer\s+(.+)$/i.exec(auth);
-    if (!m) return c.json({ error: "unauthorized" }, 401);
-    const operator = getOperatorByToken(db, m[1]);
-    if (!operator) return c.json({ error: "unauthorized" }, 401);
-
-    const id = c.req.param("id");
-    const tournamentId = parseInt(id, 10);
-    if (!tournamentId) return c.json({ error: "invalid_id" }, 400);
-
-    const signupId = signup(db, tournamentId, operator.id);
-    return c.json({ signupId, tournamentId, operatorId: operator.id }, 201);
-  });
-
-  app.get("/api/arena/tournaments/:id", (c) => {
-    const id = c.req.param("id");
-    const tournamentId = parseInt(id, 10);
-    if (!tournamentId) return c.json({ error: "invalid_id" }, 400);
-
-    const row = db
-      .prepare("SELECT id, name, start_at AS startAt, status FROM tournaments WHERE id = ?")
-      .get(tournamentId) as { id: number; name: string; startAt: number; status: string } | undefined;
-    if (!row) return c.json({ error: "not_found" }, 404);
-
-    const signups = db
-      .prepare(
-        `SELECT ts.id, ts.operator_id, o.handle
-         FROM tournament_signups ts
-         JOIN operators o ON ts.operator_id = o.id
-         WHERE ts.tournament_id = ?`,
-      )
-      .all(tournamentId);
-    return c.json({ ...row, signups });
-  });
+  mountMatchRoutes(app, db);
+  mountTournamentRoutes(app, db);
+  mountLeaderboardRoutes(app, db);
 }

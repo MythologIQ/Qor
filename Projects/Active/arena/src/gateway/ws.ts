@@ -1,11 +1,11 @@
-// HexaWars WebSocket Handler
-// task-034-ws-handler | phase C | routes to sessionManager
+// HexaWars WebSocket Handler (Plan D v2)
 
 import type { Server as HTTPServer } from 'node:http';
 import { agentSessionManager } from './session.js';
 import { presenceTracker } from '../matchmaker/presence.js';
-import type { HelloFrame, ReadyFrame, ActionFrame, StateFrame, AckFrame, EventFrame, EndFrame } from './contract.js';
-import type { HexCell, Unit } from '../shared/types.js';
+import type { HelloFrame, ReadyFrame, PlanFrame, StateFrame, AckFrame, EventFrame, EndFrame } from './contract.js';
+import { PROTOCOL_VERSION } from './contract.js';
+import type { HexCell, Unit, AgentRoundBudget } from '../shared/types.js';
 import { getOperatorByToken } from '../identity/operator.js';
 import { createLimiter, type RateLimiter } from '../identity/rate-limit.js';
 import type { Database } from 'bun:sqlite';
@@ -15,10 +15,10 @@ interface WSData {
   sessionId: string;
   matchId: string;
   side: 'A' | 'B';
-  operatorId: string;
+  operatorId: number;
 }
 
-type WSPayload = string | Buffer | TypedArray;
+type WSPayload = string | Buffer | ArrayBuffer | Uint8Array;
 
 // Authenticated handler factory — must be called once at server boot with the db instance
 let _authDb: Database | null = null;
@@ -33,7 +33,7 @@ export function configureWsAuth(db: Database): void {
   _authDb = db;
 }
 
-export function buildHelloFrame(matchId: string, side: 'A' | 'B', seed: string, boardSize: { width: number; height: number }, timeBudgetMs: number, turnCap: number): HelloFrame {
+export function buildHelloFrame(matchId: string, side: 'A' | 'B', seed: string, boardSize: { width: number; height: number }, timeBudgetMs: number): HelloFrame {
   return {
     type: 'HELLO',
     matchId,
@@ -41,8 +41,7 @@ export function buildHelloFrame(matchId: string, side: 'A' | 'B', seed: string, 
     seed,
     boardSize,
     timeBudgetMs,
-    turnCap,
-    protocolVersion: '1.0',
+    protocolVersion: PROTOCOL_VERSION,
   };
 }
 
@@ -62,7 +61,7 @@ export function handleWs(req: Request, server: HTTPServer): Response {
   }
 
   // Per-operator WS connection rate limit: 5 per rolling minute
-  const rateCheck = wsOperatorLimiter.check(operator.id);
+  const rateCheck = wsOperatorLimiter.check(String(operator.id));
   if (!rateCheck.ok) {
     return new Response('Connection rate limit exceeded', {
       status: 429,
@@ -76,7 +75,7 @@ export function handleWs(req: Request, server: HTTPServer): Response {
   const side = (url.searchParams.get('side') as 'A' | 'B') ?? 'A';
 
   // Create agent session
-  const session = agentSessionManager.createSession(sessionId, matchId, side);
+  agentSessionManager.createSession(sessionId, matchId, side);
 
   // Wire presence: operator is authenticated and WS connection is established
   presenceTracker.connect(operator.id);
@@ -86,7 +85,9 @@ export function handleWs(req: Request, server: HTTPServer): Response {
     return new Response('Expected WebSocket upgrade', { status: 426 });
   }
 
-  const upgraded = server[Symbol.for('upgrade')]?.(req, {
+  const upgraded = (server as unknown as {
+    [key: symbol]: ((req: Request, opts: { data: WSData }) => unknown) | undefined;
+  })[Symbol.for('upgrade')]?.(req, {
     data: { sessionId, matchId, side, operatorId: operator.id } as WSData,
   });
 
@@ -97,16 +98,12 @@ export function handleWs(req: Request, server: HTTPServer): Response {
       Connection: 'Upgrade',
       'Sec-WebSocket-Key': req.headers.get('sec-websocket-key') ?? '',
       'Sec-WebSocket-Version': '13',
-      'Sec-WebSocket-Protocol': 'hexawars-v1',
+      'Sec-WebSocket-Protocol': 'hexawars-v2',
     });
 
     return new Response(null, { status: 101, headers });
   }
 
-  // The upgrade is handled asynchronously via Bun.serve's internal upgrade map
-  // This return is only reached if upgrade() returns false in non-standard mode
-  // NOTE: disconnect(operatorId) must be wired via Bun.serve websocket close handler
-  // in registerWsHandlers — see registerWsHandlers for the onDisconnect hook.
   return new Response(null, { status: 101 });
 }
 
@@ -123,11 +120,10 @@ export function registerWsHandlers(
   opts: {
     boardSize?: { width: number; height: number };
     timeBudgetMs?: number;
-    turnCap?: number;
     seed?: string;
   } = {}
 ): void {
-  const { boardSize = { width: 7, height: 7 }, timeBudgetMs = 5000, turnCap = 150, seed = crypto.randomUUID() } = opts;
+  const { boardSize = { width: 7, height: 7 }, timeBudgetMs = 5000, seed = crypto.randomUUID() } = opts;
 
   // Wire presence disconnect into Bun.serve's websocket close handler
   if (bunServer.websocket) {
@@ -148,11 +144,11 @@ export function sendFrame<T extends object>(ws: WebSocket, frame: T): void {
 }
 
 // Parse an incoming frame — dispatches to typed unions
-export function parseFrame(raw: WSPayload): ReadyFrame | ActionFrame | null {
+export function parseFrame(raw: WSPayload): ReadyFrame | PlanFrame | null {
   try {
     const parsed = JSON.parse(raw.toString());
     if (parsed.type === 'READY') return parsed as ReadyFrame;
-    if (parsed.type === 'ACTION') return parsed as ActionFrame;
+    if (parsed.type === 'PLAN') return parsed as PlanFrame;
     return null;
   } catch {
     return null;
@@ -160,8 +156,16 @@ export function parseFrame(raw: WSPayload): ReadyFrame | ActionFrame | null {
 }
 
 // Build a STATE frame
-export function buildStateFrame(turn: number, yourTurn: boolean, visible: HexCell[], units: Unit[], score: { a: number; b: number }, deadline: number): StateFrame {
-  return { type: 'STATE', turn, yourTurn, visible, units, score, deadline };
+export function buildStateFrame(
+  turn: number,
+  visible: HexCell[],
+  units: Unit[],
+  score: { a: number; b: number },
+  deadline: number,
+  roundCap: number,
+  budget: AgentRoundBudget,
+): StateFrame {
+  return { type: 'STATE', turn, visible, units, score, deadline, roundCap, budget };
 }
 
 // Build an ACK frame
@@ -170,6 +174,6 @@ export function buildAckFrame(accepted: boolean, reason?: string): AckFrame {
 }
 
 // Build an END frame
-export function buildEndFrame(winner: 'A' | 'B' | 'draw', reason: string, finalScore: { a: number; b: number }, metrics: { totalActions: number; avgDecisionMs: number; invalidActions: number }): EndFrame {
+export function buildEndFrame(winner: 'A' | 'B' | 'draw' | null, reason: string, finalScore: { a: number; b: number }, metrics: { totalActions: number; avgDecisionMs: number; invalidActions: number }): EndFrame {
   return { type: 'END', winner, reason: reason as EndFrame['reason'], finalScore, metrics };
 }

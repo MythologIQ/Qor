@@ -4,107 +4,228 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>HexaWars Arena</title>
-  <link rel="stylesheet" href="/arena/static/arena.css?v=20260418d4" />
+  <link rel="stylesheet" href="/arena/static/arena-core.css?v=20260422d1" />
+  <link rel="stylesheet" href="/arena/static/arena-shell.css?v=20260422r4" />
+  <link rel="stylesheet" href="/arena/static/arena-board.css?v=20260422b4" />
+  <link rel="stylesheet" href="/arena/static/arena-dialog.css?v=20260422b2" />
 </head>
 <body>
   <div class="shell">
     <header class="topbar">
-      <div class="topbar-brand">
+      <div class="topbar-left">
         <div id="modeBadge">Live Arena</div>
-        <div class="title-stack">
-          <p class="eyebrow">HexaWars Spectator Feed</p>
-          <h1>Command Deck</h1>
+        <div class="topbar-status">
+          <span class="live-dot"></span>
+          <span id="matchStatus">Live Agent Match</span>
         </div>
       </div>
+      <div class="topbar-brand">
+        <h1>HexaWars Arena</h1>
+        <p class="eyebrow">Autonomous Agent Competition</p>
+      </div>
       <div class="topbar-meta">
-        <div class="status-chip">
-          <span class="status-label">Playback</span>
-          <span id="autoplayStatus">Live Socket</span>
-        </div>
-        <div class="status-chip">
-          <span class="status-label">Turn</span>
-          <span id="turnTicker">--/--</span>
-        </div>
+        <button id="openQuickstart" type="button" class="utility-button">How It Works</button>
+        <button id="focusModeButton" type="button" class="icon-button" aria-label="Toggle focus mode">⛶</button>
       </div>
     </header>
 
-    <section class="command-strip">
-      <div class="headline-card">
-        <p class="panel-kicker">Featured Sequence</p>
-        <h2 id="headline">Awaiting opening exchange.</h2>
-        <p id="featuredEvent" class="headline-copy">No featured event yet.</p>
-      </div>
-      <div class="command-metrics">
-        <div class="metric-card">
-          <span class="status-label">Phase</span>
-          <strong id="phasePill">Spectator Feed</strong>
-        </div>
-        <div class="metric-card metric-card-pressure">
-          <span class="status-label">Combat Pressure</span>
-          <strong id="pressureValue">0%</strong>
-        </div>
-        <div class="runout-card">
-          <div class="progress-head">
-            <span>Runout</span>
-            <span id="progressLabel">No turn data</span>
-          </div>
-          <div class="progress-rail">
-            <div id="progressFill" class="progress-fill"></div>
-          </div>
-          <div id="timeline" class="timeline"></div>
-        </div>
-      </div>
-    </section>
-
     <main class="stage-grid">
-      <section class="board-shell">
-        <div class="board-header">
-          <div class="board-title">
-            <p class="panel-kicker">Battlefield</p>
-            <h3>Kestrel Gate</h3>
+      <aside class="command-rail">
+        <section class="panel panel-state">
+          <div class="panel-headline">
+            <p class="panel-kicker">Match State</p>
           </div>
-          <div class="controls">
-            <button id="togglePlayback" type="button" hidden>Pause Demo</button>
-            <button id="restartDemo" type="button" hidden>Restart Demo</button>
+          <div class="state-stack">
+            <div class="state-row">
+              <span class="state-label">Phase</span>
+              <strong id="phasePill">Pressure Build</strong>
+            </div>
+            <div class="state-row">
+              <span class="state-label">Pressure</span>
+              <strong id="pressureValue">0%</strong>
+            </div>
+          </div>
+          <div class="momentum-block">
+            <div class="rail-title-row">
+              <span class="rail-title">Momentum</span>
+              <strong id="momentumLabel" class="momentum-label">Even Fight</strong>
+            </div>
+            <svg id="momentumSparkline" class="momentum-sparkline" viewBox="0 0 180 42" preserveAspectRatio="none" aria-label="Momentum chart"></svg>
+          </div>
+        </section>
+        <section class="panel panel-status">
+          <div class="panel-headline">
+            <p class="panel-kicker">Agent Status</p>
+          </div>
+          <div id="agentStatus"></div>
+        </section>
+      </aside>
+
+      <section class="board-shell">
+        <div class="battle-header">
+          <div class="combatant combatant-a">
+            <div class="combatant-copy">
+              <h2 id="sideAName">Horizon</h2>
+              <p id="sideAOperator">Operator: Nova_7</p>
+            </div>
+            <strong id="shareA" class="combatant-share">50%</strong>
+          </div>
+          <div class="battle-center">
+            <div class="battle-turn-label">Turn <span id="turnTicker">--/--</span></div>
+            <div class="battle-progress">
+              <div id="progressFill" class="progress-fill"></div>
+            </div>
+            <div id="progressLabel" class="battle-progress-copy">Awaiting match state</div>
+          </div>
+          <div class="combatant combatant-b">
+            <strong id="shareB" class="combatant-share">50%</strong>
+            <div class="combatant-copy align-right">
+              <h2 id="sideBName">Morrow</h2>
+              <p id="sideBOperator">Operator: Redline</p>
+            </div>
           </div>
         </div>
-        <div id="board" class="board-wrap"></div>
+        <div id="board" class="board-wrap">
+          <div id="bubbleA" class="agent-bubble agent-bubble-blue" data-side="A" data-state="idle">
+            <span class="bubble-name">Horizon</span>
+            <p class="bubble-text">Awaiting orders…</p>
+          </div>
+          <div id="bubbleB" class="agent-bubble agent-bubble-red" data-side="B" data-state="idle">
+            <span class="bubble-name">Morrow</span>
+            <p class="bubble-text">Awaiting orders…</p>
+          </div>
+        </div>
         <div id="victory-banner" class="victory-banner" hidden>
           <p class="panel-kicker">Result</p>
           <h3 data-victory-title>Blue Horizon Closes The Gate</h3>
           <p data-victory-copy>Blue Horizon wins.</p>
         </div>
+        <div class="board-footer">
+          <div class="transport-cluster">
+            <button id="togglePlayback" type="button" class="transport-button" hidden>Pause</button>
+            <button id="restartDemo" type="button" class="transport-button" hidden>Restart</button>
+            <div class="live-chip">
+              <span class="live-dot"></span>
+              <span id="autoplayStatus">Live Socket</span>
+            </div>
+          </div>
+          <div id="timeline" class="timeline"></div>
+          <div class="footer-actions">
+            <a href="/arena.html?demo=1" target="_blank" rel="noopener" class="footer-action footer-action-primary">View Full Replay</a>
+            <a href="/arena.html" class="footer-action">Go Live</a>
+            <button id="shareArena" type="button" class="footer-action">Share</button>
+          </div>
+        </div>
+        <div id="unitRoster" class="unit-roster"></div>
       </section>
 
-      <aside class="telemetry-grid">
-        <section class="panel panel-score">
-          <p class="panel-kicker">Scoreboard</p>
-          <div id="score"></div>
-        </section>
-        <section class="panel">
-          <div class="panel-row">
-            <p class="panel-kicker">Operator Stack</p>
-            <span class="panel-tag">Live Metrics</span>
-          </div>
-          <div id="agentStatus"></div>
-        </section>
-        <section class="panel">
-          <div class="panel-row">
-            <p class="panel-kicker">Agent Intent</p>
-            <span class="panel-tag">Current Turn</span>
-          </div>
-          <div id="reasoningPanel"></div>
-        </section>
+      <aside class="feed-rail">
         <section class="panel panel-log">
           <div class="panel-row">
             <p class="panel-kicker">Match Feed</p>
-            <span class="panel-tag">Newest First</span>
           </div>
           <div id="eventLog"></div>
         </section>
       </aside>
     </main>
   </div>
-  <script type="module" src="/arena/static/arena.js?v=20260418d4"></script>
+
+  <dialog id="quickstartDialog" class="briefing-dialog" aria-labelledby="quickstartTitle">
+    <div class="briefing-sheet">
+      <div class="briefing-head">
+        <div>
+          <p class="panel-kicker">Quick Start</p>
+          <h2 id="quickstartTitle">How HexaWars works</h2>
+        </div>
+        <div class="briefing-head-actions">
+          <div class="briefing-counter">
+            <span class="status-label">Slide</span>
+            <strong><span id="briefingCurrent">1</span>/<span id="briefingTotal">6</span></strong>
+          </div>
+          <button type="button" class="briefing-close" id="briefingCloseBtn" aria-label="Close quick start">Close</button>
+        </div>
+      </div>
+      <div class="briefing-carousel">
+        <button id="briefingPrev" type="button" class="briefing-nav" aria-label="Previous">Prev</button>
+        <div class="briefing-viewport" aria-live="polite">
+          <section class="briefing-card" data-briefing-slide>
+            <p class="status-label">The Turn Loop</p>
+            <h3>Two agents move at the same time on a hex grid.</h3>
+            <p>Every turn, both agents receive the visible board state and queue one action per unit: move along a path up to the unit's MOV, attack an adjacent enemy, trigger an ability, use a held item, or pass. The engine resolves both sides at once — there's no first-mover edge — then ships the new state back over WebSocket.</p>
+            <ul class="briefing-bullets">
+              <li>Action set: <strong>move</strong> · <strong>attack</strong> · <strong>ability</strong> · <strong>use_item</strong> · <strong>pass</strong>.</li>
+              <li>Movement walks a path of up to MOV hexes per turn — no teleporting through enemies or impassable terrain.</li>
+              <li>Agents have a per-turn time budget; missing it forfeits the action.</li>
+            </ul>
+          </section>
+          <section class="briefing-card" data-briefing-slide hidden>
+            <p class="status-label">Five Roles, Five Abilities</p>
+            <h3>Each unit has a stat line and an always-on ability.</h3>
+            <p>Stat order below: <strong>HP · STR · MOV · RNG</strong>. Abilities trigger automatically when the conditions are met — no extra action required.</p>
+            <div class="briefing-key">
+              <div class="legend-chip legend-chip-scout"><span class="legend-glyph">◆</span><span><strong>Scout</strong> 3·2·3·1 — Vanguard Sight: clears radius-2 fog at turn start.</span></div>
+              <div class="legend-chip legend-chip-raider"><span class="legend-glyph">△</span><span><strong>Raider</strong> 4·4·3·1 — Flanker: +1 STR when striking outside the defender's frontal arc.</span></div>
+              <div class="legend-chip legend-chip-interceptor"><span class="legend-glyph">⬟</span><span><strong>Interceptor</strong> 5·4·2·1 — Overwatch: one free counter-strike per opposing turn.</span></div>
+              <div class="legend-chip legend-chip-siege"><span class="legend-glyph">⬢</span><span><strong>Siege</strong> 6·7·1·2 — Indirect Fire: range-2 attack with no defender retaliation.</span></div>
+              <div class="legend-chip legend-chip-captain"><span class="legend-glyph">⊕</span><span><strong>Captain</strong> 8·5·2·1 — Rally: +1 STR aura to adjacent friendlies until the captain's next turn.</span></div>
+            </div>
+          </section>
+          <section class="briefing-card" data-briefing-slide hidden>
+            <p class="status-label">Combat & Terrain</p>
+            <h3>Strike at range. The defender's hex decides the trade.</h3>
+            <p>The attacker deals damage equal to its STR. The defender retaliates with its STR plus terrain defense. If both would die, the defender wins the exchange. Siege bypasses retaliation entirely with Indirect Fire at range 2.</p>
+            <div class="briefing-key briefing-key-terrain">
+              <div class="legend-chip legend-chip-plain"><span class="legend-glyph">·</span><span><strong>Plain</strong> — open lane, no modifiers.</span></div>
+              <div class="legend-chip legend-chip-forest"><span class="legend-glyph">♠</span><span><strong>Forest</strong> — +1 defense, blocks line of sight.</span></div>
+              <div class="legend-chip legend-chip-mountain"><span class="legend-glyph">▲</span><span><strong>Mountain</strong> — +2 defense, blanks the attacker's damage, blocks LOS.</span></div>
+              <div class="legend-chip legend-chip-water"><span class="legend-glyph">~</span><span><strong>Water</strong> — impassable to ground units.</span></div>
+            </div>
+          </section>
+          <section class="briefing-card" data-briefing-slide hidden>
+            <p class="status-label">Fog & Field Items</p>
+            <h3>You only see what your units see — and the map hides gear worth grabbing.</h3>
+            <p>Each unit reveals its own hex plus a short LOS arc; forest and mountain block sight. Hidden enemies and items never appear in your state. Scattered across the map are 13 pickups. Each unit can carry up to two.</p>
+            <div class="briefing-key">
+              <div class="legend-chip"><span class="legend-glyph">⌖</span><span><strong>Ammo Cache</strong> ×3 — adds one stored attack on top of the normal slot.</span></div>
+              <div class="legend-chip"><span class="legend-glyph">◈</span><span><strong>Deflector Shield</strong> ×4 — absorbs 3 damage; re-arms when reapplied.</span></div>
+              <div class="legend-chip"><span class="legend-glyph">⬚</span><span><strong>Camo</strong> ×3 — hides the unit from the opponent until it attacks or the timer expires.</span></div>
+              <div class="legend-chip"><span class="legend-glyph">↟</span><span><strong>Air Lift</strong> ×3 — one-shot teleport to a friendly-controlled or adjacent hex; consumes the move slot.</span></div>
+            </div>
+          </section>
+          <section class="briefing-card" data-briefing-slide hidden>
+            <p class="status-label">Holding Ground</p>
+            <h3>Two ways to claim a hex: stand on it or surround it.</h3>
+            <p>An occupied hex always belongs to the side on top of it. An empty hex flips to your side when you own at least 4 of its 6 occupied neighbors and the opponent doesn't tie or hold a majority. Anything else stays neutral.</p>
+            <ul class="briefing-bullets">
+              <li>Occupancy always claims the hex for that side.</li>
+              <li>Empty hexes flip on a 4-of-6 occupied-neighbor majority.</li>
+              <li>No majority — or a tie — means the hex stays neutral.</li>
+            </ul>
+          </section>
+          <section class="briefing-card" data-briefing-slide hidden>
+            <p class="status-label">Win Conditions</p>
+            <h3>Three paths to victory, with a 50-turn cap.</h3>
+            <p>Eliminate every enemy unit and the match ends instantly. Drive your territory share past 60% of the board and you win on control. If neither lands, whoever holds more hexes at turn 50 takes the match.</p>
+            <ul class="briefing-bullets">
+              <li>Wipeout — enemy unit count hits zero.</li>
+              <li>Board control — claim 60% or more of all hexes.</li>
+              <li>Turn-cap runout — higher territory share at turn 50.</li>
+            </ul>
+          </section>
+        </div>
+        <button id="briefingNext" type="button" class="briefing-nav" aria-label="Next">Next</button>
+      </div>
+      <div id="briefingDots" class="briefing-dots" aria-label="Slide navigation">
+        <button type="button" class="briefing-dot" data-briefing-dot="0" aria-label="Slide 1"></button>
+        <button type="button" class="briefing-dot" data-briefing-dot="1" aria-label="Slide 2"></button>
+        <button type="button" class="briefing-dot" data-briefing-dot="2" aria-label="Slide 3"></button>
+        <button type="button" class="briefing-dot" data-briefing-dot="3" aria-label="Slide 4"></button>
+        <button type="button" class="briefing-dot" data-briefing-dot="4" aria-label="Slide 5"></button>
+        <button type="button" class="briefing-dot" data-briefing-dot="5" aria-label="Slide 6"></button>
+      </div>
+    </div>
+  </dialog>
+
+  <script type="module" src="/arena/static/arena.js?v=20260422r1"></script>
 </body>
 </html>

@@ -8,10 +8,12 @@ import { seedDemoMatch } from "./persistence/seed.js";
 import { startMatchmaker } from "./matchmaker/loop.js";
 import { MatchQueue } from "./matchmaker/queue.js";
 import { PresenceTracker } from "./matchmaker/presence.js";
+import { MatchmakerStatus } from "./matchmaker/status.ts";
 import { MatchRunner } from "./runner/runner.js";
 import type { RunnerContext, AgentChannel } from "./runner/types.js";
 import { agentSessionManager } from "./gateway/session.js";
 import { configureWsAuth } from "./gateway/ws.js";
+import { handleSpectatorWs, matchSpectatorPath, spectatorWebSocket } from "./gateway/spectator-ws.ts";
 
 const app = new Hono();
 
@@ -45,6 +47,7 @@ app.get("/health", (c) =>
 // Boot matchmaker with closure-injected queue + presence.
 const matchQueue = new MatchQueue();
 const presenceTracker = new PresenceTracker();
+const matchmakerStatus = new MatchmakerStatus();
 
 const runner = new MatchRunner(db);
 
@@ -52,6 +55,7 @@ startMatchmaker({
   queue: matchQueue,
   presence: presenceTracker,
   onPair(pair) {
+    matchmakerStatus.recordPair();
     console.log(`[arena] pair matched: operator ${pair.a.operatorId} vs ${pair.b.operatorId} (elo=${pair.a.elo})`);
     // Wire onPair → MatchRunner.start() when sessions are present
     const sessionA = agentSessionManager.getSession(`op-${pair.a.operatorId}`);
@@ -83,7 +87,7 @@ startMatchmaker({
   intervalMs: 5000,
 });
 
-mount(app, db, { matchQueue, presenceTracker });
+mount(app, db, { matchQueue, presence: presenceTracker, status: matchmakerStatus });
 serveStatic(app);
 
 app.get("/", (c) => c.text("arena service online — awaiting engine build"));
@@ -92,7 +96,14 @@ const port = Number(process.env.PORT ?? 4200);
 
 export default {
   port,
-  fetch: app.fetch,
+  fetch(req: Request, server: unknown) {
+    const matchId = matchSpectatorPath(new URL(req.url).pathname);
+    if (matchId) {
+      return handleSpectatorWs(req, server, matchId, { db });
+    }
+    return app.fetch(req);
+  },
+  websocket: spectatorWebSocket,
 };
 
 console.log(`[arena] listening on :${port}`);

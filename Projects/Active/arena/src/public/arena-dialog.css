@@ -1,0 +1,252 @@
+.utility-button-demo {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.6rem 1rem;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 200, 110, 0.28);
+  background: linear-gradient(135deg, rgba(255, 200, 110, 0.18), rgba(255, 160, 60, 0.08)), rgba(9, 17, 28, 0.9);
+  color: var(--gold);
+  font-size: 0.76rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  text-decoration: none;
+  cursor: pointer;
+  transition: border-color 160ms, background 160ms;
+}
+
+.utility-button-demo:hover {
+  border-color: rgba(255, 200, 110, 0.5);
+  background: linear-gradient(135deg, rgba(255, 200, 110, 0.28), rgba(255, 160, 60, 0.14)), rgba(9, 17, 28, 0.92);
+}
+
+.briefing-dialog {
+  width: min(780px, calc(100vw - 24px));
+  max-height: min(92vh, 820px);
+  padding: 0;
+  border: 1px solid rgba(121, 171, 255, 0.22);
+  border-radius: 28px;
+  background: rgba(7, 13, 22, 0.96);
+  color: var(--text);
+  box-shadow: 0 28px 70px rgba(0, 0, 0, 0.55);
+  overflow: hidden;
+}
+
+.briefing-dialog::backdrop {
+  background: rgba(2, 6, 11, 0.76);
+  backdrop-filter: blur(8px);
+}
+
+.briefing-sheet {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  gap: 16px;
+  padding: 22px;
+  max-height: min(92vh, 820px);
+}
+
+.briefing-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: start;
+  gap: 12px;
+}
+
+.briefing-head h2 {
+  margin: 0;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 1.5rem;
+}
+
+.briefing-head-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.briefing-counter {
+  display: grid;
+  gap: 2px;
+  text-align: right;
+}
+
+.briefing-close {
+  padding-inline: 0.9rem;
+}
+
+.briefing-carousel {
+  display: flex;
+  align-items: stretch;
+  gap: 12px;
+}
+
+.briefing-viewport {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.briefing-nav {
+  flex-shrink: 0;
+  align-self: center;
+  padding: 0.6rem 0.5rem;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text);
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.briefing-nav:hover {
+  background: rgba(114, 179, 255, 0.1);
+  border-color: rgba(114, 179, 255, 0.24);
+}
+
+.briefing-card {
+  padding: 16px;
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.briefing-card h3 {
+  margin: 4px 0 0;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 1.15rem;
+}
+
+.briefing-card p {
+  margin: 8px 0 0;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.briefing-bullets {
+  margin: 8px 0 0;
+  padding-left: 18px;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.briefing-bullets li {
+  margin-bottom: 4px;
+}
+
+.briefing-dots {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+}
+
+.briefing-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.04);
+  cursor: pointer;
+  padding: 0;
+}
+
+.briefing-dot[data-active="true"] {
+  background: var(--blue);
+  border-color: var(--blue);
+}
+
+.briefing-key {
+  display: grid;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.legend-chip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  background: rgba(255, 255, 255, 0.03);
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.legend-glyph {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  font-weight: 700;
+  font-size: 0.75rem;
+}
+
+.legend-chip-scout .legend-glyph {
+  background: rgba(103, 246, 255, 0.15);
+  color: #67f6ff;
+}
+
+.legend-chip-lancer .legend-glyph {
+  background: rgba(114, 179, 255, 0.15);
+  color: var(--blue);
+}
+
+.legend-chip-captain .legend-glyph {
+  background: rgba(255, 200, 110, 0.15);
+  color: var(--gold);
+}
+
+.legend-chip-recon .legend-glyph {
+  background: rgba(103, 246, 255, 0.15);
+  color: #67f6ff;
+}
+
+.legend-chip-raider .legend-glyph {
+  background: rgba(255, 120, 109, 0.15);
+  color: #ff786d;
+}
+
+.legend-chip-interceptor .legend-glyph {
+  background: rgba(114, 179, 255, 0.15);
+  color: var(--blue);
+}
+
+.legend-chip-artillery .legend-glyph {
+  background: rgba(255, 200, 110, 0.15);
+  color: var(--gold);
+}
+
+.legend-chip-siege .legend-glyph {
+  background: rgba(180, 140, 255, 0.15);
+  color: #b48cff;
+}
+
+.legend-chip-plain .legend-glyph,
+.legend-chip-forest .legend-glyph,
+.legend-chip-hills .legend-glyph,
+.legend-chip-mountain .legend-glyph,
+.legend-chip-water .legend-glyph {
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--muted);
+}
+
+.briefing-key-terrain {
+  grid-template-columns: repeat(2, 1fr);
+}
+
+@media (max-width: 760px) {
+  .briefing-sheet {
+    padding: 16px;
+  }
+
+  .briefing-carousel {
+    flex-direction: column;
+  }
+
+  .briefing-nav {
+    align-self: stretch;
+  }
+}

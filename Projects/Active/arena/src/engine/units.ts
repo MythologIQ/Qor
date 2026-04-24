@@ -1,4 +1,4 @@
-import type { CubeCoord, HexCell, Unit } from "../shared/types.ts";
+import type { CubeCoord, HexCell, Unit, UnitWeight } from "../shared/types.ts";
 import { cellAt } from "./board.ts";
 
 /**
@@ -18,6 +18,13 @@ const DEFAULT_STRENGTH: Record<UnitType, number> = {
   infantry: 3,
   scout: 2,
   heavy: 5,
+};
+
+/** Default weight per unit type: drives bid economy and aim-penalty. */
+export const DEFAULT_WEIGHT: Record<UnitType, UnitWeight> = {
+  scout: 1,
+  infantry: 2,
+  heavy: 3,
 };
 
 /**
@@ -55,6 +62,7 @@ export function createUnit(
     strength: DEFAULT_STRENGTH[type],
     hp: DEFAULT_HP[type],
     type,
+    weight: DEFAULT_WEIGHT[type],
   };
 }
 

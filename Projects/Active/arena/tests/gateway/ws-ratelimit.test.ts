@@ -27,8 +27,8 @@ function buildReq(token: string, sessionId?: string): Request {
 
 describe('WS Rate Limit — handleWs', () => {
   let db: Database;
-  let operatorA: { id: string; token: string };
-  let operatorB: { id: string; token: string };
+  let operatorA: ReturnType<typeof createOperator>;
+  let operatorB: ReturnType<typeof createOperator>;
 
   beforeEach(() => {
     db = openDb(':memory:');

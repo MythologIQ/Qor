@@ -4,6 +4,8 @@
  */
 import type { Unit } from "../shared/types.ts";
 
+type RenderUnitInput = Pick<Unit, "owner" | "position">;
+
 const UNIT_RADIUS = 10;
 
 const OWNER_COLOR: Record<Unit["owner"], string> = {
@@ -15,8 +17,8 @@ const OWNER_COLOR: Record<Unit["owner"], string> = {
  * Render a unit as an SVG circle element.
  * Position is derived from the unit's cube coordinate.
  */
-export function renderUnit(unit: Unit, cx: number, cy: number): string {
-  const color = OWNER_COLOR[unit.owner] ?? "#888888";
+export function renderUnit(unit: RenderUnitInput | { owner: string }, cx: number, cy: number): string {
+  const color = OWNER_COLOR[unit.owner as Unit["owner"]] ?? "#888888";
   return `<circle cx="${cx}" cy="${cy}" r="${UNIT_RADIUS}" fill="${color}" stroke="#000" stroke-width="1.5"/>`;
 }
 
@@ -35,7 +37,7 @@ export function unitCubeToPixel(q: number, r: number): { x: number; y: number } 
  * Render all units as an SVG <g> group.
  * Each unit gets a colored circle at its cube-coordinate pixel center.
  */
-export function renderUnits(units: Unit[]): string {
+export function renderUnits(units: RenderUnitInput[]): string {
   if (units.length === 0) return "";
 
   const circles = units.map((unit) => {

@@ -6,14 +6,16 @@ import { mount } from "../../src/router";
 import { createLimiter } from "../../src/identity/rate-limit";
 import { matchQueue } from "../../src/matchmaker/queue";
 import { presenceTracker } from "../../src/matchmaker/presence";
+import { MatchmakerStatus } from "../../src/matchmaker/status";
 
 function makeApp(): { app: Hono; db: Database } {
   const db = openDb(":memory:");
   initDb(db);
   matchQueue.clear();
   presenceTracker.reset?.();
+  const status = new MatchmakerStatus();
   const app = new Hono();
-  mount(app, db, { limiter: createLimiter() });
+  mount(app, db, { limiter: createLimiter(), status });
   return { app, db };
 }
 

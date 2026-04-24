@@ -8,6 +8,73 @@
 
 ---
 
+## 2026-04-23T06:45:00Z — GATE TRIBUNAL — QOR Issue #37 v2
+
+**Phase**: GATE
+**Plan**: `docs/plans/2026-04-23-qor-issue-37-qora-forge-kernels-v2.md`
+**Verdict**: ❌ **VETO**
+**Risk Grade**: L3
+
+### Findings
+
+5 MAJOR + 5 MINOR. Plan v2 closes v1 stated MAJORs at the wrong layer of abstraction — treats `events.index` as opaque event store, but the existing op is a domain-specific LearningPacket store with strict input validation and a fixed Cypher MERGE schema.
+
+- **M-1** Catastrophic kernel failure: `writeEvent` dispatches `{ type, payload, provenance }` to `events.index`, but server requires `{ packet: { id, timestamp, lesson, ... } }` per `validatePacket()` (`learning-events.ts:61-68`). First call throws.
+- **M-2** Hash chain fields silently discarded: server Cypher MERGE (`learning-events.ts:79-85`) destructures only known LearningPacket fields. No `payload`/`hash`/`prevHash` properties on Neo4j `LearningEvent` nodes. Plan's "opaque payload" claim contradicts schema.
+- **M-3** Token-map agentId / partition mismatch: plan map keys `victor-kernel`/`qora-kernel`/`forge-kernel`, but `auth.ts:69-78` uses map key as `ctx.agentId` directly. Server stamps `agent-private:qora-kernel`, not `agent-private:qora`. Cross-agent isolation tests pass for wrong reason.
+- **M-4** Status verifier becomes vacuous: `qora/src/api/status.ts` reads JSONL ledger, plan archives JSONL post-cutover, `verifyChain([])` returns `{ valid: true }` vacuously. Canary assertion 9 false-positive generator.
+- **M-5** chain-seed prevHash mismatch: kernel uses `?? ""` for genesis, existing `append-entry.ts:31` uses `"genesis"`. Migration boundary chain divergence guaranteed. Plan's "override path" for chain-seed not specified in `writeEvent` signature.
+
+MINOR R-findings: line numbers (R-1, R-2, R-3), fictional `orderBy` parameter (R-4), undefined `seq` field (R-5). Documented for v3 remediation.
+
+Security, Ghost UI, Razor, Dependency, Build-Path, Macro-Architecture all PASS.
+
+### Content Hash
+`41e9654275135e8a905ea8e3231593148dea534a6c209fe2456e2fc999d0f020`
+
+### Previous Hash
+`285c39134e881739e19a28651bb78972ebdbee91b7c98bdfa39ebcd2dfb6e569` (v1 VETO)
+
+### Chain Hash
+`84cda2b88a8bc2d1949a5017df2fe8bc6f204f1d3f4473ef5c31f44f09058104`
+
+### Next Action
+
+`/qor-plan` → v3 closing M-1..M-5 + R-1..R-5. Recommended path: M-1 Option A (use existing `LearningPacket` shape verbatim, pack chain fields into structured packet field that maps to existing schema). Re-gate after v3 written.
+
+---
+
+## 2026-04-22T19:50:00Z — GATE TRIBUNAL — QOR Issue #37 v1
+
+**Phase**: GATE
+**Plan**: `docs/plans/2026-04-22-qor-issue-37-qora-forge-kernels.md`
+**Verdict**: ❌ **VETO**
+
+### Findings
+
+3 MAJOR violations.
+
+- **T1 — Canary Contradiction**: Phase 1 enables IPC (`QOR_IPC_SOCKET=/tmp/qor.sock`) but retains existing loop assertion that `/tmp/qor.sock` is ABSENT (`qor/qor-live-canary.sh:43-51`). Canary cannot reach 8/8 post-Phase-1 — new assertion 7 ("exists") conflicts with existing sub-assertion 5a ("absent"). Plan adds, does not modify.
+- **T2 — Partition-Stamping Gap**: `victor/src/kernel/memory/continuum-store.ts:47` `upsertCacheEntries(projectId, entries)` has no partition param; server-side `resolvePartition` (continuum/src/memory/ops/search.ts:15-17) defaults absent partition to `"shared-operational"` — NOT `agent-private:*`. Only `events.index` (learning-events.ts:72) auto-partitions via `agentPrivate(ctx.agentId)`. Plan's verbatim Qora/Forge mirror therefore writes cache/graph/search ops to `shared-operational`, contradicting AC isolation promise.
+- **T3 — Hash Chain Continuity Lost**: Phase 3 migration silent on `hash` / `prevHash` preservation. Live consumer `qora/src/api/status.ts:55` verifies chain integrity and flags tampering. Post-migration reads will surface as tampered entries.
+
+Security, Ghost UI, Razor, Dependency, Macro-Architecture, Orphan all PASS.
+
+### Content Hash
+`9e0449bb6ad144c16dce110e9ca43f38e809647a0018ba82ef229bf804316c31`
+
+### Previous Hash
+`d48264f8185425f24b6dd2b5324b1f08436289bfd087f3ed799e3706f1196f10` (Phase 3 v5.1 §Phase 2 SEAL)
+
+### Chain Hash
+`285c39134e881739e19a28651bb78972ebdbee91b7c98bdfa39ebcd2dfb6e569`
+
+### Next Action
+
+`/qor-plan` → v2 closing T1 (canary delta), T2 (partition stamping strategy), T3 (hash chain continuity). No other audit passes required for re-gate so long as v2 doesn't expand scope.
+
+---
+
 ## 2026-04-22T00:55:00Z — IMPLEMENT: Phase 3 v5.1 Phase 2 — Atomic Service Swap + Canary
 
 | Field | Value |

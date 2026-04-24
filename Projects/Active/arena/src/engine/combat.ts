@@ -1,5 +1,7 @@
 import type { Unit, HexCell } from "../shared/types.ts";
 
+type Combatant = Pick<Unit, "id" | "hp" | "strength">;
+
 export interface CombatResult {
   attackerHp: number;
   defenderHp: number;
@@ -13,16 +15,18 @@ const TERRAIN_DEFENSE_BONUS: Record<HexCell["terrain"], number> = {
   water: 0,
 };
 
-function defenderDamage(defender: Unit, terrain: HexCell["terrain"]): number {
+function defenderDamage(defender: Combatant, terrain: HexCell["terrain"]): number {
   return defender.strength + TERRAIN_DEFENSE_BONUS[terrain];
 }
 
 export function resolveCombat(
-  attacker: Unit,
-  defender: Unit,
+  attacker: Combatant,
+  defender: Combatant,
   terrain: HexCell["terrain"],
+  aimPenalty: number = 0,
 ): CombatResult {
-  const atkDmg = attacker.strength;
+  const reduced = Math.round(attacker.strength * (1 - aimPenalty));
+  const atkDmg = Math.max(0, reduced);
   const defDmg = defenderDamage(defender, terrain);
 
   // Attacks from mountain terrain cannot reach the defender

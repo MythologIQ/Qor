@@ -1,15 +1,15 @@
 /**
  * HexaWars Spectator WebSocket Client
- * Connects to /api/arena/ws?spectate=<matchId>
- * Frame types: HELLO, STATE, EVENT, END (server→client)
+ * Connects to /api/arena/matches/:id/ws
+ * Frame types: MATCH_HELLO, MATCH_STATE, MATCH_EVENT, MATCH_END
  */
 
 // ─── Re-exported frame type names for external consumers ────────────────────
 export const FRAME_TYPES = {
-  HELLO: 'HELLO',
-  STATE: 'STATE',
-  EVENT: 'EVENT',
-  END: 'END',
+  HELLO: 'MATCH_HELLO',
+  STATE: 'MATCH_STATE',
+  EVENT: 'MATCH_EVENT',
+  END: 'MATCH_END',
 };
 
 /**
@@ -24,7 +24,7 @@ export function connectSpectator(matchId, handlers = {}) {
   let intentionalClose = false;
 
   function connect() {
-    const url = `/api/arena/ws?spectate=${encodeURIComponent(matchId)}`;
+    const url = `/api/arena/matches/${encodeURIComponent(matchId)}/ws`;
     ws = new WebSocket(url);
 
     ws.addEventListener('message', (evt) => {
@@ -36,17 +36,17 @@ export function connectSpectator(matchId, handlers = {}) {
       }
 
       switch (frame.type) {
-        case 'HELLO':
+        case FRAME_TYPES.HELLO:
           retryDelay = 1000;
           handlers.onHello?.(frame);
           break;
-        case 'STATE':
+        case FRAME_TYPES.STATE:
           handlers.onState?.(frame);
           break;
-        case 'EVENT':
+        case FRAME_TYPES.EVENT:
           handlers.onEvent?.(frame);
           break;
-        case 'END':
+        case FRAME_TYPES.END:
           handlers.onEnd?.(frame);
           intentionalClose = true;
           ws?.close();

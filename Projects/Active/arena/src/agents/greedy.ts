@@ -1,113 +1,111 @@
-// Greedy Agent — HexaWars
-// Agent tier: D | phase: D
-// Scores each possible action and picks the highest score.
-// Scoring: move to unclaimed territory +2, attack enemy with HP advantage +3, default +0.
-// Tie-break: unit id ascending, then target q ascending, then target r ascending.
+// Greedy Agent — HexaWars (Plan D v2)
+// Emits a RoundPlan each round. Picks the highest-scoring freeMove/freeAction
+// pair for one owned unit: attack an adjacent enemy when hp-advantaged,
+// otherwise move into an unclaimed neighbor. Bids 0.
 
-import type { AgentAction, AgentActionType, CubeCoord, HexCell, MatchState, Unit } from '../shared/types';
+import type {
+  CubeCoord,
+  HexCell,
+  MatchState,
+  Unit,
+  RoundPlan,
+  AgentRoundBudget,
+} from '../shared/types';
+import { MOVE_POINTS } from '../engine/constants';
 import { BaseAgent } from './base';
 
 function cubeDistance(a: CubeCoord, b: CubeCoord): number {
   return Math.max(
     Math.abs(a.q - b.q),
     Math.abs(a.r - b.r),
-    Math.abs(a.s - b.s)
+    Math.abs(a.s - b.s),
   );
 }
 
-function cubeNeighbors(c: CubeCoord): CubeCoord[] {
-  return [
-    { q: c.q + 1, r: c.r - 1, s: c.s },
-    { q: c.q + 1, r: c.r, s: c.s - 1 },
-    { q: c.q, r: c.r + 1, s: c.s - 1 },
-    { q: c.q - 1, r: c.r + 1, s: c.s },
-    { q: c.q - 1, r: c.r, s: c.s + 1 },
-    { q: c.q, r: c.r - 1, s: c.s + 1 },
-  ];
-}
-
-interface ScoredAction {
+interface ScoredCandidate {
   score: number;
   unitId: string;
-  targetQ: number;
-  targetR: number;
-  action: AgentAction;
+  unit: Unit;
+  target: CubeCoord;
+  isAttack: boolean;
 }
 
 export class GreedyAgent extends BaseAgent {
-  decide(state: MatchState): AgentAction {
-    const myUnits = state.units.filter(u => u.owner === 'A');
-    if (myUnits.length === 0) {
-      return { type: 'pass', confidence: 1.0 };
-    }
+  getRoundPlan(state: MatchState, _budget: AgentRoundBudget): RoundPlan {
+    const side: "A" | "B" = "A";
+    const myUnits = state.units.filter(u => u.owner === side);
+    if (myUnits.length === 0) return { bid: 0, extras: [] };
 
-    // Collect all scored action candidates
-    const candidates: ScoredAction[] = [];
-
+    const candidates: ScoredCandidate[] = [];
     for (const unit of myUnits) {
-      const adjacentCells = state.visible.filter(
-        cell => cubeDistance(unit.position, cell.position) === 1
+      const adjacent = state.visible.filter(
+        cell => cubeDistance(unit.position, cell.position) === 1,
       );
-
-      if (adjacentCells.length === 0) {
-        // No adjacent cells: pass is the only option for this unit
-        candidates.push({
-          score: 0,
-          unitId: unit.id,
-          targetQ: unit.position.q,
-          targetR: unit.position.r,
-          action: { type: 'pass', from: unit.position, confidence: 1.0 },
-        });
-        continue;
-      }
-
-      for (const cell of adjacentCells) {
-        const score = this.scoreAction(unit, cell);
+      for (const cell of adjacent) {
+        const score = this.scoreCell(unit, cell, side);
         candidates.push({
           score,
           unitId: unit.id,
-          targetQ: cell.position.q,
-          targetR: cell.position.r,
-          action: {
-            type: this.actionTypeFor(cell, unit),
-            from: unit.position,
-            to: cell.position,
-            confidence: 1.0,
-          },
+          unit,
+          target: cell.position,
+          isAttack: Boolean(cell.unit && cell.unit.owner !== side && unit.hp > cell.unit.hp),
         });
       }
     }
 
-    // Sort: highest score first, then tie-break deterministically
+    if (candidates.length === 0) return { bid: 0, extras: [] };
+
     candidates.sort((a, b) => {
       if (b.score !== a.score) return b.score - a.score;
       if (a.unitId !== b.unitId) return a.unitId.localeCompare(b.unitId);
-      if (a.targetQ !== b.targetQ) return a.targetQ - b.targetQ;
-      return a.targetR - b.targetR;
+      if (a.target.q !== b.target.q) return a.target.q - b.target.q;
+      return a.target.r - b.target.r;
     });
 
-    return candidates[0].action;
+    const top = candidates[0]!;
+    if (top.isAttack) {
+      return {
+        bid: 0,
+        extras: [],
+        freeAction: {
+          unitId: top.unitId,
+          type: 'attack',
+          from: top.unit.position,
+          to: top.target,
+        },
+      };
+    }
+
+    const moveDistance = MOVE_POINTS[top.unit.type];
+    const moveTargets = state.visible
+      .filter((cell) =>
+        !cell.unit &&
+        cubeDistance(top.unit.position, cell.position) === moveDistance,
+      )
+      .sort((a, b) => {
+        if (a.position.q !== b.position.q) return a.position.q - b.position.q;
+        return a.position.r - b.position.r;
+      });
+
+    if (moveTargets.length === 0) {
+      return { bid: 0, extras: [] };
+    }
+
+    const moveTarget = moveTargets[0]!;
+    return {
+      bid: 0,
+      extras: [],
+      freeMove: {
+        unitId: top.unitId,
+        from: top.unit.position,
+        to: moveTarget.position,
+      },
+    };
   }
 
-  /** Score an action given the unit and target cell. */
-  private scoreAction(unit: Unit, target: HexCell): number {
-    // Attack enemy with HP advantage: +3
-    if (target.unit && target.unit.owner !== 'A' && unit.hp > target.unit.hp) {
-      return 3;
-    }
-    // Move to unclaimed territory: +2
-    if (!target.unit && !target.controlledBy) {
-      return 2;
-    }
-    // All other actions: +0
+  private scoreCell(unit: Unit, cell: HexCell, side: "A" | "B"): number {
+    if (cell.unit && cell.unit.owner !== side && unit.hp > cell.unit.hp) return 3;
+    if (!cell.unit && !cell.controlledBy) return 2;
     return 0;
-  }
-
-  /** Determine action type for a target cell. */
-  private actionTypeFor(cell: HexCell, unit: Unit): AgentActionType {
-    if (cell.unit && cell.unit.owner !== 'A') {
-      return 'attack';
-    }
-    return 'move';
   }
 }

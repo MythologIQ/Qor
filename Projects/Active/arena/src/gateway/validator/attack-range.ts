@@ -1,5 +1,6 @@
 import type { RoundPlan } from "../../shared/types";
-import type { MatchState, UnitType } from "../../shared/types";
+import type { MatchState } from "../../shared/types";
+import type { UnitType } from "../../engine/units";
 
 export interface AttackRangeResult {
   ok: true;

@@ -1,11 +1,10 @@
-// HexaWars Agent Action Contract v1
-// Contract ID: hexawars-agent-contract-v1
+// HexaWars Agent Plan Contract (Plan D v2)
+// Contract ID: hexawars-agent-contract-v2
 // Transport: WebSocket, JSON frames
 
-export const PROTOCOL_VERSION = '1.0';
+export const PROTOCOL_VERSION = '2.0';
 
-// Re-export shared types used in frames
-export type { HexCell, Unit } from '../shared/types';
+export type { HexCell, Unit, RoundPlan, AgentRoundBudget } from '../shared/types';
 
 // ─── Server → Client Frames ────────────────────────────────────────────────
 
@@ -16,44 +15,52 @@ export interface HelloFrame {
   seed: string;
   boardSize: { width: number; height: number };
   timeBudgetMs: number;
-  turnCap: number;
   protocolVersion: string;
 }
 
 export interface StateFrame {
   type: 'STATE';
   turn: number;
-  yourTurn: boolean;
   visible: import('../shared/types').HexCell[];
   units: import('../shared/types').Unit[];
   score: { a: number; b: number };
   deadline: number;
+  roundCap: number;
+  budget: import('../shared/types').AgentRoundBudget;
 }
 
 export interface AckFrame {
   type: 'ACK';
   accepted: boolean;
-  reason?: 'invalid_action' | 'not_your_turn' | 'budget_exceeded' | 'out_of_range';
-  correctedState?: Partial<import('../shared/types').GameState>;
+  reason?: 'invalid_plan' | 'budget_exceeded' | 'extras_not_implemented';
 }
 
 export interface EventFrame {
   type: 'EVENT';
-  event: 'unit_moved' | 'unit_attacked' | 'unit_destroyed' | 'territory_claimed' | 'turn_ended';
+  event:
+    | 'unit_moved'
+    | 'unit_attacked'
+    | 'unit_destroyed'
+    | 'territory_claimed'
+    | 'turn_ended'
+    | 'action_retargeted'
+    | 'slots_refunded';
   payload: Record<string, unknown>;
   timestamp: number;
 }
 
 export interface EndFrame {
   type: 'END';
-  winner: 'A' | 'B' | 'draw';
-  reason: 'elimination' | 'territory_control' | 'turn_cap' | 'timeout' | 'forfeit';
-  finalScore: { a: number; b: number };
+  matchId?: string;
+  winner: 'A' | 'B' | 'draw' | null;
+  reason: 'victory' | 'draw' | 'elimination' | 'territory_control' | 'round_cap' | 'timeout' | 'forfeit';
   metrics: {
     totalActions: number;
     avgDecisionMs: number;
     invalidActions: number;
+    totalMs?: number;
   };
+  finalScore?: { a: number; b: number };
 }
 
 // ─── Client → Server Frames ────────────────────────────────────────────────
@@ -64,11 +71,9 @@ export interface ReadyFrame {
   agentVersion: string;
 }
 
-export interface ActionFrame {
-  type: 'ACTION';
-  action: 'move' | 'attack' | 'pass';
-  from?: { q: number; r: number; s: number };
-  to?: { q: number; r: number; s: number };
+export interface PlanFrame {
+  type: 'PLAN';
+  plan: import('../shared/types').RoundPlan;
   confidence: number;
   metadata?: {
     reasoning?: string;

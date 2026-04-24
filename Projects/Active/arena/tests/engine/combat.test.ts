@@ -64,4 +64,43 @@ describe("resolveCombat", () => {
     expect(result.attackerHp).toBe(0);
     expect(result.destroyed).toContain("atk-6");
   });
+
+  it("aimPenalty=0 is regression-equivalent to no penalty", () => {
+    const attacker = { id: "atk-7", hp: 10, strength: 5, position: [0, 0] };
+    const defender = { id: "def-7", hp: 10, strength: 3, position: [1, 0] };
+    const without = resolveCombat(attacker, defender, "plain");
+    const withZero = resolveCombat(attacker, defender, "plain", 0);
+    expect(withZero.defenderHp).toBe(without.defenderHp);
+    expect(withZero.attackerHp).toBe(without.attackerHp);
+  });
+
+  it("aimPenalty=0.2 reduces damage by 20% (rounded)", () => {
+    // strength 5 * (1 - 0.2) = 4
+    const attacker = { id: "atk-8", hp: 10, strength: 5, position: [0, 0] };
+    const defender = { id: "def-8", hp: 10, strength: 0, position: [1, 0] };
+    const r = resolveCombat(attacker, defender, "plain", 0.2);
+    expect(r.defenderHp).toBe(6); // 10 - 4
+  });
+
+  it("aimPenalty=0.6 still zeroed by mountain terrain", () => {
+    const attacker = { id: "atk-9", hp: 10, strength: 10, position: [0, 0] };
+    const defender = { id: "def-9", hp: 10, strength: 0, position: [1, 0] };
+    const r = resolveCombat(attacker, defender, "mountain", 0.6);
+    expect(r.defenderHp).toBe(10);
+  });
+
+  it("aimPenalty=1.0 drops attacker damage to 0 on plain", () => {
+    const attacker = { id: "atk-10", hp: 10, strength: 8, position: [0, 0] };
+    const defender = { id: "def-10", hp: 10, strength: 0, position: [1, 0] };
+    const r = resolveCombat(attacker, defender, "plain", 1.0);
+    expect(r.defenderHp).toBe(10);
+  });
+
+  it("retaliation is unaffected by aimPenalty", () => {
+    const attacker = { id: "atk-11", hp: 10, strength: 2, position: [0, 0] };
+    const defender = { id: "def-11", hp: 10, strength: 5, position: [1, 0] };
+    const without = resolveCombat(attacker, defender, "plain", 0);
+    const with60 = resolveCombat(attacker, defender, "plain", 0.6);
+    expect(with60.attackerHp).toBe(without.attackerHp);
+  });
 });

@@ -6,6 +6,13 @@ export function resetEventLog(logEl) {
 export function appendEvent(logEl, event) {
   if (!logEl) return;
 
+  const summary = [
+    `Turn ${event.turn ?? "?"}`,
+    `Side ${event.side ?? "?"}`,
+    event.move ?? "?",
+    event.detail ?? "",
+  ].join(" ").trim();
+
   const entry = document.createElement("article");
   entry.className = "event-entry";
   if (entry.dataset) entry.dataset.side = event.side ?? "?";
@@ -39,13 +46,15 @@ export function appendEvent(logEl, event) {
     entry.appendChild(detail);
   }
 
-  entry.textContent = [
-    `Turn ${event.turn ?? "?"}`,
-    `Side ${event.side ?? "?"}`,
-    event.move ?? "?",
-    ts,
-    event.detail ?? "",
-  ].join(" ").trim();
+  const summaryNode = document.createElement("span");
+  summaryNode.className = "event-summary";
+  summaryNode.hidden = true;
+  summaryNode.textContent = summary;
+  entry.appendChild(summaryNode);
+
+  if (Array.isArray(entry.children)) {
+    entry.textContent = summary;
+  }
 
   logEl.insertBefore(entry, logEl.firstChild);
   while (logEl.children.length > 200) {

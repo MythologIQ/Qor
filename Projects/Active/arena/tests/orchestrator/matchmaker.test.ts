@@ -48,7 +48,7 @@ describe("Matchmaker", () => {
     const notification = start()!;
     const match = getMatch(notification.matchId);
     expect(match).toBeDefined();
-    expect(match!.seed).toContain("match-");
+    expect(match!.roundCap).toBeGreaterThan(0);
   });
 
   it("getMatch returns undefined for an unknown matchId", () => {

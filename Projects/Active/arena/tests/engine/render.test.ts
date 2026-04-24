@@ -5,7 +5,11 @@
  */
 
 import { describe, it, expect } from 'bun:test';
-import { renderBoard } from '../../src/public/hex-render';
+import * as hexRender from '../../src/public/hex-render.js';
+
+const renderBoard = (hexRender as unknown as {
+  renderBoard: (svg: SVGSVGElement, board: Array<{ coord: { q: number; r: number; s: number }; terrain: string }>) => void;
+}).renderBoard;
 
 // ── Minimal SVG DOM stub ──────────────────────────────────────────────────────
 
@@ -15,6 +19,8 @@ type Element = {
   childNodes: Element[];
   textContent: string;
   firstChild: Element | null;
+  _gCount?: number;
+  _allElements?: Element[];
   removeChild: (el: Element) => void;
   appendChild: (el: Element) => void;
   setAttribute: (name: string, value: string) => void;
@@ -49,7 +55,6 @@ function createSVGElement(
   return {
     localName: 'svg',
     attributes: {},
-    childNodes: kids,
     textContent: '',
     firstChild: null,
     _gCount: 0,
@@ -69,9 +74,7 @@ function createSVGElement(
     getAttribute(name: string) {
       return this.attributes[name] ?? null;
     },
-    get childNodes() {
-      return kids;
-    },
+    childNodes: kids,
     get ownerDocument() {
       return doc;
     },

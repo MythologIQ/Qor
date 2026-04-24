@@ -1,8 +1,8 @@
 import { describe, expect, test, beforeEach, afterEach } from 'bun:test';
 import { MatchQueue } from '../../src/matchmaker/queue';
 import { PresenceTracker } from '../../src/matchmaker/presence';
+import { MatchmakerStatus } from '../../src/matchmaker/status';
 import { startMatchmaker } from '../../src/matchmaker/loop';
-import { recordPair, getLastPairAt } from '../../src/router';
 import type { MatchPair } from '../../src/matchmaker/types';
 
 function makeEntry(operatorId: number, elo = 1000) {
@@ -12,11 +12,13 @@ function makeEntry(operatorId: number, elo = 1000) {
 describe('matchmaker integration smoke', () => {
   let queue: MatchQueue;
   let presence: PresenceTracker;
+  let status: MatchmakerStatus;
   let fired: { pairs: MatchPair[] };
 
   beforeEach(() => {
     queue = new MatchQueue();
     presence = new PresenceTracker();
+    status = new MatchmakerStatus();
     fired = { pairs: [] };
   });
 
@@ -26,12 +28,13 @@ describe('matchmaker integration smoke', () => {
     presence.connect(10);
     presence.connect(11);
 
-    const beforePair = getLastPairAt();
+    const beforePair = status.getLastPairAt();
 
     const { stop } = startMatchmaker({
       queue,
       presence,
       onPair(pair) {
+        status.recordPair();
         fired.pairs.push(pair);
       },
       intervalMs: 10,
@@ -44,7 +47,7 @@ describe('matchmaker integration smoke', () => {
     expect(fired.pairs[0].a.operatorId).toBe(10);
     expect(fired.pairs[0].b.operatorId).toBe(11);
     expect(queue.size()).toBe(0);
-    expect(getLastPairAt()).not.toBe(beforePair);
+    expect(status.getLastPairAt()).not.toBe(beforePair);
   });
 
   test('single online operator does not trigger onPair', async () => {
