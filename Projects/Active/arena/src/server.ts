@@ -4,6 +4,7 @@ import { dirname } from "node:path";
 import { mount } from "./router.js";
 import { serveStatic } from "./static-routes.js";
 import { openDb, initDb, DEFAULT_DB_PATH } from "./persistence/db.js";
+import { initSchema } from "./storage/db.js";
 import { seedDemoMatch } from "./persistence/seed.js";
 import { startMatchmaker } from "./matchmaker/loop.js";
 import { MatchQueue } from "./matchmaker/queue.js";
@@ -21,6 +22,7 @@ const dbPath = process.env.ARENA_DB_PATH ?? DEFAULT_DB_PATH;
 if (dbPath !== ":memory:") mkdirSync(dirname(dbPath), { recursive: true });
 const db = openDb(dbPath);
 initDb(db);
+initSchema();
 configureWsAuth(db);
 if (process.env.ARENA_SEED_DEMO === "1") {
   try {
