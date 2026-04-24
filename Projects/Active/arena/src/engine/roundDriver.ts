@@ -2,6 +2,8 @@ import { resolveBids } from "./bidResolver";
 import { findRetarget } from "./retarget";
 import { resolveCombat } from "./combat";
 import { applyCarryover, applyEndOfRound, deductBid } from "./round-state";
+import { resolveExtras } from "./round-resolver/extras.ts";
+import { resolveReserveTriggers } from "./round-resolver/triggers.ts";
 import { RANGE } from "./constants";
 import { checkVictory } from "./victory";
 import type {
@@ -14,7 +16,7 @@ import type {
   Unit,
   CubeCoord,
   HexCell,
-} from "../shared/types";
+} from "../shared/types.ts";
 
 interface AgentOutcome {
   state: MatchState;
@@ -29,18 +31,58 @@ export function runRound(input: RunRoundInput): RunRoundResult {
     agentA: { bid: input.planA.bid, plan: input.planA },
     agentB: { bid: input.planB.bid, plan: input.planB },
   });
+
+  // Phase 5: resolve reserve triggers BEFORE free moves/actions fire.
+  // Fires on input.state (original state, not yet mutated by bids).
+  // Returns reserve_fired + wasted_action events.
+  const reserveEvents = resolveReserveTriggers(
+    input.state,
+    input.planA,
+    input.planB,
+    order.first,
+    input.round,
+  );
+
+  // After reserve resolution, some units may have hp <= 0. Filter them out
+  // so subsequent phase functions don't act with dead units.
+  const liveUnits = input.state.units.map((u) => {
+    // If reserve killed this unit, mark hp=0 and exclude from live set
+    const killedByReserve = reserveEvents.some(
+      (e) => e.type === "reserve_fired" && (e.payload as Record<string, unknown>).target === u.id,
+    );
+    if (killedByReserve) return { ...u, hp: 0 };
+    return u;
+  });
+  const stateAfterReserve: MatchState = {
+    ...input.state,
+    units: liveUnits,
+  };
+
   const startA = applyCarryover(deductBid(input.budgetA, input.planA.bid));
   const startB = applyCarryover(deductBid(input.budgetB, input.planB.bid));
 
   const firstAgent = order.first;
   const firstPlan = firstAgent === "A" ? input.planA : input.planB;
   const firstStart = firstAgent === "A" ? startA : startB;
-  const firstOut = runAgent(firstAgent, firstPlan, input.state, firstStart);
+  const firstOut = runAgent(firstAgent, firstPlan, stateAfterReserve, firstStart);
 
   const secondAgent: "A" | "B" = firstAgent === "A" ? "B" : "A";
   const secondPlan = firstAgent === "A" ? input.planB : input.planA;
   const secondStart = firstAgent === "A" ? startB : startA;
   const secondOut = runAgent(secondAgent, secondPlan, firstOut.state, secondStart);
+
+  // Phase 4 AP extras: winner's extras first, then loser, preserving declared order.
+  const boostFlag: Record<string, { mode: "range" | "damage" } | undefined> = {};
+  const extrasCtx: import("./round-resolver/extras.ts").ExtrasContext = {
+    state: secondOut.state,
+    round: input.round,
+    bidWinner: order.first,
+    boostFlag,
+    events: [],
+    planA: input.planA,
+    planB: input.planB,
+  };
+  resolveExtras(extrasCtx);
 
   const budgetAPre = firstAgent === "A" ? firstOut.budget : secondOut.budget;
   const budgetBPre = firstAgent === "A" ? secondOut.budget : firstOut.budget;
@@ -48,7 +90,13 @@ export function runRound(input: RunRoundInput): RunRoundResult {
   const budgetB = applyEndOfRound(budgetBPre);
 
   const refundEvents = buildRefundEvents(input.budgetA, budgetA, input.budgetB, budgetB, input.round);
-  const events = [...firstOut.events, ...secondOut.events, ...refundEvents];
+  const events = [
+    ...reserveEvents,
+    ...firstOut.events,
+    ...secondOut.events,
+    ...extrasCtx.events,
+    ...refundEvents,
+  ];
 
   const nextState: MatchState = { ...secondOut.state, turn: input.round + 1 };
   const victory = checkVictory(nextState);
@@ -71,22 +119,39 @@ function runAgent(
   let nextState = state;
   let nextBudget = budget;
 
-  if (plan.freeMove) {
+  // Skip dead units in plan references (they were killed by reserve trigger).
+  // Per R4, AP was burned at validate time — no refund.
+  const skipDead = (unitId: string) =>
+    nextState.units.find((u) => u.id === unitId && u.hp <= 0) !== undefined;
+
+  if (plan.freeMove && !skipDead(plan.freeMove.unitId)) {
     const moveOut = doMove(agent, plan.freeMove.unitId, plan.freeMove.to, nextState);
     if (moveOut) {
       nextState = moveOut.state;
       events.push(moveOut.event);
       nextBudget = { ...nextBudget, freeMove: Math.max(0, nextBudget.freeMove - 1) };
     }
+  } else if (plan.freeMove && skipDead(plan.freeMove.unitId)) {
+    events.push({
+      type: "wasted_action",
+      payload: { agent, kind: "freeMove", originalUnitId: plan.freeMove.unitId, reason: "trigger_killed_unit" },
+      timestamp: 0,
+    });
   }
 
-  if (plan.freeAction && plan.freeAction.type === "attack") {
+  if (plan.freeAction && !skipDead(plan.freeAction.unitId) && plan.freeAction.type === "attack") {
     const atkOut = doAttack(agent, plan.freeAction.unitId, plan.freeAction.to, nextState);
     if (atkOut) {
       nextState = atkOut.state;
       events.push(...atkOut.events);
       nextBudget = { ...nextBudget, freeAction: Math.max(0, nextBudget.freeAction - 1) };
     }
+  } else if (plan.freeAction && skipDead(plan.freeAction.unitId)) {
+    events.push({
+      type: "wasted_action",
+      payload: { agent, kind: "freeAction", originalUnitId: plan.freeAction.unitId, reason: "trigger_killed_unit" },
+      timestamp: 0,
+    });
   }
 
   return { state: nextState, budget: nextBudget, events };

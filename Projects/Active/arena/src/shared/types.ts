@@ -33,6 +33,10 @@ export interface MatchState {
   score: { a: number; b: number };
   deadline: number; // Unix ms
   roundCap: number;
+  /** Plan D Phase 4: active stances, keyed by appliesOnRound */
+  stances?: StanceRecord[];
+  /** Plan D Phase 4: active reserves */
+  reserves?: ReserveRecord[];
 }
 
 export type EngineEventType =
@@ -42,7 +46,18 @@ export type EngineEventType =
   | "territory_claimed"
   | "turn_ended"
   | "action_retargeted"
-  | "slots_refunded";
+  | "slots_refunded"
+  // Plan D Phase 4 AP extras:
+  | "boost_applied"
+  | "action_wasted"
+  | "stance_recorded"
+  | "reserve_recorded"
+  // Plan D Phase 4 abilities:
+  | "ability_resolved"
+  | "unit_revealed"
+  // Plan D Phase 5 reserve triggers:
+  | "reserve_fired"
+  | "wasted_action";
 
 export interface EngineEvent {
   type: EngineEventType;
