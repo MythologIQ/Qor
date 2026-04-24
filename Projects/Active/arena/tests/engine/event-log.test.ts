@@ -8,15 +8,13 @@ import { describe, it, expect } from 'bun:test';
 
 function makeDiv(): any {
   const kids: any[] = [];
+  const style = {
+    backgroundColor: '', display: '', width: '', height: '',
+    borderRadius: '', marginRight: '', verticalAlign: '', fontSize: '', fontWeight: '',
+  };
   const el: any = {
-    localName: 'div',
-    tagName: 'DIV',
-    attributes: {},
-    textContent: '',
-    childNodes: kids,
-    children: kids,
-    firstChild: null,
-    lastChild: null,
+    localName: 'div', tagName: 'DIV', attributes: {}, textContent: '',
+    childNodes: kids, children: kids, firstChild: null, lastChild: null, style,
     removeChild(c: any) {
       const i = kids.indexOf(c);
       if (i >= 0) kids.splice(i, 1);
@@ -24,15 +22,12 @@ function makeDiv(): any {
       el.lastChild = kids[kids.length - 1] ?? null;
     },
     appendChild(c: any) {
-      kids.push(c);
-      el.firstChild = kids[0];
-      el.lastChild = kids[kids.length - 1];
+      kids.push(c); el.firstChild = kids[0]; el.lastChild = kids[kids.length - 1];
     },
     insertBefore(c: any, ref: any) {
       if (ref === null) kids.push(c);
       else { const i = kids.indexOf(ref); kids.splice(i >= 0 ? i : 0, 0, c); }
-      el.firstChild = kids[0];
-      el.lastChild = kids[kids.length - 1];
+      el.firstChild = kids[0]; el.lastChild = kids[kids.length - 1];
     },
     setAttribute(n: string, v: string) { el.attributes[n] = v; },
     getAttribute(n: string) { return el.attributes[n] ?? null; },
@@ -42,12 +37,17 @@ function makeDiv(): any {
       if (sel === '.event-entry') return kids.filter((c: any) => c.attributes?.['class'] === 'event-entry');
       return [];
     },
+    replaceChildren() { kids.length = 0; el.firstChild = null; el.lastChild = null; },
   };
   return el;
 }
 
+function makeEl(tag: string): any {
+  return makeDiv();
+}
+
 Object.defineProperty(globalThis, 'document', {
-  value: { createElement: (tag: string) => makeDiv() },
+  value: { createElement: makeEl },
   writable: true,
   configurable: true,
 });
@@ -61,10 +61,10 @@ describe('event-log', () => {
     appendEvent(logEl, { turn: 2, side: 'Y', move: 'C→D', timestamp: 2000 });
     const entries = logEl.querySelectorAll('.event-entry');
     expect(entries.length).toBe(2);
-    expect(entries[0].textContent).toContain('Turn 2');
+    expect(entries[0].textContent).toContain('Round 2');
     expect(entries[0].textContent).toContain('Side Y');
     expect(entries[0].textContent).toContain('C→D');
-    expect(entries[1].textContent).toContain('Turn 1');
+    expect(entries[1].textContent).toContain('Round 1');
     expect(entries[1].textContent).toContain('Side X');
     expect(entries[1].textContent).toContain('A→B');
   });
@@ -76,8 +76,8 @@ describe('event-log', () => {
     }
     const entries = logEl.querySelectorAll('.event-entry');
     expect(entries.length).toBe(200);
-    expect(entries[0].textContent).toContain('Turn 250');
-    expect(entries[entries.length - 1].textContent).toContain('Turn 51');
+    expect(entries[0].textContent).toContain('Round 250');
+    expect(entries[entries.length - 1].textContent).toContain('Round 51');
   });
 
   it('order preserved — oldest at bottom', () => {
@@ -88,7 +88,7 @@ describe('event-log', () => {
     }
     const entries = logEl.querySelectorAll('.event-entry');
     expect(entries.length).toBe(5);
-    expect(entries[0].textContent).toContain('Turn 5');
-    expect(entries[4].textContent).toContain('Turn 1');
+    expect(entries[0].textContent).toContain('Round 5');
+    expect(entries[4].textContent).toContain('Round 1');
   });
 });

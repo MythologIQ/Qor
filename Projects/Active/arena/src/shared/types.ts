@@ -57,7 +57,9 @@ export type EngineEventType =
   | "unit_revealed"
   // Plan D Phase 5 reserve triggers:
   | "reserve_fired"
-  | "wasted_action";
+  | "wasted_action"
+  // Plan D Phase 6:
+  | "round_ended";
 
 export interface EngineEvent {
   type: EngineEventType;
