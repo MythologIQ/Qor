@@ -36,6 +36,26 @@ export function mountMatchRoutes(app: Hono, db: Database): void {
     return c.json({ matchId: id, events });
   });
 
+  app.get("/api/arena/matches/:id/status", (c) => {
+    const matchId = c.req.param("id");
+    const { getActiveRuntime } = require("../orchestrator/match-runner.js");
+    const runtime = getActiveRuntime(matchId);
+    if (runtime) {
+      return c.json({
+        state: "active",
+        round: runtime.round,
+        roundCap: runtime.state.roundCap,
+      });
+    }
+    const rec = getMatch(db, matchId);
+    if (!rec) return c.json({ error: "not_found" }, 404);
+    return c.json({
+      state: rec.outcome ? "completed" : "pending",
+      round: 0,
+      roundCap: 0,
+    });
+  });
+
   app.get("/api/arena/operators/:handle/matches", (c) => {
     const handle = c.req.param("handle");
     const op = db
