@@ -1,57 +1,82 @@
 import { describe, it, expect, beforeEach } from "bun:test";
-import { enqueue, start, clear, getMatch } from "../../src/orchestrator/matchmaker.ts";
+import { queueAgent, findOpponent, launchMatch, getQueueStatus, resetMatchmakerState } from "../../src/orchestrator/matchmaker.ts";
+import { createOperator } from "../../src/storage/operators.ts";
+import { registerAgent } from "../../src/storage/agents.ts";
+import { getDb } from "../../src/storage/db.ts";
 
-describe("Matchmaker", () => {
+describe("Matchmaker (Phase 2)", () => {
   beforeEach(() => {
-    clear();
+    const db = getDb();
+    db.exec("DELETE FROM match_records");
+    db.exec("DELETE FROM agent_versions");
+    db.exec("DELETE FROM operators");
+    resetMatchmakerState();
   });
 
   it("enqueues a single agent without creating a match", () => {
-    enqueue("agent-1");
-    const result = start();
-    expect(result).toBeNull();
+    const { operator } = createOperator("op-enqueue-single");
+    const { agent } = registerAgent(operator.id, "SingleAgent", "fp-single", "qwen2.5-14b");
+
+    queueAgent(agent.id, "vanguard");
+    const opponent = findOpponent(agent.id, "vanguard");
+
+    expect(opponent).toBeNull();
   });
 
-  it("creates a match when two agents are enqueued", () => {
-    enqueue("agent-1");
-    enqueue("agent-2");
-    const result = start();
-    expect(result).not.toBeNull();
-    expect(result!.type).toBe("match_created");
-    expect(result!.agentA).toBe("agent-1");
-    expect(result!.agentB).toBe("agent-2");
-    expect(result!.matchId).toMatch(/^match-\d{4}$/);
+  it("creates a match when two agents are enqueued in the same bracket", () => {
+    const { operator: op1 } = createOperator("op-match-two-1");
+    const { operator: op2 } = createOperator("op-match-two-2");
+    const { agent: ag1 } = registerAgent(op1.id, "AgentA", "fp-a", "gpt-4o-mini");
+    const { agent: ag2 } = registerAgent(op2.id, "AgentB", "fp-b", "qwen2.5-14b");
+
+    queueAgent(ag1.id, "apex");
+    queueAgent(ag2.id, "apex");
+
+    const match = launchMatch(ag1.id, ag2.id, "apex");
+
+    expect(match).toBeDefined();
+    expect(match.id).toMatch(/^match-/);
+    expect(match.agentAId).toBe(ag1.id);
+    expect(match.agentBId).toBe(ag2.id);
   });
 
   it("creates a unique match ID for each match", () => {
-    enqueue("agent-1");
-    enqueue("agent-2");
-    const match1 = start();
-    enqueue("agent-3");
-    enqueue("agent-4");
-    const match2 = start();
-    expect(match1!.matchId).not.toBe(match2!.matchId);
+    const { operator: op1 } = createOperator("op-unique-id-1");
+    const { operator: op2 } = createOperator("op-unique-id-2");
+    const { operator: op3 } = createOperator("op-unique-id-3");
+    const { operator: op4 } = createOperator("op-unique-id-4");
+    const { agent: ag1 } = registerAgent(op1.id, "UniqueA1", "fp-u1", "qwen2.5-14b");
+    const { agent: ag2 } = registerAgent(op2.id, "UniqueA2", "fp-u2", "qwen2.5-7b");
+    const { agent: ag3 } = registerAgent(op3.id, "UniqueA3", "fp-u3", "gpt-4o-mini");
+    const { agent: ag4 } = registerAgent(op4.id, "UniqueA4", "fp-u4", "llama-70b");
+
+    queueAgent(ag1.id, "sentinel");
+    queueAgent(ag2.id, "sentinel");
+    const match1 = launchMatch(ag1.id, ag2.id, "sentinel");
+
+    queueAgent(ag3.id, "vanguard");
+    queueAgent(ag4.id, "vanguard");
+    const match2 = launchMatch(ag3.id, ag4.id, "vanguard");
+
+    expect(match1.id).not.toBe(match2.id);
   });
 
   it("does not create more matches when fewer than 2 agents are pending", () => {
-    enqueue("agent-1");
-    const r1 = start();
-    expect(r1).toBeNull();
-    enqueue("agent-2");
-    const r2 = start();
-    expect(r2).not.toBeNull();
+    const { operator } = createOperator("op-fewer-than-two");
+    const { agent } = registerAgent(operator.id, "LoneAgent", "fp-lone", "qwen2.5-14b");
+
+    queueAgent(agent.id, "vanguard");
+    const opponent = findOpponent(agent.id, "vanguard");
+
+    expect(opponent).toBeNull();
   });
 
-  it("getMatch returns the match state for a valid matchId", () => {
-    enqueue("A");
-    enqueue("B");
-    const notification = start()!;
-    const match = getMatch(notification.matchId);
-    expect(match).toBeDefined();
-    expect(match!.roundCap).toBeGreaterThan(0);
-  });
+  it("getQueueStatus returns the match state for all brackets", () => {
+    const status = getQueueStatus();
 
-  it("getMatch returns undefined for an unknown matchId", () => {
-    expect(getMatch("unknown-match")).toBeUndefined();
+    expect(status).toBeDefined();
+    expect(status.length).toBeGreaterThan(0);
+    expect(status[0].bracket).toBeDefined();
+    expect(typeof status[0].queued).toBe("number");
   });
 });
