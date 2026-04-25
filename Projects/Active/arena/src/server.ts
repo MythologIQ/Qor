@@ -1,7 +1,7 @@
 import { Hono } from "hono";
 import { mkdirSync } from "node:fs";
 import { dirname } from "node:path";
-import { mount } from "./router.js";
+import { mount } from "./router.ts";
 import { serveStatic } from "./static-routes.js";
 import { openDb, initDb, DEFAULT_DB_PATH } from "./persistence/db.js";
 import { initSchema } from "./storage/db.js";
@@ -17,6 +17,8 @@ import { configureWsAuth } from "./gateway/ws.js";
 import { handleSpectatorWs, matchSpectatorPath, spectatorWebSocket } from "./gateway/spectator-ws.ts";
 import { register } from "./gateway/routes/register.ts";
 import { agents } from "./gateway/routes/agents.ts";
+import { getMatch } from "./persistence/match-store.ts";
+import { getActiveRuntime } from "./orchestrator/match-runner.ts";
 
 const app = new Hono();
 
@@ -95,6 +97,28 @@ mount(app, db, { matchQueue, presence: presenceTracker, status: matchmakerStatus
 serveStatic(app);
 
 app.get("/", (c) => c.text("arena service online — awaiting engine build"));
+
+// GET /api/arena/matches/:matchId/status — live vs completed state
+app.get("/api/arena/matches/:matchId/status", (c) => {
+  const { matchId } = c.req.param();
+  const runtime = getActiveRuntime(matchId);
+  if (runtime) {
+    return c.json({
+      state: "active",
+      round: runtime.round,
+      roundCap: runtime.state.roundCap,
+    });
+  }
+  const match = getMatch(db, matchId);
+  if (match) {
+    return c.json({
+      state: "completed",
+      round: 0,
+      roundCap: 0,
+    });
+  }
+  return c.json({ error: "not_found" }, 404);
+});
 
 const port = Number(process.env.PORT ?? 4200);
 
