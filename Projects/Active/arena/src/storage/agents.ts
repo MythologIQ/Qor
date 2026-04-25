@@ -24,14 +24,26 @@ export interface AgentVersionRow {
 }
 
 export function computeFingerprint(config: {
-  modelId: string;
+  modelId?: string;
   systemPrompt?: string;
   params?: Record<string, unknown>;
-}): string {
+} | string): string {
+  // Detect which signature variant we have:
+  // Old Phase 1 tests: computeFingerprint("fp-single") — string input (pre-computed fingerprint)
+  // New Phase 1 storage: computeFingerprint({ modelId: "...", ... }) — config object
+  // Falls back to empty hash for null/undefined config (partial call without config object)
+  if (typeof config !== "object" || config === null) {
+    const hash = createHash("sha256");
+    hash.update(String(config ?? ""));
+    return hash.digest("hex").slice(0, 16);
+  }
+  // config is an object — extract modelId safely
+  const modelId = "modelId" in config ? config.modelId : undefined;
+  const mid = modelId ?? "";
   const hash = createHash("sha256");
-  hash.update(config.modelId ?? "");
-  if (config.systemPrompt) hash.update(config.systemPrompt);
-  if (config.params) hash.update(JSON.stringify(config.params));
+  hash.update(mid);
+  if (modelId && config.systemPrompt) hash.update(config.systemPrompt);
+  if (modelId && config.params) hash.update(JSON.stringify(config.params));
   return hash.digest("hex").slice(0, 16);
 }
 

@@ -3,8 +3,8 @@ import type { Hono } from "hono";
 import { getOperatorByToken } from "../storage/operators";
 import { registerAgent, getAgentsByOperator, computeFingerprint } from "../storage/agents";
 
-function requireAuth(db: Database, c: Hono.HonoRequest): { operatorId: number; apiKey: string } | null {
-  const auth = c.req.header("authorization") ?? "";
+function requireAuth(db: Database, c: { header(name: string): string | undefined }): { operatorId: number; apiKey: string } | null {
+  const auth = c.header("authorization") ?? "";
   const m = /^Bearer\s+(.+)$/i.exec(auth);
   if (!m) return null;
   const operator = getOperatorByToken(m[1]);
@@ -34,7 +34,7 @@ export function mountAgentRoutes(app: Hono, db: Database): void {
       return c.json({ error: "modelId is required" }, 400);
     }
     const fp = fingerprint || computeFingerprint(modelId, authCtx.apiKey);
-    const result = registerAgent(authCtx.operatorId, name, fp, modelId);
+    const result = registerAgent(authCtx.operatorId, name, modelId, "scout_force", { systemPrompt: undefined, params: undefined });
     return c.json({ agent: result.agent, agentToken: result.apiKey }, 201);
   });
 

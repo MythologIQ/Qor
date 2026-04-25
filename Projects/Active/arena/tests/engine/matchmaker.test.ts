@@ -7,9 +7,14 @@ import { getDb } from "../../src/storage/db.ts";
 describe("matchmaker (Phase 2)", () => {
   beforeEach(() => {
     const db = getDb();
+    db.exec("PRAGMA foreign_keys=OFF");
+    db.exec("DELETE FROM challenges");
+    db.exec("DELETE FROM match_events");
+    db.exec("DELETE FROM matches");
     db.exec("DELETE FROM match_records");
     db.exec("DELETE FROM agent_versions");
     db.exec("DELETE FROM operators");
+    db.exec("PRAGMA foreign_keys=ON");
     resetMatchmakerState();
   });
 
@@ -49,8 +54,8 @@ describe("matchmaker (Phase 2)", () => {
     const match = launchMatch(ag1.id, ag2.id, "apex");
 
     expect(match.id).toBeDefined();
-    expect(match.agentAId).toBe(ag1.id);
-    expect(match.agentBId).toBe(ag2.id);
+    expect(match.agent_a_id).toBe(ag1.id);
+    expect(match.agent_b_id).toBe(ag2.id);
 
     // Both agents should be dequeued
     expect(findOpponent(ag1.id, "apex")).toBeNull();

@@ -20,7 +20,10 @@ export function mountRegisterRoutes(app: Hono, db: Database): void {
     }
     try {
       const result = createOperator(handle);
-      return c.json({ operator: result.operator, apiKey: result.apiKey }, 201);
+      return c.json({
+        operator: { id: result.operator.id, handle: result.operator.handle },
+        apiKey: result.apiKey,
+      }, 201);
     } catch (err: any) {
       if (err.message?.includes("already taken")) {
         return c.json({ error: err.message }, 409);
