@@ -1,97 +1,94 @@
-import { createHash } from "node:crypto";
-import { getDb } from "./db.js";
+import { getDb } from "./db";
+import { randomBytes, createHash } from "node:crypto";
 
-export interface AgentVersion {
+export type Bracket = "scout_force" | "warband" | "vanguard_legion";
+export type Verification =
+  | "unverified"
+  | "pending_handshake"
+  | "verified_pending_queue"
+  | "queue_eligible"
+  | "active"
+  | "demoted";
+
+export interface AgentVersionRow {
   id: number;
-  operatorId: number;
+  operator_id: number;
   name: string;
   fingerprint: string;
+  model_id: string;
+  bracket: Bracket;
+  verification: Verification;
+  queue_eligible: number;
+  api_key: string;
+  created_at: number;
+}
+
+export function computeFingerprint(config: {
   modelId: string;
-  bracket: string;
-  verification: string;
-  queueEligible: boolean;
-  apiKey: string;
-  createdAt: number;
+  systemPrompt?: string;
+  params?: Record<string, unknown>;
+}): string {
+  const hash = createHash("sha256");
+  hash.update(config.modelId ?? "");
+  if (config.systemPrompt) hash.update(config.systemPrompt);
+  if (config.params) hash.update(JSON.stringify(config.params));
+  return hash.digest("hex").slice(0, 16);
 }
 
 export function registerAgent(
   operatorId: number,
   name: string,
-  fingerprint: string,
   modelId: string,
-): { agent: AgentVersion; apiKey: string } {
+  bracket: Bracket,
+  config: { systemPrompt?: string; params?: Record<string, unknown> },
+): { agent: AgentVersionRow; apiKey: string } {
+  const fingerprint = computeFingerprint(config);
+  const apiKey = `ag_${randomBytes(24).toString("hex")}`;
+  const now = Date.now();
   const db = getDb();
-  const agentApiKey = require("node:crypto").randomBytes(16).toString("hex");
-  const createdAt = Date.now();
-  db.exec(
-    `INSERT INTO agent_versions (operator_id, name, fingerprint, model_id, bracket, verification, queue_eligible, api_key, created_at) VALUES (?, ?, ?, ?, 'scout_force', 'unverified', 0, ?, ?)`,
-    [operatorId, name, fingerprint, modelId, agentApiKey, createdAt],
+  const result = db.run(
+    "INSERT INTO agent_versions (operator_id, name, fingerprint, model_id, bracket, verification, queue_eligible, api_key, created_at) VALUES (?, ?, ?, ?, ?, 'unverified', 0, ?, ?)",
+    [operatorId, name, fingerprint, modelId, bracket, apiKey, now],
   );
-  const row = db
-    .query<{ id: number; operator_id: number; name: string; fingerprint: string; model_id: string; bracket: string; verification: string; queue_eligible: number; api_key: string; created_at: number }>(
-      `SELECT * FROM agent_versions WHERE api_key = ?`,
-    )
-    .get(agentApiKey)!;
   return {
     agent: {
-      id: row.id,
-      operatorId: row.operator_id,
-      name: row.name,
-      fingerprint: row.fingerprint,
-      modelId: row.model_id,
-      bracket: row.bracket,
-      verification: row.verification,
-      queueEligible: row.queue_eligible === 1,
-      apiKey: row.api_key,
-      createdAt: row.created_at,
+      id: Number(result.lastInsertRowid),
+      operator_id: operatorId,
+      name,
+      fingerprint,
+      model_id: modelId,
+      bracket,
+      verification: "unverified",
+      queue_eligible: 0,
+      api_key: apiKey,
+      created_at: now,
     },
-    apiKey: agentApiKey,
+    apiKey,
   };
 }
 
-export function getAgentById(id: number): AgentVersion | null {
-  const db = getDb();
-  const row = db
-    .query<{ id: number; operator_id: number; name: string; fingerprint: string; model_id: string; bracket: string; verification: string; queue_eligible: number; api_key: string; created_at: number }>(
-      `SELECT * FROM agent_versions WHERE id = ?`,
-    )
-    .get(id);
-  if (!row) return null;
-  return {
-    id: row.id,
-    operatorId: row.operator_id,
-    name: row.name,
-    fingerprint: row.fingerprint,
-    modelId: row.model_id,
-    bracket: row.bracket,
-    verification: row.verification,
-    queueEligible: row.queue_eligible === 1,
-    apiKey: row.api_key,
-    createdAt: row.created_at,
-  };
+export function getAgentsByOperator(operatorId: number): AgentVersionRow[] {
+  return getDb()
+    .query("SELECT * FROM agent_versions WHERE operator_id = ? ORDER BY created_at DESC")
+    .all(operatorId) as AgentVersionRow[];
 }
 
-export function getAgentsByOperator(operatorId: number): AgentVersion[] {
-  const db = getDb();
-  return db
-    .query<{ id: number; operator_id: number; name: string; fingerprint: string; model_id: string; bracket: string; verification: string; queue_eligible: number; api_key: string; created_at: number }>(
-      `SELECT * FROM agent_versions WHERE operator_id = ? ORDER BY created_at DESC`,
-    )
-    .all(operatorId)
-    .map((row) => ({
-      id: row.id,
-      operatorId: row.operator_id,
-      name: row.name,
-      fingerprint: row.fingerprint,
-      modelId: row.model_id,
-      bracket: row.bracket,
-      verification: row.verification,
-      queueEligible: row.queue_eligible === 1,
-      apiKey: row.api_key,
-      createdAt: row.created_at,
-    }));
+export function getAgentById(agentId: number): AgentVersionRow | null {
+  return getDb().query("SELECT * FROM agent_versions WHERE id = ?").get(agentId) as AgentVersionRow | null;
 }
 
-export function computeFingerprint(modelId: string, handle: string): string {
-  return createHash("sha256").update(`${modelId}:${handle.toLowerCase().trim()}`).digest("hex");
+export function updateAgentVerification(agentId: number, verification: Verification): void {
+  getDb().run("UPDATE agent_versions SET verification = ? WHERE id = ?", [verification, agentId]);
+}
+
+export function setQueueEligible(agentId: number, eligible: boolean): void {
+  getDb().run("UPDATE agent_versions SET queue_eligible = ? WHERE id = ?", [eligible ? 1 : 0, agentId]);
+}
+
+export function getQueueEligibleAgents(bracket: Bracket): AgentVersionRow[] {
+  return getDb()
+    .query(
+      "SELECT * FROM agent_versions WHERE queue_eligible = 1 AND bracket = ? AND verification IN ('queue_eligible', 'active')",
+    )
+    .all(bracket) as AgentVersionRow[];
 }

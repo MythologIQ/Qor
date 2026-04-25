@@ -1,42 +1,44 @@
-import { describe, it, beforeEach, expect } from "bun:test";
-import { createOperator, getOperatorByToken } from "./operators";
-import { initSchema, getDb } from "./db";
+import { describe, test, expect, beforeEach } from "bun:test";
+import { getDb, initSchema, resetDb } from "./db";
+import { registerOperator, authenticateOperator } from "./operators";
 
 describe("operators storage", () => {
   beforeEach(() => {
-    const db = getDb();
-    db.exec("DELETE FROM operators");
+    process.env.ARENA_DB = ":memory:";
+    resetDb();
+    initSchema();
   });
 
-  it("createOperator returns valid shape", () => {
-    const { operator, apiKey } = createOperator("TestHandle");
-    expect(operator.id).toBeGreaterThan(0);
-    expect(operator.handle).toBe("TestHandle");
-    expect(operator.handleNormalized).toBe("testhandle");
-    expect(operator.apiKey).toBe(apiKey);
-    expect(apiKey).toHaveLength(32);
-    expect(operator.createdAt).toBeGreaterThan(0);
+  test("registerOperator returns valid shape", () => {
+    const result = registerOperator("TestPlayer");
+    expect(result.operator.handle).toBe("TestPlayer");
+    expect(result.operator.handle_normalized).toBe("testplayer");
+    expect(result.apiKey).toMatch(/^ak_[0-9a-f]{48}$/);
+    expect(result.operator.id).toBeGreaterThan(0);
   });
 
-  it("duplicate handle throws", () => {
-    createOperator("DupHandle");
-    expect(() => createOperator("DupHandle")).toThrow();
+  test("duplicate handle throws", () => {
+    registerOperator("UniqueHandle");
+    expect(() => registerOperator("UniqueHandle")).toThrow();
   });
 
-  it("getOperatorByToken works", () => {
-    const { operator, apiKey } = createOperator("TokenTest");
-    const found = getOperatorByToken(apiKey);
-    expect(found).not.toBeNull();
-    expect(found!.id).toBe(operator.id);
-    expect(found!.handle).toBe("TokenTest");
+  test("duplicate normalized handle throws", () => {
+    registerOperator("MyHandle");
+    expect(() => registerOperator("myhandle")).toThrow();
   });
 
-  it("getOperatorByToken returns null for bad token", () => {
-    expect(getOperatorByToken("deadbeefdeadbeefdeadbeefdeadbeef")).toBeNull();
+  test("authenticateOperator returns operator for valid key", () => {
+    const result = registerOperator("AuthTest");
+    const auth = authenticateOperator(result.apiKey);
+    expect(auth).not.toBeNull();
+    expect(auth!.handle).toBe("AuthTest");
   });
 
-  it("handle normalization strips spaces and lowercases", () => {
-    const { operator } = createOperator("  My-Handle  ");
-    expect(operator.handleNormalized).toBe("my-handle");
+  test("authenticateOperator returns null for unknown key", () => {
+    expect(authenticateOperator("ak_nonexistent")).toBeNull();
+  });
+
+  test("short handle throws", () => {
+    expect(() => registerOperator("ab")).toThrow(/3-32/);
   });
 });

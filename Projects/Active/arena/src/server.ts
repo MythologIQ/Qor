@@ -15,6 +15,8 @@ import type { RunnerContext, AgentChannel } from "./runner/types.js";
 import { agentSessionManager } from "./gateway/session.js";
 import { configureWsAuth } from "./gateway/ws.js";
 import { handleSpectatorWs, matchSpectatorPath, spectatorWebSocket } from "./gateway/spectator-ws.ts";
+import { register } from "./gateway/routes/register.ts";
+import { agents } from "./gateway/routes/agents.ts";
 
 const app = new Hono();
 

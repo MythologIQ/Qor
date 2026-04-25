@@ -1,62 +1,46 @@
+import { getDb } from "./db";
 import { randomBytes } from "node:crypto";
-import { getDb } from "./db.js";
 
-export interface MatchRecord {
+export interface MatchRecordRow {
   id: string;
-  operatorAId: number | null;
-  operatorBId: number | null;
-  agentAId: number | null;
-  agentBId: number | null;
-  originTag: string;
+  agent_a_id: number;
+  agent_b_id: number;
+  bracket: string;
+  origin_tag: string;
   outcome: string | null;
-  createdAt: number;
+  created_at: number;
+  completed_at: number | null;
 }
 
 export function createMatch(
   agentAId: number,
   agentBId: number,
+  bracket: string,
   originTag = "auto",
-): MatchRecord {
-  const db = getDb();
-  const id = `match-${randomBytes(4).toString("hex")}-${Date.now()}`;
-  const createdAt = Date.now();
-  db.exec(
-    `INSERT INTO match_records (id, agent_a_id, agent_b_id, origin_tag, created_at) VALUES (?, ?, ?, ?, ?)`,
-    [id, agentAId, agentBId, originTag, createdAt],
+): MatchRecordRow {
+  const id = `match-${randomBytes(8).toString("hex")}`;
+  const now = Date.now();
+  getDb().run(
+    "INSERT INTO matches (id, agent_a_id, agent_b_id, bracket, origin_tag, created_at) VALUES (?, ?, ?, ?, ?, ?)",
+    [id, agentAId, agentBId, bracket, originTag, now],
   );
   return {
     id,
-    operatorAId: null,
-    operatorBId: null,
-    agentAId,
-    agentBId,
-    originTag,
+    agent_a_id: agentAId,
+    agent_b_id: agentBId,
+    bracket,
+    origin_tag: originTag,
     outcome: null,
-    createdAt,
+    created_at: now,
+    completed_at: null,
   };
 }
 
-export function getMatch(id: string): MatchRecord | null {
-  const db = getDb();
-  const row = db
-    .query<{ id: string; operator_a_id: number | null; operator_b_id: number | null; agent_a_id: number | null; agent_b_id: number | null; origin_tag: string; outcome: string | null; created_at: number }>(
-      `SELECT * FROM match_records WHERE id = ?`,
-    )
-    .get(id);
-  if (!row) return null;
-  return {
-    id: row.id,
-    operatorAId: row.operator_a_id ?? null,
-    operatorBId: row.operator_b_id ?? null,
-    agentAId: row.agent_a_id ?? null,
-    agentBId: row.agent_b_id ?? null,
-    originTag: row.origin_tag,
-    outcome: row.outcome,
-    createdAt: row.created_at,
-  };
+export function getMatch(id: string): MatchRecordRow | null {
+  return getDb().query("SELECT * FROM matches WHERE id = ?").get(id) as MatchRecordRow | null;
 }
 
 export function updateOutcome(id: string, outcome: string): void {
-  const db = getDb();
-  db.exec(`UPDATE match_records SET outcome = ? WHERE id = ?`, [outcome, id]);
+  const now = Date.now();
+  getDb().run("UPDATE matches SET outcome = ?, completed_at = ? WHERE id = ?", [outcome, now, id]);
 }

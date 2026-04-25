@@ -1,44 +1,82 @@
 import { Hono } from "hono";
-import { getOperatorByToken, createOperator } from "../../storage/operators.js";
-import { registerAgent, getAgentsByOperator, computeFingerprint } from "../../storage/agents.js";
-import { randomBytes } from "node:crypto";
+import { authenticateOperator } from "../../storage/operators";
+import { registerAgent, getAgentsByOperator, type Bracket } from "../../storage/agents";
+import type { Context } from "hono";
 
-const router = new Hono();
+const agents = new Hono();
 
-function requireAuth(c: Hono.HonoRequest): { operatorId: number; apiKey: string } {
+async function requireAuth(c: Context): Promise<{ operatorId: number } | Response> {
   const auth = c.req.header("authorization");
   if (!auth?.startsWith("Bearer ")) {
-    throw new Hono.HTTPException(401, { message: "Missing or invalid Authorization header" });
+    return c.json({ error: "Authorization required" }, 401);
   }
   const token = auth.slice(7);
-  const operator = getOperatorByToken(token);
+  const operator = authenticateOperator(token);
   if (!operator) {
-    throw new Hono.HTTPException(401, { message: "Invalid API key" });
+    return c.json({ error: "Invalid API key" }, 401);
   }
-  return { operatorId: operator.id, apiKey: token };
+  return { operatorId: operator.id };
 }
 
-router.post("/", async (c) => {
-  const { operatorId, apiKey } = requireAuth(c.req);
-  const body = await c.req.json<{ name?: string; fingerprint?: string; modelId?: string }>();
-  const { name, fingerprint, modelId } = body ?? {};
+const VALID_BRACKETS: Bracket[] = ["scout_force", "warband", "vanguard_legion"];
 
-  if (!name || typeof name !== "string" || name.length < 2 || name.length > 48) {
-    return c.json({ error: "name must be 2–48 characters" }, 400);
-  }
-  if (!modelId || typeof modelId !== "string") {
-    return c.json({ error: "modelId is required" }, 400);
-  }
-  const fp = fingerprint || computeFingerprint(modelId, apiKey);
+agents.post("/", async (c: Context) => {
+  const authResult = await requireAuth(c);
+  if (authResult instanceof Response) return authResult;
 
-  const result = registerAgent(operatorId, name, fp, modelId);
-  return c.json({ agent: result.agent, agentToken: result.apiKey }, 201);
+  const parsed = await c.req.json();
+  const { name, modelId, bracket, config } = parsed as {
+    name?: string;
+    modelId?: string;
+    bracket?: string;
+    config?: { systemPrompt?: string; params?: Record<string, unknown> };
+  };
+
+  if (!name || typeof name !== "string") return c.json({ error: "name is required" }, 400);
+  if (!modelId || typeof modelId !== "string") return c.json({ error: "modelId is required" }, 400);
+  if (!bracket || !VALID_BRACKETS.includes(bracket as Bracket)) {
+    return c.json({ error: `bracket must be one of: ${VALID_BRACKETS.join(", ")}` }, 400);
+  }
+
+  try {
+    const result = registerAgent(authResult.operatorId, name, modelId, bracket as Bracket, config ?? {});
+    return c.json(
+      {
+        agent: {
+          id: result.agent.id,
+          name: result.agent.name,
+          fingerprint: result.agent.fingerprint,
+          model_id: result.agent.model_id,
+          bracket: result.agent.bracket,
+          verification: result.agent.verification,
+        },
+        agentToken: result.apiKey,
+      },
+      201,
+    );
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : "Agent registration failed";
+    return c.json({ error: msg }, 400);
+  }
 });
 
-router.get("/", async (c) => {
-  const { operatorId } = requireAuth(c.req);
-  const agents = getAgentsByOperator(operatorId);
-  return c.json({ agents });
+agents.get("/", async (c: Context) => {
+  const authResult = await requireAuth(c);
+  if (authResult instanceof Response) return authResult;
+
+  const agentList = getAgentsByOperator(authResult.operatorId);
+  return c.json({
+    agents: agentList.map((a) => ({
+      id: a.id,
+      name: a.name,
+      fingerprint: a.fingerprint,
+      model_id: a.model_id,
+      bracket: a.bracket,
+      verification: a.verification,
+      queue_eligible: a.queue_eligible === 1,
+      created_at: a.created_at,
+    })),
+  });
 });
 
-export default router;
+export { agents };
