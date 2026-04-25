@@ -25,6 +25,8 @@ import { runnerMetrics } from "./runner/metrics";
 import { mountMatchRoutes } from "./routes/matches";
 import { mountTournamentRoutes } from "./routes/tournaments";
 import { mountLeaderboardRoutes } from "./routes/leaderboard";
+import { mountAgentRoutes } from "./routes/agents";
+import { mountRegisterRoutes } from "./routes/register";
 
 export interface MountOpts {
   limiter?: RateLimiter;
@@ -64,13 +66,58 @@ export function mount(app: Hono, db: Database, opts: MountOpts = {}): void {
     });
   });
 
-  app.get("/api/arena/match/:id", (c) =>
-    c.json({ stub: true, path: "/api/arena/match/:id", id: c.req.param("id") }),
-  );
+  app.post("/api/arena/match/queue", async (c) => {
+    const m = /^Bearer\s+(.+)$/i.exec(c.req.header("authorization") ?? "");
+    if (!m) return c.json({ error: "unauthorized" }, 401);
+    const { getOperatorByToken } = await import("../storage/operators.js");
+    const operator = getOperatorByToken(m[1]);
+    if (!operator) return c.json({ error: "unauthorized" }, 401);
 
-  app.post("/api/arena/match", (c) =>
-    c.json({ stub: true, path: "/api/arena/match" }),
-  );
+    let body: { agentId?: number; bracket?: string };
+    try { body = await c.req.json(); } catch { return c.json({ error: "invalid_json" }, 400); }
+    const agentId = typeof body?.agentId === "number" ? body.agentId : 0;
+    const bracket = body?.bracket === "sentinel" || body?.bracket === "vanguard" ? body.bracket : "apex";
+
+    const { getAgentById } = await import("../storage/agents.js");
+    const agent = getAgentById(agentId);
+    if (!agent) return c.json({ error: "agent not found" }, 404);
+    if (agent.operatorId !== operator.id) return c.json({ error: "forbidden" }, 403);
+
+    const { queueAgent } = await import("../orchestrator/matchmaker.js");
+    queueAgent(agentId, bracket as "sentinel" | "vanguard" | "apex");
+    return c.json({ queued: true, bracket });
+  });
+
+  app.post("/api/arena/match/launch", async (c) => {
+    const m = /^Bearer\s+(.+)$/i.exec(c.req.header("authorization") ?? "");
+    if (!m) return c.json({ error: "unauthorized" }, 401);
+    const { getOperatorByToken } = await import("../storage/operators.js");
+    const operator = getOperatorByToken(m[1]);
+    if (!operator) return c.json({ error: "unauthorized" }, 401);
+
+    let body: { agentId?: number; bracket?: string };
+    try { body = await c.req.json(); } catch { return c.json({ error: "invalid_json" }, 400); }
+    const agentId = typeof body?.agentId === "number" ? body.agentId : 0;
+    const bracket = body?.bracket === "sentinel" || body?.bracket === "vanguard" ? body.bracket : "apex";
+
+    const { getAgentById } = await import("../storage/agents.js");
+    const agent = getAgentById(agentId);
+    if (!agent) return c.json({ error: "agent not found" }, 404);
+    if (agent.operatorId !== operator.id) return c.json({ error: "forbidden" }, 403);
+
+    const { findOpponent, launchMatch } = await import("../orchestrator/matchmaker.js");
+    const opponent = findOpponent(agentId, bracket as "sentinel" | "vanguard" | "apex");
+    if (!opponent) return c.json({ error: "no opponent found" }, 409);
+
+    const match = launchMatch(agentId, opponent.agentId, bracket as "sentinel" | "vanguard" | "apex");
+    return c.json({ matchId: match.matchId, opponent: opponent.agentId }, 201);
+  });
+
+  app.get("/api/arena/match/status", async (c) => {
+    const { getQueueStatus } = await import("../orchestrator/matchmaker.js");
+    const status = getQueueStatus();
+    return c.json({ brackets: status });
+  });
 
   app.get("/api/arena/metrics", (c) => {
     const matchCount = db
@@ -205,6 +252,8 @@ export function mount(app: Hono, db: Database, opts: MountOpts = {}): void {
     });
   });
 
+  mountAgentRoutes(app, db);
+  mountRegisterRoutes(app, db);
   mountMatchRoutes(app, db);
   mountTournamentRoutes(app, db);
   mountLeaderboardRoutes(app, db);

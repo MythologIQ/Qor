@@ -368,3 +368,14 @@ Plan D v2 sealed end-to-end at commit chain `e08511ef2cb9c31…` (2026-04-24T23:
 
 ### Linked META_LEDGER
 Chain hash: `e08511ef2cb9c31ffe57fabfdaabaddc19f09ef1839ab26fdfe25bb310e3ee1c`
+
+- **builder tick 202 (task-202-notification)** — blocked_on_deps: missing task-199 and task-200 success entries; task-201 completed successfully. Severity: 1 | ts: 2026-04-25T01:58:34Z
+
+- 2026-04-25T02:13:03Z | severity=1 | builder tick 202 | blocked_on_deps | task: task-202-notification | blocked_by: task-199
+
+## Builder Failure — tick=202 spec_defect (task-199 dependency unverifiable)
+
+**Tick:** 202 | **Task:** task-202-notification | **Status:** spec_defect
+**Root cause:** `depends_on: [task-199]` but task-199 does not exist in builder queue (max queue entry is 198.yaml). Dependency unverifiable — task definition absent.
+**Severity:** 4
+**Timestamp:** 2026-04-25T03:05:00Z
