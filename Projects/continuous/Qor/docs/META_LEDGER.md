@@ -2,9 +2,43 @@
 
 **Chain Version**: 1.0.5
 **Genesis Hash**: `QOR-ENCODE-v1.0`
-**Final Ledger Hash**: `16cf664dccdd56a367973e51133b16d2888b5faf387751cf42c372eef1485a1e`
+**Final Ledger Hash**: `e05a98e641da5cd9b8a70428de17cea1a3d0889d1eb698b46dbfa2dc645f2d55`
 **Phase**: EXECUTE → COMPLETE → JUDGE → RESTRUCTURE
 **Status**: SEALED — Victor full execution path substantiated
+
+---
+
+## 2026-04-30T14:05:00Z — GATE TRIBUNAL — QOR Issue #37 v7
+
+**Phase**: GATE
+**Plan**: `docs/plans/2026-04-29-qor-issue-37-qora-forge-kernels-v7.md`
+**Verdict**: ✅ **PASS**
+**Risk Grade**: L3
+
+### Findings
+
+None. All v6 MAJOR findings closed:
+
+| v6 Finding | v7 Closure |
+|---|---|
+| **M-1 (v6)** Maintenance gate missing on `/record-veto` | ✅ Both handlers get 503 guard. Step 3a-3 probes both. Abort if either 2xx. |
+| **M-2 (v6)** `handleRecordVeto` not refactored to kernel | ✅ Both handlers call `appendEntry()`. VETO = `type: "VETO"`. |
+| **M-3 (v6)** Ghost-ledger recreation post-archive | ✅ No `writeFileSync` → no file recreation. Grep gate + step 7e check. |
+
+Live-codebase verification: 2/2 `writeFileSync(LEDGER_PATH)` in `qora-routes.ts` addressed. Post-refactor acceptance gate discriminating. All 7 adversarial passes clean.
+
+### Content Hash
+`21f63380aab0f90dddda76f000b3bcc5dac789efea4f5162e07359581b3bf819`
+
+### Previous Hash
+`16cf664dccdd56a367973e51133b16d2888b5faf387751cf42c372eef1485a1e` (v2 VETO)
+
+### Chain Hash
+`e05a98e641da5cd9b8a70428de17cea1a3d0889d1eb698b46dbfa2dc645f2d55`
+
+### Next Action
+
+`/qor-implement` — Phase 1 (IPC token infra + service cutover + Victor canary).
 
 ---
 
@@ -8443,7 +8477,55 @@ Chain Hash: sha256(continuum-ingestion-hardening-v1-audit-v1 + impl-continuum-in
 | Phase 2: `/api/qor/evidence` (GET public, POST auth) | ✅ 200 GET, 401 unauthed POST | PASS |
 | Phase 2: `/api/qor/evidence/bundle` (POST auth) | ✅ 401 unauthed | PASS |
 | Phase 3: Forge write APIs record evidence | ✅ 3 routes modified | PASS |
-| Phase 3: `/qor/victor/audit` rewired to unified evidence | ✅ Fetches from `/api/qor/evidence
+| Phase 3: `/qor/victor/audit` rewired to unified evidence | ✅ Fetches from `/api/qor/evidence` | PASS |
+
+**9/9 planned deliverables exist. 0 missing. 0 unplanned.**
+
+### Test Verification
+
+| Suite | Tests | Status |
+|-------|-------|--------|
+| `evidence/tests/contract.test.ts` | 5 | ✅ PASS |
+| `evidence/tests/evaluate.test.ts` | 11 | ✅ PASS |
+| `evidence/tests/log.test.ts` | 9 | ✅ PASS |
+| `evidence/tests/bundle.test.ts` | 8 | ✅ PASS |
+| **Total** | **33** | **33/33 PASS (42ms)** |
+
+### Live Verification
+
+| Check | Result |
+|-------|--------|
+| POST `/api/qor/evaluate` (shell.execute @ CBT) | ✅ 200 — Block, risk 0.8, critical |
+| POST `/api/qor/evaluate` (file.read @ CBT) | ✅ 200 — Allow, risk 0.1 |
+| GET `/api/qor/evidence` | ✅ 200 — entries returned |
+| POST `/api/qor/evidence` (no auth) | ✅ 401 |
+| POST `/api/qor/evidence/bundle` (no auth) | ✅ 401 |
+| `get_space_errors()` | ✅ 0 errors |
+| console.log in evidence/ | ✅ 0 found |
+
+### Section 4 Final
+
+| Check | Limit | Actual | Status |
+|-------|-------|--------|--------|
+| Function lines | 40 | 20 | ✅ |
+| File lines | 250 | 85 | ✅ |
+| Nesting depth | 3 | 2 | ✅ |
+| Nested ternaries | 0 | 0 | ✅ |
+| console.log | 0 | 0 | ✅ |
+| Runtime errors | 0 | 0 | ✅ |
+
+### Session Seal
+
+```
+Merkle Hash: 1cfee42b0c952746fc4cb66dba8d1e52387e8323d8b9eecc16f765c9847e5c8f
+Chain Hash: sha256(evidence-layer-integration-v1 + content-hash + parent-commit-7ef19a3)
+```
+
+### Verdict
+
+**SEALED** — Reality matches Promise. QOR now has a unified governance evidence layer: 4 TypeScript modules porting FailSafe-Pro's evaluation engine, 3 API endpoints with bearer auth on writes, append-only JSONL ledger, and existing Forge write APIs wired to emit evidence on every governance action. 33 tests passing across 4 suites.
+
+---
 
 ## 2026-04-16 — REVIEW TICK 6 (2026-04-16T21:00:00Z)
 verdict: GREEN
@@ -9021,564 +9103,4 @@ Handoff to Judge for substantiation (`/qor-substantiate` or tribunal re-entry) p
 - **Q3** (Victor boot-site injection) — tracked as Issue #37; no production caller today
 
 ### Content Hash (session seal content)
-SHA256(sorted hashes of 6 Phase-1 files) = `3cfa945e7dbf49272803c849f62bd0bea48a67dd4e3ef5df5f798277f423f5a3`
-
-### Previous Hash
-`ae75c7bec0d0595bc5afd883d0e4d1e6e3ff72da322d6469fcffc07eebc01b89` (Phase 1 implement)
-
-### MERKLE SEAL (Chain Hash)
-SHA256(content_hash + previous_hash) = `4076922d20552e9857001bb3190323872f5153e73aaabcb0865b1bc4aae997c0`
-
-### Verdict
-**SEALED** — Phase 1 substantiation complete. Reality = Promise. Proceed to Phase 2 re-audit.
-
-### Next Action
-`/qor-audit` scoped to Phase 2 (wrapper entrypoint `qor/start.sh` + `qor/neo4j.conf` + `qor/README.md` + `qor/start.test.sh`). Phase 2 implementation requires PASS verdict from that audit before execution.
-
----
-
-## 2026-04-18 — GATE TRIBUNAL — QOR Mono-Service Cutover, Phase 2
-
-**Phase**: GATE (Phase 2 re-audit)
-**Persona**: The Judge (adversarial)
-**Blueprint**: `docs/plans/2026-04-18-qor-mono-service-cutover.md` (Phase 2 only)
-**Verdict**: **PASS**
-**Risk Grade**: L2 (process supervision + lifecycle coupling)
-
-### Audit Matrix
-
-| Pass                      | Verdict |
-|---------------------------|---------|
-| Security                  | PASS    |
-| Ghost UI                  | PASS (N/A — infra/ops) |
-| Simplicity Razor          | PASS    |
-| Dependency                | PASS (no new deps)     |
-| Macro-Level Architecture  | PASS    |
-| Build-Path / Orphan       | PASS    |
-
-### Non-Blocking Observations
-
-1. Watchdog does not monitor Bun PID after `exec`; backgrounded watchdog could orphan on Bun crash. Phase 2 local smoke should include "kill bun → Neo4j dies" scenario.
-2. `qor/neo4j.conf` hardcodes absolute data path — brittle on repo relocation; acceptable for stable workspace.
-3. Q1 supervisor backoff carries forward; in-script counter fallback named.
-4. First-run Neo4j auth deferred — data dir already initialized.
-
-### Content Hash
-SHA256(`docs/plans/2026-04-18-qor-mono-service-cutover.md`) = `9dd679dc7bd908f616a5a76184d8cf9e155a4884c64c17e6681ad331a3adf3cb`
-
-### Previous Hash
-`4076922d20552e9857001bb3190323872f5153e73aaabcb0865b1bc4aae997c0` (Phase 1 session seal)
-
-### MERKLE SEAL (Chain Hash)
-SHA256(content_hash + previous_hash) = `d2c9b1d159b3b562d016164ddb5bf9741b4c20f173ff7532274588ddbe9a381a`
-
-### Authorizations Advanced
-
-- Phase 2 (wrapper + resiliency overlay) unlocked for `/qor-implement`.
-- Phase 3 requires independent re-audit against *live state* immediately before cutover.
-- No SHADOW_GENOME update (PASS; no new failure pattern).
-
-### Next Action
-`/qor-implement Phase 2` — create `qor/start.sh` (+0600/+x), `qor/neo4j.conf`, `qor/README.md`, `qor/start.test.sh`; run bash test harness; confirm boot-gate + liveness scenarios pass; then hand off to `/qor-substantiate` before Phase 3 re-gate.
-
----
-
-## 2026-04-18 — IMPLEMENTATION — QOR Mono-Service Cutover, Phase 2
-
-**Phase**: IMPLEMENT (Phase 2 of 3)
-**Persona**: The Specialist
-**Blueprint**: `docs/plans/2026-04-18-qor-mono-service-cutover.md` (Phase 2)
-**Gate**: PASS (tribunal chain `d2c9b1d159b3b562d016164ddb5bf9741b4c20f173ff7532274588ddbe9a381a`)
-
-### Files Created
-
-| File | Lines | Role |
-|------|-------|------|
-| `qor/start.sh` (+x) | 45 | Wrapper entrypoint: env defaults → spawn Neo4j → boot gate → liveness watchdog → `exec bun` |
-| `qor/neo4j.conf` | 9 | Workspace-local Neo4j override (127.0.0.1 listen; data/logs paths) |
-| `qor/README.md` | 60 | Entrypoint spec: env vars, exit codes, signal handling, local verification recipe |
-| `qor/start.test.sh` (+x) | 153 | Bash scenario harness: boot-pass, boot-timeout, liveness-kill |
-
-### Test Results (bash scenario harness)
-
-```
-qor/start.test.sh — 3 scenarios
-  [OK] scenario_boot_gate_pass
-  [OK] scenario_boot_gate_timeout (exit=1, elapsed=3s)
-  [OK] scenario_liveness_kill
-
-Results: 3 pass, 0 fail
-```
-
-Each scenario runs the wrapper under `setsid` with stubbed `bun` (PATH shim) and stubbed `neo4j` (`$NEO4J_HOME` redirect). Stubs use a single python3 listener driven by `QOR_TEST_STUB_MODE`. Process-group reap between scenarios prevents port-7687 leakage.
-
-### Complexity Self-Check
-
-| Artifact | Lines | Nesting | Ternaries | Status |
-|----------|-------|---------|-----------|--------|
-| `start.sh` main body | ~30 exec | 3 (`until → if → kill/exit`) | 0 | OK |
-| `start.sh` watchdog subshell | ~12 | 3 (`while → if → kill/exit`) | 0 | OK |
-| `start.test.sh` scenarios | 20–25 each | 2 | 0 | OK |
-
-All files ≤ 250 LOC; all blocks ≤ 40 LOC; nesting ≤ 3; 0 nested ternaries; no `console.log` (N/A in bash).
-
-### Non-Blocking Observations Carried Forward
-
-1. Watchdog does not monitor Bun PID (Phase 2 gate-audit finding #1) — README.md "Known Limitations" now documents this. Resolution tracked for Phase 2 live smoke / Phase 3 cutover.
-2. `qor/neo4j.conf` hardcodes workspace data path — documented in README "Known Limitations".
-3. Q1 supervisor backoff remains an operational concern for Phase 3 re-gate.
-
-### Content Hash
-SHA256(sorted hashes of 4 Phase-2 files) = `2b3ff3bc7fb65c5425a8a4bade0c70e40be4d7b9c392f8802deb89e5668f9925`
-
-### Previous Hash
-`d2c9b1d159b3b562d016164ddb5bf9741b4c20f173ff7532274588ddbe9a381a` (Phase 2 gate)
-
-### MERKLE SEAL (Chain Hash)
-SHA256(content_hash + previous_hash) = `1e6b3bf5388d21b5d5ac50e27155af234c8428bf1c586457f7df4d18d15474ac`
-
-### Next Action
-Handoff to Judge for `/qor-substantiate` (Phase 2 seal), then Phase 3 operational re-gate (live-state audit before atomic service swap).
-
----
-
-## 2026-04-18 — SUBSTANTIATE — QOR Mono-Service Cutover, Phase 2 Session Seal
-
-**Phase**: SUBSTANTIATE (Phase 2 of 3)
-**Persona**: The Judge
-**Blueprint**: `docs/plans/2026-04-18-qor-mono-service-cutover.md` (Phase 2 subset)
-**Implementation Chain**: `1e6b3bf5388d21b5d5ac50e27155af234c8428bf1c586457f7df4d18d15474ac`
-
-### Reality vs Promise
-
-| Planned File | Status | Notes |
-|--------------|--------|-------|
-| `qor/start.sh` (executable) | EXISTS | +x bit set; 45 LOC; process-group SIGTERM on liveness loss |
-| `qor/neo4j.conf` | EXISTS | 127.0.0.1 bolt/listen; workspace data dir |
-| `qor/README.md` | EXISTS | Env contract, exit codes, Known Limitations (watchdog-bun, hardcoded path) |
-| `qor/start.test.sh` (executable) | EXISTS | +x bit set; 3 scenarios, all pass |
-
-**MISSING**: 0 **UNPLANNED**: 0 **Reality = Promise**: ✅
-
-### Functional Verification
-
-- Phase 2 bash harness: **3/3 pass** (results recorded at IMPLEMENT entry).
-- Continuum Phase 1 scoped suites still green (33/33) — Phase 2 touches no Bun source.
-- No `console.log` in production surface (N/A — bash scripts use stderr `echo` for operational logging).
-
-### Section 4 Razor (Final)
-
-| Artifact | Lines | Nesting | Nested Ternaries | Status |
-|----------|-------|---------|------------------|--------|
-| `start.sh` main body | ~30 exec | 3 | 0 | OK |
-| `start.sh` watchdog subshell | ~12 | 3 | 0 | OK |
-| `start.test.sh` scenario fns | 20–25 | 2 | 0 | OK |
-| All Phase 2 files | ≤ 250 LOC | ≤ 3 | 0 | OK |
-
-### Deferrals Acknowledged
-
-- **Watchdog does not monitor Bun PID** — documented in `qor/README.md` Known Limitations; carries into Phase 3 live-state re-gate.
-- **`neo4j.conf` absolute workspace path** — documented in `qor/README.md`; acceptable for current stable workspace.
-- **Q1 supervisor backoff** — unresolved until Phase 3 operational observation.
-
-### System State Sync
-
-`docs/SYSTEM_STATE.md` updated: now reflects Phase 2 sealed; Phase 2 artifact table added; Phase 3 remains unshipped pending live-state re-gate.
-
-### Content Hash
-SHA256(sorted hashes of 4 Phase-2 files) = `2b3ff3bc7fb65c5425a8a4bade0c70e40be4d7b9c392f8802deb89e5668f9925`
-
-### Previous Hash
-`1e6b3bf5388d21b5d5ac50e27155af234c8428bf1c586457f7df4d18d15474ac` (Phase 2 implement)
-
-### MERKLE SEAL (Chain Hash)
-SHA256(content_hash + previous_hash) = `d60746eade24b5a9b917c5e12fa96bc02e1af2d88536a6fd187dfe08e09638c3`
-
-### Verdict
-**SEALED** — Phase 2 substantiation complete. Reality = Promise.
-
-### Next Action
-Phase 3 (atomic service swap) requires **live-state re-audit** immediately before cutover execution. The re-audit must verify: (a) current `neo4j` + `continuum-api` service IDs still match Phase 3 plan; (b) supervisor backoff policy of Zo `register_user_service` (Q1); (c) port 7687 not externally exposed at cutover moment.
-
----
-
-## 2026-04-18 — GATE TRIBUNAL — QOR Mono-Service Cutover, Phase 3 (Live-State Re-Audit)
-
-**Phase**: GATE (Phase 3 live-state re-gate)
-**Persona**: The Judge (adversarial)
-**Blueprint**: `docs/plans/2026-04-18-qor-mono-service-cutover.md` (Phase 3 only)
-**Verdict**: **VETO**
-**Risk Grade**: L2 → effectively L3 at cutover moment (deterministic service failure in blueprint)
-
-### Audit Matrix
-
-| Pass                      | Verdict |
-|---------------------------|---------|
-| Security                  | PASS (no new violations; existing NEO4J 7474 public exposure is pre-existing and removed by cutover) |
-| Ghost UI                  | PASS (N/A — ops)  |
-| Simplicity Razor          | PASS (no code delta) |
-| Dependency                | PASS (no new deps) |
-| Macro-Level Architecture  | PASS    |
-| Build-Path / Orphan       | PASS    |
-| **Blocking Violations (R1–R4)** | **VETO** |
-
-### Live-State Reconnaissance
-
-- `neo4j=svc_Vw2b3WN68nM` — entrypoint still references nonexistent `.neo4j/start-neo4j.sh`; service non-functional (benign, matches plan assumption).
-- `continuum-api=svc_JsVdYqujQAw` — env_vars include `NEO4J_URI=bolt://localhost:7687`, `NEO4J_USER=neo4j`, `NEO4J_PASS=victor-memory-dev`, `CONTINUUM_PORT=4100`.
-- Service IDs in plan verified current.
-
-### Blocking Violations
-
-1. **R1 — env_vars incompleteness.** Plan's `register_user_service(qor)` omits `NEO4J_URI`/`NEO4J_USER`/`NEO4J_PASS`. Runtime (`continuum/src/memory/driver.ts:18–22`) fails closed on missing env. Deterministic service crash.
-2. **R2 — unresolved `QOR_IPC_TOKEN_MAP: "..."` placeholder.** Operator has no authoritative path.
-3. **R3 — supervisor backoff unverified; in-script crashloop counter never implemented in Phase 2.** Crashloop storms unmitigated.
-4. **R4 — watchdog-Bun gap + no pre-flight port check.** Bun crash → orphaned Neo4j → supervisor restart fails to bind 7687 → permanent wedge.
-
-### Content Hash
-SHA256(`docs/plans/2026-04-18-qor-mono-service-cutover.md`) = `9dd679dc7bd908f616a5a76184d8cf9e155a4884c64c17e6681ad331a3adf3cb`
-
-### Previous Hash
-`d60746eade24b5a9b917c5e12fa96bc02e1af2d88536a6fd187dfe08e09638c3` (Phase 2 session seal)
-
-### MERKLE SEAL (Chain Hash)
-SHA256(content_hash + previous_hash) = `2dffc116a7f6f7d6bc0283f62617076737de4f982c60a17d0fe6ec7d6ee8a2e6`
-
-### Authorizations
-
-- Phase 3 implementation **blocked** pending revision.
-- Phase 1 and Phase 2 seals remain valid (this VETO does not invalidate prior chain entries).
-- SHADOW_GENOME updated with new failure pattern: "Live-state blueprint drift — env_vars completeness regression across plan phases".
-
-### Remediation Path (from AUDIT_REPORT.md)
-
-1. **R1**: Add `NEO4J_URI`, `NEO4J_USER`, `NEO4J_PASS` to Phase 3 env_vars.
-2. **R2**: Replace `QOR_IPC_TOKEN_MAP: "..."` with concrete path (or remove var).
-3. **R3**: Verify Zo supervisor backoff OR implement in-script crashloop counter as Phase 2 amendment.
-4. **R4**: Add pre-flight port-7687 check to `qor/start.sh` as Phase 2 amendment.
-
-### Next Action
-`/qor-plan` to draft Phase 3-revision plan addressing R1–R4. Then re-submit via `/qor-audit`. No `/qor-implement` on Phase 3 permitted until PASS verdict.
-
-
----
-
-## GATE TRIBUNAL — 2026-04-19 Phase 3 Cutover v2 (VETO-Remediation)
-
-**Blueprint:** `docs/plans/2026-04-18-qor-phase3-cutover-v2.md`
-**Verdict:** ❌ **VETO**
-**Risk Grade:** L2
-
-### Verdict Summary
-
-| Audit Pass                | Verdict |
-|---------------------------|---------|
-| Security (L3)             | PASS    |
-| Section 4 Razor           | PASS    |
-| Dependency                | PASS    |
-| Macro-Level Architecture  | VETO    |
-| Build-Path / Orphan       | VETO    |
-| **Blocking Violations (T1, C2)** | **VETO** |
-
-### Live-State Reconnaissance
-
-- Existing test harness is `qor/start.test.sh` (bash, 3 scenarios) — NOT a TS Bun test at `tests/qor/*`.
-- Driver fail-closed confirmed (`continuum/src/memory/driver.ts:18-22`); R1 grounding valid.
-- IPC conditional confirmed (`continuum/src/service/server.ts:128-136`); Q2=A cleanly disables IPC.
-- `/health` route exists. `/ipc/status` route does NOT exist.
-
-### Blocking Violations
-
-1. **T1 — Orphan Test Target.** Plan specifies `tests/qor/start-sh-harness.test.ts` but that directory/file format doesn't exist. Existing harness is bash (`qor/start.test.sh`). Pre-cutover gate becomes unprovable; R3 + R4 closures cannot be substantiated.
-2. **C2 — Canary Assertion Vacuity.** Plan's `/ipc/status` 404-or-disabled probe proves nothing because the route doesn't exist at all — a 404 occurs regardless of IPC state. R2 is not actually closed by the proposed test.
-
-### VETO-Remediation Status (R1–R4 from prior tribunal)
-
-| Finding | v2 Treatment | Closure |
-|---------|---------------|---------|
-| R1 env_vars | Inline `NEO4J_URI/USER/PASS` per Q1=A | **CLOSED** |
-| R2 IPC tokens | Omit both per Q2=A | Design closed / test NOT closed (C2) |
-| R3 crashloop | `/dev/shm/qor-crashloop` counter 3/60s/60s | Design closed; test VETOed by T1 |
-| R4 orphan reap + Bun watchdog | Pre-flight 7687 probe + Bun PID watchdog | Design closed; test VETOed by T1 |
-
-### Content Hash
-SHA256(`docs/plans/2026-04-18-qor-phase3-cutover-v2.md`) = `6bd8b7f56860e973e42275bf29f11b493c2a194ff99ce936cd478e854d0b0c55`
-
-### Previous Hash
-`2dffc116a7f6f7d6bc0283f62617076737de4f982c60a17d0fe6ec7d6ee8a2e6` (prior v1 Phase 3 VETO)
-
-### MERKLE SEAL (Chain Hash)
-SHA256(content_hash + previous_hash) = `2d4c2a6fc9d7182e642967ef593e30a4c3f8cf34f65111635fa56e3ce91965c2`
-
-### Authorizations
-
-- Phase 3 v2 implementation **blocked** pending T1 + C2 remediation.
-- v1 Phase 1 and Phase 2 seals remain valid.
-- SHADOW_GENOME addendum pending: "Plan-author assumed `tests/<module>/*.test.ts` layout by convention; reality co-locates bash harnesses with targets. Test-path grounding required before blueprint write."
-
-### Remediation Path
-
-1. **T1**: Rewrite Phase 1 Unit Tests to extend `qor/start.test.sh` with four bash scenarios. Update pre-cutover gate to `bash qor/start.test.sh`.
-2. **C2**: Replace `/ipc/status` probe with socket-file absence check (preferred) or log-line absence check.
-3. Relocate `qor-live-health.test.ts` to `continuum/tests/` to match existing suite layout.
-
-### Next Action
-`/qor-plan` to revise v2 plan addressing T1 + C2. Then re-submit via `/qor-audit`. No `/qor-implement` on Phase 3 v2 permitted until PASS verdict.
-
----
-
-## GATE TRIBUNAL — 2026-04-19 Phase 3 Cutover v3 (T1+C2 Remediation)
-
-**Plan**: `docs/plans/2026-04-19-qor-phase3-cutover-v3.md`
-**Verdict**: ❌ **VETO** (findings T1r, X1 — canary test location orphaned, config-layer coverage gap)
-**Chain hash**: `(v3 intermediate — superseded wholesale by v4; see v4 entry for continuation)`
-
-Superseded; see v4 VETO entry below for design continuation.
-
----
-
-## GATE TRIBUNAL — 2026-04-19 Phase 3 Cutover v4 (T1r+X1 Remediation)
-
-**Plan**: `docs/plans/2026-04-19-qor-phase3-cutover-v4.md`
-**Verdict**: ❌ **VETO** (finding N1 — canary assertion 3 probes unregistered route `/api/continuum/memory`)
-**Chain hash**: `5b58f8a920f1a5ef8407a2987d5860dd02a84fe4e4eca5c82e88979118dd082f`
-
-Superseded by v5; see below.
-
----
-
-## GATE TRIBUNAL — 2026-04-20 Phase 3 Cutover v5 (N1 Remediation)
-
-**Phase**: GATE
-**Plan**: `docs/plans/2026-04-20-qor-phase3-cutover-v5.md`
-**Risk Grade**: L2
-**Verdict**: ✅ **PASS**
-
-### Audit Passes
-
-| Pass                      | Verdict |
-|---------------------------|---------|
-| Security (L3)             | PASS    |
-| Ghost UI                  | PASS (N/A) |
-| Section 4 Razor           | PASS    |
-| Dependency                | PASS    |
-| Macro-Level Architecture  | PASS    |
-| Build-Path / Orphan       | PASS (N1 closed) |
-
-### N1 Closure
-
-v5 swaps canary assertion 3 from orphan `/api/continuum/memory?limit=1` to registered `/api/continuum/stats` (wired at `continuum/src/service/server.ts:72-74`, handled by `handleGraphRoutes`, calls `getGraphStats()` which executes Cypher via `getDriver()`). 200+JSON discriminates router wiring + NEO4J_* env_vars + Bolt handshake + Cypher read in a single probe.
-
-### Content Hash
-SHA256(`docs/plans/2026-04-20-qor-phase3-cutover-v5.md`) = `b929b2314acc5ad7586ac2ee537e0f2ef228943414909fdba8a23219ec5cac1d`
-
-### Previous Hash
-`5b58f8a920f1a5ef8407a2987d5860dd02a84fe4e4eca5c82e88979118dd082f` (v4 VETO)
-
-### MERKLE SEAL (Chain Hash)
-SHA256(content_hash + previous_hash) = `b6792654d0fe59712fc48d09b3d87a08513360c6b75ddd0d2495bbfab40cfd1e`
-
-### Authorizations
-
-- Phase 3 v5 Phase 1 (start.sh hardening + harness scenarios 4–7) cleared for implementation.
-- Phase 2 (atomic service swap + canary) remains gated behind Phase 1 seal.
-
-### Next Action
-`/qor-implement Phase 1` — harden `qor/start.sh` + extend `qor/start.test.sh`; run bash harness; hand to `/qor-substantiate`.
-
----
-
-## 2026-04-20 — IMPLEMENTATION — QOR Phase 3 v5, Phase 1 (start.sh Hardening)
-
-**Phase**: IMPLEMENT
-**Plan**: `docs/plans/2026-04-20-qor-phase3-cutover-v5.md` §Phase 1 (inherited v3 spec)
-**Gate**: PASS (chain `b6792654d0fe59712fc48d09b3d87a08513360c6b75ddd0d2495bbfab40cfd1e`)
-
-### Artifacts
-
-| File | LOC | Change | SHA256 |
-|---|---|---|---|
-| `qor/start.sh` | 93 | R3 crashloop counter + R4 Gap 1 pre-flight 7687 probe + R4 Gap 2 Bun PID watchdog | `4637e2d9060432574076af0f66421391e0e245392b815500179910fabaa57b8e` |
-| `qor/start.test.sh` | 349 | Scenarios 4–7 appended (crashloop cooldown, window reset, preflight probe, Bun watchdog) | `e11bf0d23c7d72b2690535d741934952c23b6cb27898d51f04c05c34e6ff392b` |
-
-### R3/R4 Closure
-
-- **R3**: `/dev/shm/qor-crashloop` counter — 3 failures / 60s window / 60s cooldown. Counter resets outside window; exits 1 without side-effects during cooldown. Verified by scenarios 4 (cooldown) + 5 (window reset).
-- **R4 Gap 1**: Pre-flight probe against 127.0.0.1:7687 via `/dev/tcp` in subshell (stderr-scope bug avoided). Fails fast with distinct log on orphan detect. Verified by scenario 6.
-- **R4 Gap 2**: Bun watchdog — background launch + `wait`, SIGCHLD reaps orphans, exit code propagates to supervisor. Verified by scenario 7 (simulated Bun crash → wrapper exits 42 in ~3s).
-
-### Test Results
-
-```
-qor/start.test.sh — 7 scenarios
-  [OK] scenario_boot_gate_pass
-  [OK] scenario_boot_gate_timeout
-  [OK] scenario_liveness_kill
-  [OK] scenario_crashloop_cooldown
-  [OK] scenario_crashloop_window_reset
-  [OK] scenario_preflight_port_probe
-  [OK] scenario_bun_watchdog
-
-Results: 7 pass, 0 fail
-```
-
-### Section 4 Razor Self-Check
-
-| File | LOC | Under 250? | Max Nesting | OK? |
-|------|-----|-----------|-------------|-----|
-| `qor/start.sh` | 93 | ✅ | 2 | ✅ |
-| `qor/start.test.sh` | 349 | ⚠ test harness (scenarios are fixture-heavy) | 3 | ⚠ documented |
-
-**Note:** `start.test.sh` exceeds 250L due to scenario 6 (56 LOC) + scenario 7 (ported Bun-sim stubs). Test-harness exemption noted; production code (`start.sh` 93L) well under razor.
-
----
-
-## 2026-04-20 — SUBSTANTIATE — QOR Phase 3 v5, Phase 1 Session Seal
-
-**Phase**: SUBSTANTIATE
-**Plan**: `docs/plans/2026-04-20-qor-phase3-cutover-v5.md` §Phase 1
-
-### Reality = Promise Audit
-
-| Planned File | Reality | Status |
-|---|---|---|
-| `qor/start.sh` (R3+R4 hardening) | Exists, 93 LOC, R3+R4 closures verified | ✅ PASS |
-| `qor/start.test.sh` (scenarios 4–7) | Exists, 349 LOC, 7/7 scenarios pass | ✅ PASS |
-
-**Planned: 2. Missing: 0. Unplanned: 0.**
-
-### Functional Verification
-
-- `bash qor/start.test.sh` → 7 pass, 0 fail.
-- Pre-cutover gate condition (v5 §Success Criteria 1) satisfied.
-
-### Version Validation
-
-- Phase 3 is additive infra-only — no package version bump required.
-- v1 Phase 1 + Phase 2 seals remain valid (unmodified).
-
-### Open Blockers Review
-
-- Phase 2 atomic-swap cutover not yet executed (expected — Phase 1 only).
-- MCP-bound config-layer runbook (R2 completion at config layer) deferred to Phase 2 substantiate.
-
-### Content Hash (implementation artifacts)
-SHA256(start.sh_sha + start.test.sh_sha) = `17f6b1d2806338119ca151ef2bf10d4771fbdc0290ce2ae9a7cca9e087f0d1e3`
-
-### Previous Hash
-`b6792654d0fe59712fc48d09b3d87a08513360c6b75ddd0d2495bbfab40cfd1e` (Phase 3 v5 GATE PASS)
-
-### MERKLE SEAL (Chain Hash)
-SHA256(content_hash + previous_hash) = `e15f8b67d86a92bfb867d6367fdf13086347408711b2f75b49696a7f743bedc5`
-
-### Authorizations
-
-**SEALED** — Phase 3 v5 Phase 1 substantiation complete. Reality = Promise. 7/7 harness scenarios pass.
-
-### Next Action
-
-`/qor-audit` on Phase 3 v5 **Phase 2** — atomic service swap + bash canary (`qor/qor-live-canary.sh`) + MCP runbook step. Live-state re-verification required immediately before cutover execution.
-
-
----
-
-## 2026-04-21 — GATE TRIBUNAL — QOR Phase 3 v5 §Phase 2
-
-**Phase**: GATE
-**Plan**: `docs/plans/2026-04-20-qor-phase3-cutover-v5.md` §Phase 2
-**Verdict**: ❌ **VETO**
-
-### Findings
-
-| ID | Pass | Severity | Summary |
-|---|---|---|---|
-| D1 | Dependency / Toolchain | L2 | Canary assertion 4 uses `nc -z 127.0.0.1 7687`; `nc` / `netcat` / `ncat` absent on host. False-negative guaranteed at runtime. Remediation: swap to bash built-in `(exec 3<>/dev/tcp/127.0.0.1/7687)` (primitive already used by Phase 1 sealed `start.sh`). |
-
-All other passes (Security, Ghost UI, Razor, Macro-Architecture, Build-Path/Orphan) PASS.
-
-Baseline drift noted (not VETO): `continuum-api` + `neo4j` services currently non-serving (ports 4100 / 7687 unreachable, public `/health` 404). Cutover is effectively restoration. Implementer must re-snapshot service IDs via `list_user_services` at cutover time — v2-vintage IDs are stale.
-
-### Content Hash
-`f75d0822c61d5f365ccc0c80d5fd8c6f1a35b535c22adb6868f37a9402cbb1da`
-
-### Previous Hash
-`e15f8b67d86a92bfb867d6367fdf13086347408711b2f75b49696a7f743bedc5` (Phase 3 v5 Phase 1 SEAL)
-
-### Chain Hash
-`b19d4da856aeee32788c809600296b980af5661f5a9f0c57fd52867529bef531`
-
-### Next Action
-
-`/qor-plan` → v5.1 (single-line remediation: assertion 4 swap from `nc` to `/dev/tcp`). `/qor-audit` re-gate. `/qor-implement` Phase 2 only on PASS.
-
----
-
-## 2026-04-21 — GATE TRIBUNAL — QOR Phase 3 v5.1 §Phase 2
-
-**Phase**: GATE
-**Plan**: `docs/plans/2026-04-21-qor-phase3-cutover-v5.1.md` §Phase 2
-**Verdict**: ✅ **PASS**
-
-### Findings
-
-All audit passes clear (Security, Ghost UI, Razor, Dependency, Macro-Architecture, Build-Path/Orphan). D1 closed via bash `/dev/tcp` primitive swap (dependency-reducing; already validated under Phase 1 seal `e15f8b67…`). Live host recon confirms primitive discriminates bound vs. unbound ports correctly and does not leak fds to parent shell.
-
-Residual sweep: cosmetic overstatement of fd-leak rationale in plan (parent-shell `exec 3<&- 3>&-` is a no-op since subshell-scoped `/dev/tcp` already handles cleanup) — functional behavior unaffected, not VETO-worthy.
-
-### Content Hash
-`33deccdfc5713b9fdc45a3be39694a967e257b3923f350d30d0875dbc7dbbb1a`
-
-### Previous Hash
-`b19d4da856aeee32788c809600296b980af5661f5a9f0c57fd52867529bef531` (Phase 3 v5 §Phase 2 VETO)
-
-### Chain Hash
-`cc6f127eacd0dccd879d0e0de04f90f7127b0d1284c6b59b4f65960e0e812ee2`
-
-### Next Action
-
-`/qor-implement` — Phase 2 of v5.1. Create `qor/qor-live-canary.sh` with 6 assertions, execute cutover, run canary, record MCP config-layer env_var assertions in Phase 2 seal evidence.
-
----
-
-## 2026-04-22T04:40:00Z — SEAL: Phase 3 v5.1 Phase 2 — Atomic Service Swap Substantiated
-
-| Field | Value |
-|-------|-------|
-| Phase | SUBSTANTIATE — Judge, cryptographic session seal |
-| Plan | `docs/plans/2026-04-21-qor-phase3-cutover-v5.1.md` §Phase 2 |
-| Verdict | ✅ **SEALED** — Reality = Promise |
-| Reality Audit | Planned files: `qor/qor-live-canary.sh` ✅ · `AGENTS.md` root ✅ · `docs/SYSTEM_STATE.md` ✅. MISSING: 0. UNPLANNED: 0. |
-| Canary hash | `594be380c961d65bff1f510eb035f589c38449f29d991bc3ad59bdf1dce23be4` |
-| Plan hash | `33deccdfc5713b9fdc45a3be39694a967e257b3923f350d30d0875dbc7dbbb1a` |
-| SYSTEM_STATE hash | `b777ac3fbc7ed5c4887e8db634b4a12ee0e3bcce5db6dd9281c3acaa82dadc38` |
-| Content hash | `bf016ee924a5c0438e4e5af0cfdc20cc9ac8df489174fecae1654eef6237dd03` |
-| Previous chain | `cc6f127eacd0dccd879d0e0de04f90f7127b0d1284c6b59b4f65960e0e812ee2` (Phase 3 v5.1 §Phase 2 GATE PASS) |
-| Chain hash | `d48264f8185425f24b6dd2b5324b1f08436289bfd087f3ed799e3706f1196f10` |
-| Runtime re-verification | `bash qor/qor-live-canary.sh` → 6/6 PASS at seal-time (2026-04-22 00:40 EDT) |
-| Razor compliance | canary 58 LOC ✅ (< 250) · flat bash, depth ≤ 3 ✅ · 0 ternaries ✅ · 0 `console.log` ✅ |
-| Section 4 final check | PASS |
-| Test audit | canary assertions 6/6 covered by Phase 1 sealed `start.test.sh` scenarios 1–7 (bash `/dev/tcp` primitive identical); new canary itself is the Phase 2 test surface |
-| Open Deferrals | Q1 (supervisor backoff confidence) · Q3 (Victor boot-site consumer switch → Issue #37) · Phase 1-sealed defects (NEO4J_CONF env var name, orphan-on-early-Bun-death) → Phase 4 backlog |
-| Version | No semver tag (repo uses sealed-chain hashes as version basis); Phase 3 cutover complete |
-| Next | `prompt Skills/qor-plan/SKILL.md` (Phase 4 resiliency patches) or Issue #38 Phase 3.1 hardening |
-
-### Chain Integrity
-
-```
-Phase 1 seal         e15f8b67d86a92bfb867d6367fdf13086347408711b2f75b49696a7f743bedc5
-  ↓ gate v5 P2 VETO  b19d4da856aeee32788c809600296b980af5661f5a9f0c57fd52867529bef531
-  ↓ gate v5.1 P2 PASS cc6f127eacd0dccd879d0e0de04f90f7127b0d1284c6b59b4f65960e0e812ee2
-  ↓ Phase 2 SEAL     d48264f8185425f24b6dd2b5324b1f08436289bfd087f3ed799e3706f1196f10
-```
-
-### Success Criteria (all met)
-
-- [x] PASS verdict in AUDIT_REPORT.md (`cc6f127e…`)
-- [x] Reality matches Promise (0 missing, 0 unplanned)
-- [x] No open security blockers
-- [x] Test surface verified (canary 6/6; harness scenarios 1–7 sealed under Phase 1)
-- [x] Section 4 Razor final check passed
-- [x] SYSTEM_STATE.md synced with actual file tree
-- [x] Merkle seal calculated and recorded
-- [x] Ready for commit + push
-
+SHA256(sorted hashes of 6 Phase-1 files) = `3cfa945e7dbf49272803c849f62bd0
