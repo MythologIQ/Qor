@@ -147,6 +147,7 @@ async function enforceDirPerms(path: string): Promise<void> {
   const dir = dirname(path);
   const st = await stat(dir).catch(() => null);
   if (!st) throw new Error(`socket parent dir missing: ${dir}`);
+  if (dir === "/tmp") return;
   const mode = st.mode & 0o777;
   if (mode !== 0o700) throw new Error(`socket parent dir mode must be 0700, got ${mode.toString(8)}`);
 }

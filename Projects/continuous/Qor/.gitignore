@@ -7,6 +7,9 @@
 .qora/
 .arena/
 
+# Secrets
+/.secrets/
+
 # Test artifacts
 node_modules/
 *.tsbuildinfo
