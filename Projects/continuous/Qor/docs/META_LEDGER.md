@@ -2,9 +2,74 @@
 
 **Chain Version**: 1.0.6
 **Genesis Hash**: `QOR-ENCODE-v1.0`
-**Final Ledger Hash**: `TBD`
-**Phase**: EXECUTE → COMPLETE → JUDGE → RESTRUCTURE
-**Status**: SEALED — Victor full execution path substantiated
+**Final Ledger Hash**: `4ba65a9c2866b8eed679b439f35393b29b72cde407bb8c063b7c2ef2c41e974e`
+**Phase**: SUBSTANTIATE — Issue #37 Phase 1 SEALED
+**Status**: SEALED
+
+---
+
+## 2026-04-30T03:30:00Z — SUBSTANTIATE: Issue #37 Phase 1 — IPC Token Infra + Victor Canary
+
+| Field | Value |
+|-------|-------|
+| Phase | SUBSTANTIATE |
+| Blueprint | `docs/plans/2026-04-29-qor-issue-37-qora-forge-kernels-v7.md` (Phase 1) |
+| Risk Grade | L2 |
+| Gate Hash | `e05a98e641da5cd9b8a70428de17cea1a3d0889d1eb698b46dbfa2dc645f2d55` |
+| Merkle Seal | `ae23586c0c98abeb5eb2d18a9398aafc59695d5addcb41001669959f23dc2443` |
+| Chain Hash | `4ba65a9c2866b8eed679b439f35393b29b72cde407bb8c063b7c2ef2c41e974e` |
+| Commit | `0cb11e8` |
+| Verdict | **PASS — Reality = Promise** |
+
+### Reality Audit
+
+| Planned | Delivered | Verdict |
+|---------|-----------|---------|
+| `.secrets/ipc-agents.json` (0600, bare names: victor/qora/forge) | ✅ Created, mode 600 | PASS |
+| `.secrets/README.md` | ✅ 19 LOC | PASS |
+| `.gitignore` entry `/.secrets/` | ✅ Added | PASS |
+| `scripts/ipc-canary-victor.ts` (≤40 LOC) | ✅ 36 LOC | PASS |
+| `scripts/tests/ipc-canary-victor.test.ts` | ✅ 31 LOC, 1/1 pass | PASS |
+| `qor/qor-live-canary.sh` expanded (6→8 assertions) | ✅ 83 LOC, 8/8 pass | PASS |
+| `continuum/src/ipc/server.ts` /tmp perm fix | ✅ 182 LOC | PASS |
+| Service env_vars: QOR_IPC_SOCKET + QOR_IPC_TOKEN_MAP | ✅ Applied, service running | PASS |
+| IPC socket `/tmp/qor.sock` live | ✅ Present | PASS |
+| Victor IPC roundtrip (`events.execution.query`) | ✅ Proven (456ms) | PASS |
+| Neo4j password `victor-memory-dev` | ✅ Re-rotated | PASS |
+| META_LEDGER updated | ✅ Chain v1.0.6 | PASS |
+
+**11/11 planned deliverables exist. 0 missing. 0 unplanned.**
+
+### Unplanned Files
+
+- `.secrets/ipc-agents.json` — gitignored, not in commit. Expected (secrets excluded).
+
+### Section 4 Razor
+
+| Check | Limit | Actual | Status |
+|-------|-------|--------|--------|
+| Function lines | 40 | max 36 (canary script) | ✅ |
+| File lines | 250 | max 182 (server.ts) | ✅ |
+| Nesting depth | 3 | max 2 | ✅ |
+| Nested ternaries | 0 | 0 | ✅ |
+| console.log | 0 | 0 | ✅ |
+
+### Runtime Verification
+
+| Check | Result |
+|-------|--------|
+| `/health` 200 | ✅ |
+| IPC socket present | ✅ |
+| Token file mode 0600 | ✅ |
+| Token keys: victor, qora, forge | ✅ |
+| Victor IPC canary test | ✅ 1/1 pass |
+| Full canary | ✅ 8/8 pass |
+
+**SEALED** — Issue #37 Phase 1 substantiated. IPC token infrastructure live, Victor roundtrip proven, canary 8/8.
+
+### Next
+
+`/qor-implement` — Phase 2 (events.ledger.* server ops + kernel standup + ACL + isolation tests).
 
 ---
 
