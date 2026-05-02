@@ -16,6 +16,8 @@ const CONSTRAINTS: string[] = [
   "CREATE CONSTRAINT procedural_id_unique IF NOT EXISTS FOR (p:Procedural) REQUIRE p.id IS UNIQUE",
   "CREATE CONSTRAINT learning_id_unique IF NOT EXISTS FOR (l:LearningEvent) REQUIRE l.id IS UNIQUE",
   "CREATE CONSTRAINT execution_id_unique IF NOT EXISTS FOR (x:ExecutionEvent) REQUIRE x.id IS UNIQUE",
+  "CREATE CONSTRAINT ledger_entry_id_unique IF NOT EXISTS FOR (l:LedgerEntry) REQUIRE l.id IS UNIQUE",
+  "CREATE CONSTRAINT ledger_entry_partition_seq_unique IF NOT EXISTS FOR (l:LedgerEntry) REQUIRE (l.partition, l.seq) IS UNIQUE",
   "CREATE CONSTRAINT source_doc_id_unique IF NOT EXISTS FOR (d:SourceDocument) REQUIRE d.id IS UNIQUE",
   "CREATE CONSTRAINT source_chunk_id_unique IF NOT EXISTS FOR (c:SourceChunk) REQUIRE c.id IS UNIQUE",
 ];
@@ -48,6 +50,7 @@ export async function initializeSchema(driver: Driver): Promise<void> {
   const session = driver.session();
   try {
     for (const stmt of CONSTRAINTS) await session.run(stmt);
+    await session.run("CREATE INDEX ledger_entry_partition_seq_idx IF NOT EXISTS FOR (l:LedgerEntry) ON (l.partition, l.seq)");
     for (const stmt of vectorIndexStatements(vectorDimensions())) await session.run(stmt);
   } finally {
     await session.close();

@@ -6,6 +6,7 @@
 
 import type { AgentContext } from "../access-policy";
 import { learningEventsOps } from "./learning-events";
+import { ledgerEventsOps } from "./ledger-events";
 import { recordExecutionEvent, queryExecutionEvents } from "./execution-events";
 import { semanticGraphOps } from "./semantic-graph";
 import { searchOps } from "./search";
@@ -21,6 +22,7 @@ export class UnknownOpError extends Error {
 
 export const OP_TABLE: Readonly<Record<string, OpHandler>> = Object.freeze({
   ...learningEventsOps,
+  ...ledgerEventsOps,
   "events.execution.record": recordExecutionEvent,
   "events.execution.query": queryExecutionEvents,
   ...semanticGraphOps,
