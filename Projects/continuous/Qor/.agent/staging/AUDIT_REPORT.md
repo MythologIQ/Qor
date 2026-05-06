@@ -1,98 +1,88 @@
-# AUDIT_REPORT — QOR Issue #37 Plan v7
+# AUDIT_REPORT — QOR Issue #38 Plan v1
 
-**Plan**: `docs/plans/2026-04-29-qor-issue-37-qora-forge-kernels-v7.md`
-**Plan SHA-256**: `21f63380aab0f90dddda76f000b3bcc5dac789efea4f5162e07359581b3bf819`
+**Plan**: `docs/plans/2026-05-06-qor-issue-38-ipc-hardening.md`
+**Plan SHA-256**: `83b1e5e0597e426a301b52663bf85a95f70164ec0c5dabfca3c8ace382ed64d7`
 **Phase**: GATE — Adversarial Tribunal
-**Date**: 2026-04-30
-**Verdict**: ✅ **PASS**
-**Risk Grade**: L3
+**Date**: 2026-05-06
+**Verdict**: ❌ **VETO**
+**Risk Grade**: L2
 
 ---
 
 ## Summary
 
-V7 supersedes v6 with three MAJOR closures all rooted in the same blind spot: `handleRecordVeto` was an ungated, unrefactored second JSONL write site. V7 applies identical treatment (maintenance-mode gate + kernel delegation + `writeFileSync` elimination) to both write handlers. Live-codebase sweep confirms exactly 2 `writeFileSync(LEDGER_PATH)` call sites in `qora-routes.ts` (lines 72, 97) — both addressed. Post-refactor acceptance gate (`grep -c "writeFileSync.*LEDGER_PATH" === 0`) is discriminating: currently returns 2, will return 0 post-implementation. No new findings.
+V1 addresses 7 IPC hardening items from the Issue #37 gate residual. Six items are grounded and well-scoped. One item (Item 7) targets the wrong file, and the plan's description of Item 3 mischaracterizes the current code pattern. One MAJOR finding (M-1) and one MINOR finding (R-1).
 
 ## Findings
 
-None. All v6 findings closed:
-
-| v6 Finding | Severity | v7 Closure |
-|---|---|---|
-| **M-1 (v6)** `QORA_MAINTENANCE` gate missing on `/record-veto` | MAJOR | ✅ Closed. Both handlers get identical 503 guard. Step 3a-3 probes both endpoints. Abort if either returns 2xx. |
-| **M-2 (v6)** `handleRecordVeto` not refactored to kernel | MAJOR | ✅ Closed. Both handlers call `appendEntry()`. VETO is `type: "VETO"` through same method. |
-| **M-3 (v6)** Ghost-ledger recreation post-archive | MAJOR | ✅ Closed by M-2. No `writeFileSync` → no file recreation. Grep acceptance gate + step 7e negative check. |
+| ID | Pass | Severity | Summary |
+|---|---|---|---|
+| M-1 | Macro-Architecture / Build-Path | MAJOR | Item 7 targets `ipc/server.ts` for logging replacement, but `ipc/server.ts` contains **zero** `process.stdout.write` calls (verified: `grep -c` returns 0). The ad-hoc logging actually lives in `service/server.ts` (lines 132, 135, 147). Plan's `ipc-logger.ts` module targets the wrong consumer and the `server.ts` §Changes for Item 7 will replace zero instances. The affected file in the plan should be `continuum/src/service/server.ts`, not `continuum/src/ipc/server.ts`. |
+| R-1 | Ghost UI (description accuracy) | MINOR | Item 3 justification states "callers must instanceof-check" for `dispatchOp`'s `Promise<unknown>` return. Actual pattern: `handleOpFrame` (sole caller, `ipc/server.ts:60-67`) uses try/catch on the dispatch call and instanceof-checks **thrown errors** to derive error codes — it never instanceof-checks the return value. The DispatchResult discriminated union is a valid improvement, but the motivating description is inaccurate. |
 
 ## Pass-by-Pass
 
 ### Pass A — Security (PASS)
-- Token-map bare-name → `ctx.agentId` mapping verified against `continuum/src/ipc/auth.ts:69`. ✓
-- ACL semantics via `assertCanWrite/assertCanRead` on `agentPrivate(agentId)` unchanged. ✓
-- `QORA_MAINTENANCE` env-var pattern is standard 12-factor; no privilege escalation. ✓
-- New `events.ledger.*` op family preserves existing partition-isolation (`access-policy.ts:36-41`). ✓
-- `import` mode gated by `QOR_LEDGER_IMPORT=1` env-var — feature-flag pattern, no auth bypass. ✓
-- No new auth surface. No CORS/CSRF surface. No injection vectors. ✓
-- `.secrets/` excluded from git via `.gitignore` entry. ✓
+- No auth changes. No new auth surfaces. ✓
+- SIGHUP reload is fail-open (retains old map on failure) — acceptable for local UDS. ✓
+- ErrorCode enum values match existing wire literals exactly. No privilege escalation. ✓
+- Token map atomic swap pattern is sound for single-writer (SIGHUP handler). ✓
+- No new secrets, no injection vectors. ✓
 
-### Pass B — Ghost UI (PASS)
-- All file paths cited verified against live repo state. ✓
-- `AgentContext = {agentId: string, partitions: Partition[]}` shape (`access-policy.ts:12-15`) matches plan fixture spec. ✓
-- `events.execution.query` op shape matches `execution-events.ts:167-200`. ✓
-- `OP_TABLE` registry pattern (`registry.ts:22-28`) matches plan dispatch addition. ✓
-- `qora-routes.ts` line numbers (52-74 `handleAppendEntry`, 76-99 `handleRecordVeto`) verified against live file. ✓
+### Pass B — Ghost UI (PASS — with R-1 flag)
+- All proposed file paths verified against live repo. ✓
+- `execution-events.ts` confirmed: 5 exported interfaces/types (line grep matches plan's extraction list). ✓
+- `server.ts` error code literals confirmed at lines 64-66, 79, 88, 95, 109, 118. ✓
+- `registry.ts` `dispatchOp` confirmed: returns `Promise<unknown>` (line grep matches). ✓
+- **R-1**: Plan's Item 3 description says "callers must instanceof-check" but the actual pattern is try/catch on errors, not return-value discrimination. Description drift, not a ghost symbol.
 - No fictional symbols. No invented APIs. ✓
 
 ### Pass C — Razor (PASS)
+- `execution-event-types.ts` ≤60 LOC. ✓
+- `error-codes.ts` ≤40 LOC. ✓
+- `ipc-logger.ts` ≤30 LOC. ✓
+- `server.ts` delta +30 LOC — current file is 181 LOC, post-change ~211 LOC. Under 250. ✓
+- All test files under their stated limits. ✓
 - Plan declares ≤40 LOC functions, depth ≤3, no nested ternaries, no `console.log`. ✓
-- `ledger-events.ts` ≤200 LOC, `hash-chain.ts` ≤30 LOC, `continuum-store.ts` ≤200 LOC — all within 250 LOC file limit. ✓
-- `start.sh` already sealed at 93 LOC. ✓
 
 ### Pass D — Dependency / Toolchain (PASS)
 - No new external dependencies. ✓
-- `computeHash` extracted to `continuum/src/shared/hash-chain.ts` — zero-dependency (uses `Buffer.from` + `JSON.stringify` — Node builtins). ✓
-- Neo4j driver, IPC socket primitives, env-var read all already in repo. ✓
-- `openssl rand -base64 32` for token generation — host tool, not a dependency. ✓
+- `ErrorCode` enum uses TypeScript enum (zero runtime cost). ✓
+- `ipcLog` uses `JSON.stringify` + `process.stdout.write` — Node/Bun builtins. ✓
+- SIGHUP is a POSIX signal available in Bun runtime. ✓
 
-### Pass E — Macro-Architecture (PASS)
-- Clear module boundaries: `continuum/src/memory/ops/` (server ops), `qora/src/kernel/` (Qora kernel), `forge/src/kernel/` (Forge kernel). ✓
-- No cyclic dependencies between modules. ✓
-- Layering enforced: route → kernel → IPC → server → Neo4j. No reverse imports. ✓
-- Single source of truth for shared types: `access-policy.ts` (AgentContext), `partitions.ts` (Partition), `registry.ts` (OP_TABLE). ✓
-- `computeHash` consolidated into `continuum/src/shared/hash-chain.ts`. ✓
-- No duplicated domain logic. ✓
-- **v6 root pattern eliminated:** v7 sweeps the *file* (`qora-routes.ts`) for `LEDGER_PATH` writers, not just named routes. grep acceptance gate is failure-class invariant, not route-name invariant. ✓
+### Pass E — Macro-Architecture (VETO — see M-1)
+- Module boundaries are clear for Items 1-6. ✓
+- **M-1**: Item 7 proposes `ipc-logger.ts` and says "Replace all `process.stdout.write` in `server.ts` with `ipcLog()` calls." But `continuum/src/ipc/server.ts` has **zero** `process.stdout.write` calls. The logging that exists is in `continuum/src/service/server.ts` (lines 132, 135, 147). The plan targets the wrong file for Item 7's implementation, which means:
+  - The `ipc/server.ts` §Changes for Item 7 will be a no-op (replacing zero instances)
+  - The actual ad-hoc logging in `service/server.ts` will remain untouched
+  - Post-implementation verification would falsely pass (grep for `process.stdout.write` in `ipc/server.ts` already returns 0)
 
 ### Pass F — Build-Path / Orphan (PASS)
 | Proposed File | Entry Point Connection | Status |
 |---|---|---|
-| `continuum/src/memory/ops/ledger-events.ts` | `registry.ts` → `OP_TABLE` → `ipc/server.ts` dispatch | Connected ✓ |
-| `continuum/src/shared/hash-chain.ts` | `ledger-events.ts` import | Connected ✓ |
-| `qora/src/kernel/identity.ts` | `qora/src/kernel/memory/continuum-store.ts` → `store.ts` | Connected ✓ |
-| `qora/src/kernel/memory/continuum-store.ts` | `qora-routes.ts` via `getQoraMemoryStore()` | Connected ✓ |
-| `qora/src/kernel/memory/store.ts` | `continuum-store.ts` factory | Connected ✓ |
-| `qora/src/kernel/index.ts` | Barrel export | Connected ✓ |
-| `forge/src/kernel/*` (4 files) | Symmetric to Qora kernel | Connected ✓ |
-| `scripts/migrate-qora-jsonl-to-ledger.ts` | Phase 3 step 4c manual invocation | Connected ✓ |
-| `.secrets/ipc-agents.json` | `server.ts` → `loadAgentTokenMap()` at IPC init | Connected ✓ |
-| `scripts/ipc-canary-victor.ts` | Phase 1 step 6 assertion 8 | Connected ✓ |
+| `continuum/src/shared/execution-event-types.ts` | Re-exported by `execution-events.ts` → imported by IPC callers | Connected ✓ |
+| `continuum/src/ipc/error-codes.ts` | Imported by `server.ts` + `registry.ts` | Connected ✓ |
+| `continuum/src/ipc/ipc-logger.ts` | Imported by `service/server.ts` (should be — currently targets wrong file) | **Misrouted** (M-1) |
+| `continuum/src/ipc/protocol.ts` (DispatchResult) | Imported by `registry.ts` + `server.ts` | Connected ✓ |
+| `continuum/tests/*` | Test runner | Connected ✓ |
 
-No orphans. ✓
+### Pass G — Reality Check (PASS — confirms findings)
+- `ipc/server.ts` logging: confirmed zero `process.stdout.write`. ✓
+- `service/server.ts` logging: confirmed at lines 132, 135, 147. ✓
+- Error code literals in `server.ts`: confirmed at 7 locations matching plan's enum values. ✓
+- `dispatchOp` return type: confirmed `Promise<unknown>`. ✓
+- `stop()` signature: confirmed instant-close (no drain). ✓
+- `tokenMap` closure capture: confirmed at `buildHandler(tokenMap)` line 102. ✓
 
-### Pass G — Reality Check (PASS)
-- `qora-routes.ts` confirmed: exactly 2 `writeFileSync(LEDGER_PATH)` at lines 72, 97. ✓
-- `OP_TABLE` confirmed: no `events.ledger.*` ops currently registered. ✓
-- `qora/src/api/append-entry.ts` exists as legacy standalone but NOT imported by `qora-routes.ts` (handlers are inline). ✓
-- Forge write sites confirmed deferred per Non-Goals. ✓
-- `docs/META_LEDGER.md` chain ends at `16cf664dccdd56a367973e51133b16d2888b5faf387751cf42c372eef1485a1e` (v2 VETO). ✓
+## Root Pattern
 
-## Root Pattern Analysis
-
-V6's root cause — scoping remediation to a named route rather than the failure class — is resolved. V7's acceptance gate (`grep -c "writeFileSync.*LEDGER_PATH" === 0`) is expressed against the failure mode (any JSONL write to `LEDGER_PATH`), not the route name. This prevents the same class of omission from recurring if a third write site is added before cutover.
+The plan was written from the Issue #37 gate audit notes ("IPC server logging is ad-hoc") without re-verifying which file contains the logging. The Issue #37 audit correctly identified the logging as "ad-hoc" but the plan author mapped the remediation to `ipc/server.ts` instead of the actual location (`service/server.ts`). Classic "audit note → wrong file target" drift.
 
 ## Verdict
 
-✅ **PASS** — V7 closes all three v6 MAJOR findings with complete, discriminating treatment. Live-codebase verification confirms plan claims match reality. No new findings across all 7 adversarial passes.
+❌ **VETO** — M-1 is a build-path misrouting that would make Item 7 a no-op. The structured logger would be created but never called from the file that actually has the ad-hoc logging.
 
 ### Next Action
 
-`/qor-implement` — Phase 1 (IPC token infra + service cutover + Victor canary).
+`/qor-plan` → v2 closing M-1 (correct Item 7 target file to `service/server.ts`, add it to Affected Files table, update §Changes Item 7). R-1 is non-blocking — fix the Item 3 description for accuracy.
