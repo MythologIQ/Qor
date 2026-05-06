@@ -19,9 +19,14 @@ Qor is a modular governance-first platform for autonomous agent systems. Every s
 
 ```
 ┌─────────────────────────────────────────────────┐
-│                  zo.space routes                │
+│              zo.space (proxy layer)              │
 │  /api/forge/*   /api/qora/*   /api/victor/*     │
 └──────────────────────┬──────────────────────────┘
+                       │
+              ┌────────▼────────┐
+              │  qor service     │  ← port 4100 (Bun)
+              │  start.sh → Neo4j + Bun server
+              └────────┬────────┘
                        │ evidence required
               ┌────────▼────────┐
               │ Governance Gate │  ← fail-closed
@@ -31,7 +36,8 @@ Qor is a modular governance-first platform for autonomous agent systems. Every s
          ┌─────────────┼─────────────┐
          ▼             ▼             ▼
    evidence/      forge/         qora/
-   ledger.jsonl   ledger.jsonl   ledger.jsonl
+   ledger.jsonl   ledger.jsonl   Neo4j :LedgerEntry
+                                 (via IPC kernel ops)
 ```
 
 ## Modules
@@ -71,18 +77,21 @@ Every decision is recorded to `evidence/ledger.jsonl` as a `PolicyDecision` entr
 Qor/
 ├── evidence/           # Governance contracts, gate, evaluation, logging
 │   ├── contract.ts     # Type definitions (EvidenceBundle, GovernanceDecision, etc.)
-│   ├── evaluate.ts     # Policy evaluation engine
 │   ├── governance-gate.ts  # Central fail-closed enforcement
-│   ├── log.ts          # Append-only evidence ledger
-│   ├── bundle.ts       # Evidence bundling
-│   └── tests/          # 20+ tests (vitest/bun:test)
+│   └── tests/          # 20+ tests
 ├── forge/              # Build manager (phases, tasks, risks)
+│   └── src/kernel/     # Forge IPC kernel (identity + memory store)
 ├── qora/               # Consensus ledger (hash-chain, vetoes)
+│   └── src/kernel/     # Qora IPC kernel (identity + memory store)
 ├── victor/             # Agent heartbeat and autonomy kernel
 ├── continuum/          # Semantic graph intelligence (Neo4j)
-├── governance/         # Policy definitions
+│   ├── src/memory/ops/ # Server-side ops (execution, ledger, learning, search)
+│   ├── src/ipc/        # UDS IPC server + auth
+│   └── client/         # ContinuumClient facade
+├── qor/                # Mono-service entrypoint + canary
+├── .secrets/           # IPC agent tokens (gitignored)
 ├── docs/               # Architecture plans, concepts, META_LEDGER
-└── shadow-genome/      # Embeddings and shadow state
+└── scripts/            # Migration + canary utilities
 ```
 
 ## Development

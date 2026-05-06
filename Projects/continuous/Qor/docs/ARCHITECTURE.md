@@ -29,15 +29,15 @@ Both systems share:
 
 | Concern | QOR (zo.space) | FailSafe Pro (Tauri/Rust) |
 |---------|----------------|--------------------------|
-| **Runtime** | Node.js / Bun | Rust native |
-| **Hosting** | zo.space (anywhere) | Desktop daemon |
-| **Memory** | JS hash-map + JSONL | GG-CORE ONNX embeddings |
-| **Graph** | In-memory JS graph | CozoDB / Kuzu |
-| **Vectors** | None (phase 1) | sqlite-vec + GG-CORE |
-| **Evidence** | JSONL files (localStorage) | Append-only log files |
-| **Orchestration** | JS workcell state | Rust workcell planner |
-| **IPC** | zo.space routes | axum on localhost:7777 |
-| **SDK** | zo.space JS SDK | @failsafe/client TypeScript |
+| **Runtime** | Bun (mono-service) | Rust native |
+| **Hosting** | qor service (port 4100) + zo.space proxy | Desktop daemon |
+| **Memory** | Neo4j graph + Continuum IPC | GG-CORE ONNX embeddings |
+| **Graph** | Neo4j (Cypher) | CozoDB / Kuzu |
+| **Vectors** | Neo4j vector indexes (1024-dim cosine) | sqlite-vec + GG-CORE |
+| **Evidence** | evidence/ledger.jsonl + Neo4j :LedgerEntry | Append-only log files |
+| **Orchestration** | governed-build-runner + workcell policy | Rust workcell planner |
+| **IPC** | UDS (unix domain socket) + token auth | axum on localhost:7777 |
+| **SDK** | ContinuumClient (IPC facade) | @failsafe/client TypeScript |
 
 ---
 

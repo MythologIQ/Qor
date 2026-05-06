@@ -74,8 +74,8 @@ Atomic service swap executed. Stale `neo4j` (`svc_Vw2b3WN68nM`) + `continuum-api
 | `NEO4J_URI=bolt://127.0.0.1:7687` present | ✅ |
 | `NEO4J_USER=neo4j` present | ✅ |
 | `NEO4J_PASS=victor-memory-dev` present | ✅ |
-| `QOR_IPC_SOCKET` absent (IPC deferred) | ✅ |
-| `QOR_IPC_TOKEN_MAP` absent (IPC deferred) | ✅ |
+| `QOR_IPC_SOCKET` present (IPC active since #37) | ✅ |
+| `QOR_IPC_TOKEN_MAP` present (IPC active since #37) | ✅ |
 
 ### Runtime Assertions (`bash qor/qor-live-canary.sh`)
 
@@ -94,6 +94,24 @@ Phase 3 v5.1 Phase 2 **SEALED** at chain `d48264f8185425f24b6dd2b5324b1f08436289
 
 - **Phase 4** — resiliency patches for Phase 1-sealed defects (NEO4J_CONF env var name, EXIT-trap orphan handling).
 - **Issue #38** — Phase 3.1 IPC hardening (7 residual items).
+
+## Issue #37 Status (SEALED 2026-05-05)
+
+Qora/Forge kernels direct Continuum IPC consumption. Three-phase implementation sealed:
+
+| Phase | Scope | Status |
+|-------|-------|--------|
+| **Phase 1** | IPC token infra + service cutover + Victor canary (8/8) | SEALED `0cb11e8` |
+| **Phase 2** | `events.ledger.*` ops + Qora/Forge kernels + ACL tests | SEALED `8f281e6` |
+| **Phase 3** | Qora route migration + JSONL retirement + maintenance-mode cutover | SEALED `230c689` |
+
+Key outcomes:
+- `QOR_IPC_SOCKET=/tmp/qor.sock` and `QOR_IPC_TOKEN_MAP` now active on `qor` service
+- Both Qora write paths (`append-entry` + `record-veto`) delegate to Neo4j `:LedgerEntry` nodes via direct server ops
+- `qora/data/ledger.jsonl` archived; zero `writeFileSync(LEDGER_PATH)` in routes
+- `events.ledger.{append,query,getLastHash}` ops registered in `OP_TABLE`
+- Cross-agent isolation proven (ACL unit + live IPC test)
+- Current service ID: `svc_9xdl_7FbHF0` (port 4100)
 
 ## Open Deferrals (Per Plan)
 
