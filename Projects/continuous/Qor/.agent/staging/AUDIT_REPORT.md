@@ -1,88 +1,82 @@
-# AUDIT_REPORT — QOR Issue #38 Plan v1
+# AUDIT_REPORT — QOR Issue #38 Plan v2
 
-**Plan**: `docs/plans/2026-05-06-qor-issue-38-ipc-hardening.md`
-**Plan SHA-256**: `83b1e5e0597e426a301b52663bf85a95f70164ec0c5dabfca3c8ace382ed64d7`
+**Plan**: `docs/plans/2026-05-06-qor-issue-38-ipc-hardening-v2.md`
+**Plan SHA-256**: `473a1bea7f038b6fe6e0085844f1711767c84ac6ac191b23c35df2d6c490de7c`
 **Phase**: GATE — Adversarial Tribunal
-**Date**: 2026-05-06
-**Verdict**: ❌ **VETO**
+**Date**: 2026-05-07
+**Verdict**: ✅ **PASS**
 **Risk Grade**: L2
 
 ---
 
 ## Summary
 
-V1 addresses 7 IPC hardening items from the Issue #37 gate residual. Six items are grounded and well-scoped. One item (Item 7) targets the wrong file, and the plan's description of Item 3 mischaracterizes the current code pattern. One MAJOR finding (M-1) and one MINOR finding (R-1).
+V2 closes v1's MAJOR (M-1: Item 7 targets wrong file) by retargeting logging from `ipc/server.ts` (zero logging) to `service/server.ts` (4 `process.stdout.write` calls). All 7 items verified against live codebase. Two MINOR findings (line-number drift, non-blocking).
 
 ## Findings
 
-| ID | Pass | Severity | Summary |
-|---|---|---|---|
-| M-1 | Macro-Architecture / Build-Path | MAJOR | Item 7 targets `ipc/server.ts` for logging replacement, but `ipc/server.ts` contains **zero** `process.stdout.write` calls (verified: `grep -c` returns 0). The ad-hoc logging actually lives in `service/server.ts` (lines 132, 135, 147). Plan's `ipc-logger.ts` module targets the wrong consumer and the `server.ts` §Changes for Item 7 will replace zero instances. The affected file in the plan should be `continuum/src/service/server.ts`, not `continuum/src/ipc/server.ts`. |
-| R-1 | Ghost UI (description accuracy) | MINOR | Item 3 justification states "callers must instanceof-check" for `dispatchOp`'s `Promise<unknown>` return. Actual pattern: `handleOpFrame` (sole caller, `ipc/server.ts:60-67`) uses try/catch on the dispatch call and instanceof-checks **thrown errors** to derive error codes — it never instanceof-checks the return value. The DispatchResult discriminated union is a valid improvement, but the motivating description is inaccurate. |
+| ID | Severity | Summary |
+|---|---|---|
+| R-1 | MINOR | Item 7 cites `service/server.ts` lines 49, 131, 132, 147. Actual lines: 54, 132, 135, 147. Drift from post-v1 edits. No functional impact — implementer will grep, not follow line numbers. |
+| R-2 | MINOR | Item 3 corrected from "instanceof-check" to "catches typed errors" (v1 R-1 closure verified). Correct. |
 
 ## Pass-by-Pass
 
 ### Pass A — Security (PASS)
-- No auth changes. No new auth surfaces. ✓
-- SIGHUP reload is fail-open (retains old map on failure) — acceptable for local UDS. ✓
-- ErrorCode enum values match existing wire literals exactly. No privilege escalation. ✓
-- Token map atomic swap pattern is sound for single-writer (SIGHUP handler). ✓
-- No new secrets, no injection vectors. ✓
+- No hardcoded credentials or secrets. ✓
+- `QOR_IPC_SOCKET` is local UDS only — no network exposure. ✓
+- SIGHUP token reload: fail-open retains existing map (acceptable for availability). On reload failure, attacker cannot inject new map — existing map persists. ✓
+- `DRAIN_TIMEOUT_MS = 5000` bounds shutdown window. ✓
+- No new auth surface. No injection vectors. ✓
 
-### Pass B — Ghost UI (PASS — with R-1 flag)
-- All proposed file paths verified against live repo. ✓
-- `execution-events.ts` confirmed: 5 exported interfaces/types (line grep matches plan's extraction list). ✓
-- `server.ts` error code literals confirmed at lines 64-66, 79, 88, 95, 109, 118. ✓
-- `registry.ts` `dispatchOp` confirmed: returns `Promise<unknown>` (line grep matches). ✓
-- **R-1**: Plan's Item 3 description says "callers must instanceof-check" but the actual pattern is try/catch on errors, not return-value discrimination. Description drift, not a ghost symbol.
-- No fictional symbols. No invented APIs. ✓
+### Pass B — Ghost UI (N/A)
+- No UI routes in scope. ✓
 
 ### Pass C — Razor (PASS)
 - `execution-event-types.ts` ≤60 LOC. ✓
 - `error-codes.ts` ≤40 LOC. ✓
-- `ipc-logger.ts` ≤30 LOC. ✓
-- `server.ts` delta +30 LOC — current file is 181 LOC, post-change ~211 LOC. Under 250. ✓
-- All test files under their stated limits. ✓
-- Plan declares ≤40 LOC functions, depth ≤3, no nested ternaries, no `console.log`. ✓
+- `ipc-logger.ts` ≤30 LOC (single function). ✓
+- `dispatchOp` change is additive (+10 LOC). ✓
+- Graceful shutdown: bounded by `DRAIN_TIMEOUT_MS`. ✓
+- All new files within 250 LOC limit. ✓
 
 ### Pass D — Dependency / Toolchain (PASS)
 - No new external dependencies. ✓
-- `ErrorCode` enum uses TypeScript enum (zero runtime cost). ✓
-- `ipcLog` uses `JSON.stringify` + `process.stdout.write` — Node/Bun builtins. ✓
-- SIGHUP is a POSIX signal available in Bun runtime. ✓
+- `JSON.stringify` + `process.stdout.write` — Node builtins. ✓
+- `process.on("SIGHUP")` — Node built-in signal handling. ✓
+- No build tool changes required. ✓
 
-### Pass E — Macro-Architecture (VETO — see M-1)
-- Module boundaries are clear for Items 1-6. ✓
-- **M-1**: Item 7 proposes `ipc-logger.ts` and says "Replace all `process.stdout.write` in `server.ts` with `ipcLog()` calls." But `continuum/src/ipc/server.ts` has **zero** `process.stdout.write` calls. The logging that exists is in `continuum/src/service/server.ts` (lines 132, 135, 147). The plan targets the wrong file for Item 7's implementation, which means:
-  - The `ipc/server.ts` §Changes for Item 7 will be a no-op (replacing zero instances)
-  - The actual ad-hoc logging in `service/server.ts` will remain untouched
-  - Post-implementation verification would falsely pass (grep for `process.stdout.write` in `ipc/server.ts` already returns 0)
+### Pass E — Macro-Architecture (PASS)
+- Type extraction to `shared/` is correct boundary — IPC surface should not expose Neo4j driver types. ✓
+- ErrorCode enum centralizes 9 scattered string literals across `ipc/server.ts`. Single source of truth. ✓
+- DispatchResult eliminates `Promise<unknown>` — callers get discriminated union instead of try/catch. ✓
+- `ipc-logger.ts` consumed by both `service/server.ts` (4 call sites) and `ipc/server.ts` (internal events). No orphan. ✓
+- Layering preserved: `shared/` → `ipc/` → `service/`. No reverse imports. ✓
 
 ### Pass F — Build-Path / Orphan (PASS)
 | Proposed File | Entry Point Connection | Status |
 |---|---|---|
-| `continuum/src/shared/execution-event-types.ts` | Re-exported by `execution-events.ts` → imported by IPC callers | Connected ✓ |
-| `continuum/src/ipc/error-codes.ts` | Imported by `server.ts` + `registry.ts` | Connected ✓ |
-| `continuum/src/ipc/ipc-logger.ts` | Imported by `service/server.ts` (should be — currently targets wrong file) | **Misrouted** (M-1) |
-| `continuum/src/ipc/protocol.ts` (DispatchResult) | Imported by `registry.ts` + `server.ts` | Connected ✓ |
-| `continuum/tests/*` | Test runner | Connected ✓ |
+| `continuum/src/shared/execution-event-types.ts` | `execution-events.ts` re-export → `registry.ts` → `ipc/server.ts` dispatch | Connected ✓ |
+| `continuum/src/ipc/error-codes.ts` | `ipc/server.ts` + `protocol.ts` import | Connected ✓ |
+| `continuum/src/ipc/protocol.ts` (DispatchResult) | `registry.ts` return type → `ipc/server.ts` handleOpFrame | Connected ✓ |
+| `continuum/src/ipc/ipc-logger.ts` | `service/server.ts` + `ipc/server.ts` import | Connected ✓ |
+| `continuum/tests/*` (6 test files) | `bun test` | Connected ✓ |
 
-### Pass G — Reality Check (PASS — confirms findings)
-- `ipc/server.ts` logging: confirmed zero `process.stdout.write`. ✓
-- `service/server.ts` logging: confirmed at lines 132, 135, 147. ✓
-- Error code literals in `server.ts`: confirmed at 7 locations matching plan's enum values. ✓
-- `dispatchOp` return type: confirmed `Promise<unknown>`. ✓
-- `stop()` signature: confirmed instant-close (no drain). ✓
-- `tokenMap` closure capture: confirmed at `buildHandler(tokenMap)` line 102. ✓
+No orphans. ✓
 
-## Root Pattern
-
-The plan was written from the Issue #37 gate audit notes ("IPC server logging is ad-hoc") without re-verifying which file contains the logging. The Issue #37 audit correctly identified the logging as "ad-hoc" but the plan author mapped the remediation to `ipc/server.ts` instead of the actual location (`service/server.ts`). Classic "audit note → wrong file target" drift.
+### Pass G — Reality Check (PASS)
+- `service/server.ts` `process.stdout.write` confirmed at lines 54, 132, 135, 147 (plan cites 49, 131, 132, 147 — R-1 drift). ✓
+- Error codes in `ipc/server.ts`: `"auth_required"` (L79), `"auth_failed"/"auth_error"` (L88), `"protocol_error"` (L95), `"auth_timeout"` (L109), `"frame_error"` (L118), `"unknown_op"/"access_denied"/"internal_error"` (L64-66). All 9 match enum values. ✓
+- `dispatchOp` signature: `Promise<unknown>` at `registry.ts:36`. Confirmed. ✓
+- `stop()`: `server.stop()` + `unlink()` at L177-179. No drain. Confirmed. ✓
+- `isValidPartition` exported at `partitions.ts:37`. Confirmed. ✓
+- `tokenMap` closure-captured via `buildHandler(tokenMap)` at L172. Confirmed. ✓
+- `ipc/server.ts` has zero logging calls. Confirmed. ✓
 
 ## Verdict
 
-❌ **VETO** — M-1 is a build-path misrouting that would make Item 7 a no-op. The structured logger would be created but never called from the file that actually has the ad-hoc logging.
+✅ **PASS** — All 7 items verified against live codebase. v1 MAJOR closed. Two MINOR findings (R-1 line-number drift, R-2 description correction) do not block implementation. ~33 new tests planned.
 
 ### Next Action
 
-`/qor-plan` → v2 closing M-1 (correct Item 7 target file to `service/server.ts`, add it to Affected Files table, update §Changes Item 7). R-1 is non-blocking — fix the Item 3 description for accuracy.
+`/qor-implement` — Issue #38 (all 7 items, single phase).
